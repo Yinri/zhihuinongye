@@ -1,0 +1,889 @@
+{
+    "860048073163923": {
+        "code": 1,
+        "msg": null,
+        "count": 0,
+        "data": {
+            "imageDetailList": [
+                {
+                    "q": {
+                        "id": 743152,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-02T19:51:08",
+                        "dateCreated": "2025-09-02T19:48:40",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/d54c87d3add32f7c281fbd51eb15082a.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/d54c87d3add32f7c281fbd51eb15082a.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-02/4aa07c62-fa16-45e5-b290-cc5ab51489f1.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/d54c87d3add32f7c281fbd51eb15082a.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-02/4aa07c62-fa16-45e5-b290-cc5ab51489f1.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/d54c87d3add32f7c281fbd51eb15082a.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 36,
+                            "id": 1
+                        },
+                        {
+                            "name": "黑皮蠹",
+                            "count": 9,
+                            "id": 24328
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 7,
+                            "id": 20619
+                        },
+                        {
+                            "name": "异跗萤叶甲",
+                            "count": 3,
+                            "id": 20779
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 2,
+                            "id": 21731
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 2,
+                            "id": 22847
+                        },
+                        {
+                            "name": "负泥虫",
+                            "count": 1,
+                            "id": 20625
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 7
+                },
+                {
+                    "q": {
+                        "id": 743123,
+                        "insectCount": 53,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-02T19:32:54",
+                        "dateCreated": "2025-09-02T19:24:54",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/e9c8cf98ee6a078888437e01af7220f3.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/e9c8cf98ee6a078888437e01af7220f3.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-02/11cf8d16-759d-45df-af42-90ce9a77d2e0.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/e9c8cf98ee6a078888437e01af7220f3.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-02/11cf8d16-759d-45df-af42-90ce9a77d2e0.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/e9c8cf98ee6a078888437e01af7220f3.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 34,
+                            "id": 1
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 9,
+                            "id": 20619
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 5,
+                            "id": 22847
+                        },
+                        {
+                            "name": "二化螟",
+                            "count": 1,
+                            "id": 20596
+                        },
+                        {
+                            "name": "大螟",
+                            "count": 1,
+                            "id": 20597
+                        },
+                        {
+                            "name": "卷叶螟",
+                            "count": 1,
+                            "id": 20598
+                        },
+                        {
+                            "name": "褐飞虱",
+                            "count": 1,
+                            "id": 20612
+                        },
+                        {
+                            "name": "负泥虫",
+                            "count": 1,
+                            "id": 20625
+                        }
+                    ],
+                    "countSum": 53,
+                    "harmTypeCount": 8
+                },
+                {
+                    "q": {
+                        "id": 742071,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-01T23:31:34",
+                        "dateCreated": "2025-09-01T23:26:47",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/27ec5e19aea884578b81cd5cee9d5fa2.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/27ec5e19aea884578b81cd5cee9d5fa2.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-01/bb47d436-67d2-45d5-a654-5824ade33acc.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/27ec5e19aea884578b81cd5cee9d5fa2.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-01/bb47d436-67d2-45d5-a654-5824ade33acc.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/27ec5e19aea884578b81cd5cee9d5fa2.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 34,
+                            "id": 1
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 12,
+                            "id": 22847
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 8,
+                            "id": 20619
+                        },
+                        {
+                            "name": "二化螟",
+                            "count": 4,
+                            "id": 20596
+                        },
+                        {
+                            "name": "大螟",
+                            "count": 1,
+                            "id": 20597
+                        },
+                        {
+                            "name": "负泥虫",
+                            "count": 1,
+                            "id": 20625
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 6
+                },
+                {
+                    "q": {
+                        "id": 742041,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-02T01:28:24",
+                        "dateCreated": "2025-09-01T23:02:19",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/adbd2e16ce4d9f7ef8f603988dcda764.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/adbd2e16ce4d9f7ef8f603988dcda764.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-02/aabfcadb-4c6d-4383-ba3e-6470a78beafe.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/adbd2e16ce4d9f7ef8f603988dcda764.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-02/aabfcadb-4c6d-4383-ba3e-6470a78beafe.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/adbd2e16ce4d9f7ef8f603988dcda764.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 37,
+                            "id": 1
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 12,
+                            "id": 20619
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 8,
+                            "id": 22847
+                        },
+                        {
+                            "name": "褐飞虱",
+                            "count": 1,
+                            "id": 20612
+                        },
+                        {
+                            "name": "负泥虫",
+                            "count": 1,
+                            "id": 20625
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 1,
+                            "id": 21731
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 6
+                },
+                {
+                    "q": {
+                        "id": 742007,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-01T22:42:02",
+                        "dateCreated": "2025-09-01T22:36:36",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/84fec1ac3937c90d253eaabec3d6b540.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/84fec1ac3937c90d253eaabec3d6b540.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-01/6264bcc9-9e4b-4d99-a1fa-e4e85e6291ee.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/84fec1ac3937c90d253eaabec3d6b540.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-01/6264bcc9-9e4b-4d99-a1fa-e4e85e6291ee.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/84fec1ac3937c90d253eaabec3d6b540.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 40,
+                            "id": 1
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 9,
+                            "id": 22847
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 7,
+                            "id": 20619
+                        },
+                        {
+                            "name": "二化螟",
+                            "count": 1,
+                            "id": 20596
+                        },
+                        {
+                            "name": "异跗萤叶甲",
+                            "count": 1,
+                            "id": 20779
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 1,
+                            "id": 21731
+                        },
+                        {
+                            "name": "黑皮蠹",
+                            "count": 1,
+                            "id": 24328
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 7
+                },
+                {
+                    "q": {
+                        "id": 741967,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-02T00:40:52",
+                        "dateCreated": "2025-09-01T22:14:15",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/b08a0dc674748e4ac1dd7de22e9106e3.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/b08a0dc674748e4ac1dd7de22e9106e3.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-02/0a1c4423-a745-47f3-ad15-5219310cae91.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/b08a0dc674748e4ac1dd7de22e9106e3.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-02/0a1c4423-a745-47f3-ad15-5219310cae91.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/b08a0dc674748e4ac1dd7de22e9106e3.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 34,
+                            "id": 1
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 12,
+                            "id": 20619
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 6,
+                            "id": 22847
+                        },
+                        {
+                            "name": "二化螟",
+                            "count": 3,
+                            "id": 20596
+                        },
+                        {
+                            "name": "大螟",
+                            "count": 1,
+                            "id": 20597
+                        },
+                        {
+                            "name": "卷叶螟",
+                            "count": 1,
+                            "id": 20598
+                        },
+                        {
+                            "name": "褐飞虱",
+                            "count": 1,
+                            "id": 20612
+                        },
+                        {
+                            "name": "绿翅脊萤叶甲",
+                            "count": 1,
+                            "id": 20695
+                        },
+                        {
+                            "name": "异跗萤叶甲",
+                            "count": 1,
+                            "id": 20779
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 9
+                },
+                {
+                    "q": {
+                        "id": 741912,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-01T21:51:53",
+                        "dateCreated": "2025-09-01T21:48:01",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/c36f08661c82f374c86a6cd666bb0703.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/c36f08661c82f374c86a6cd666bb0703.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-01/6c37ab9f-54a8-4fe8-870b-a694a319b243.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/c36f08661c82f374c86a6cd666bb0703.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-01/6c37ab9f-54a8-4fe8-870b-a694a319b243.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/c36f08661c82f374c86a6cd666bb0703.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 35,
+                            "id": 1
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 11,
+                            "id": 22847
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 8,
+                            "id": 20619
+                        },
+                        {
+                            "name": "褐飞虱",
+                            "count": 2,
+                            "id": 20612
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 2,
+                            "id": 21731
+                        },
+                        {
+                            "name": "二化螟",
+                            "count": 1,
+                            "id": 20596
+                        },
+                        {
+                            "name": "螟",
+                            "count": 1,
+                            "id": 20793
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 7
+                },
+                {
+                    "q": {
+                        "id": 741861,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-01T23:19:25",
+                        "dateCreated": "2025-09-01T21:24:16",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/dcd77c0c9f68cacc275ef52939260d2b.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/dcd77c0c9f68cacc275ef52939260d2b.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-01/eaa69da7-e35d-4f0e-a976-65f593adb90f.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/dcd77c0c9f68cacc275ef52939260d2b.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-01/eaa69da7-e35d-4f0e-a976-65f593adb90f.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/dcd77c0c9f68cacc275ef52939260d2b.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 33,
+                            "id": 1
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 13,
+                            "id": 20619
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 8,
+                            "id": 22847
+                        },
+                        {
+                            "name": "二化螟",
+                            "count": 1,
+                            "id": 20596
+                        },
+                        {
+                            "name": "卷叶螟",
+                            "count": 1,
+                            "id": 20598
+                        },
+                        {
+                            "name": "负泥虫",
+                            "count": 1,
+                            "id": 20625
+                        },
+                        {
+                            "name": "绿翅脊萤叶甲",
+                            "count": 1,
+                            "id": 20695
+                        },
+                        {
+                            "name": "异跗萤叶甲",
+                            "count": 1,
+                            "id": 20779
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 1,
+                            "id": 21731
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 9
+                },
+                {
+                    "q": {
+                        "id": 741812,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-01T22:40:58",
+                        "dateCreated": "2025-09-01T20:59:26",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/48846cd4e456798bb957ad451c8422fb.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/48846cd4e456798bb957ad451c8422fb.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-01/759003c6-b0ac-44f6-855b-bf0e570b7f09.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/48846cd4e456798bb957ad451c8422fb.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-01/759003c6-b0ac-44f6-855b-bf0e570b7f09.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/48846cd4e456798bb957ad451c8422fb.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 32,
+                            "id": 1
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 11,
+                            "id": 20619
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 9,
+                            "id": 22847
+                        },
+                        {
+                            "name": "异跗萤叶甲",
+                            "count": 3,
+                            "id": 20779
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 3,
+                            "id": 21731
+                        },
+                        {
+                            "name": "二化螟",
+                            "count": 1,
+                            "id": 20596
+                        },
+                        {
+                            "name": "大螟",
+                            "count": 1,
+                            "id": 20597
+                        }
+                    ],
+                    "countSum": 60,
+                    "harmTypeCount": 7
+                },
+                {
+                    "q": {
+                        "id": 741767,
+                        "insectCount": 60,
+                        "isAnalysis": 2,
+                        "analysisTime": "2025-09-01T21:56:31",
+                        "dateCreated": "2025-09-01T20:32:13",
+                        "deviceId": 3169,
+                        "sthumbnail": "https://img.aheagle.com/preview/yg-iot/raw-data/lamp-image/recognition-images/f4754b4dc68dd23d0365eb0167fa1704.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "thumbnail": "https://img.aheagle.com/thumbnail/yg-iot/raw-data/lamp-image/recognition-images/f4754b4dc68dd23d0365eb0167fa1704.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "url": "https://img.aheagle.com/preview/yg-iot/raw_data/lampimage/original-drawing/2025-09-01/1d185fc1-31ea-4b10-a737-fca03fd643e3.jpg?tk=cd1528943bae170aa6bc1450b5d78afa",
+                        "minioNameThumbnail": "raw-data/lamp-image/recognition-images/f4754b4dc68dd23d0365eb0167fa1704.jpg",
+                        "minioNameUrl": "raw_data/lampimage/original-drawing/2025-09-01/1d185fc1-31ea-4b10-a737-fca03fd643e3.jpg",
+                        "minioReduce": "raw-data/lamp-image/recognition-images/f4754b4dc68dd23d0365eb0167fa1704.jpg"
+                    },
+                    "insectList": [
+                        {
+                            "id": 3169,
+                            "deviceCode": "860048073163923",
+                            "cropType": "1",
+                            "deviceName": "虫情测报灯",
+                            "eqType": 1,
+                            "status": 0,
+                            "bugData": 0,
+                            "lat": "31.726397",
+                            "lng": "117.146873",
+                            "dateCreated": "2025-06-12T15:29:53",
+                            "updateTime": null,
+                            "isDelete": 0,
+                            "isOnline": 1,
+                            "cType": "YF",
+                            "deviceBrand": null,
+                            "deviceModel": null,
+                            "province": null,
+                            "deviceKey": null
+                        }
+                    ],
+                    "imageDetailList": [
+                        {
+                            "name": "其他",
+                            "count": 29,
+                            "id": 1
+                        },
+                        {
+                            "name": "其他",
+                            "count": 28,
+                            "id": 1
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 15,
+                            "id": 20619
+                        },
+                        {
+                            "name": "蓟马",
+                            "count": 15,
+                            "id": 20619
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 5,
+                            "id": 22847
+                        },
+                        {
+                            "name": "蚊子",
+                            "count": 5,
+                            "id": 22847
+                        },
+                        {
+                            "name": "褐飞虱",
+                            "count": 3,
+                            "id": 20612
+                        },
+                        {
+                            "name": "褐飞虱",
+                            "count": 3,
+                            "id": 20612
+                        },
+                        {
+                            "name": "异跗萤叶甲",
+                            "count": 3,
+                            "id": 20779
+                        },
+                        {
+                            "name": "异跗萤叶甲",
+                            "count": 2,
+                            "id": 20779
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 2,
+                            "id": 21731
+                        },
+                        {
+                            "name": "黑皮蠹",
+                            "count": 2,
+                            "id": 24328
+                        },
+                        {
+                            "name": "蝼蛄",
+                            "count": 2,
+                            "id": 21731
+                        },
+                        {
+                            "name": "黑皮蠹",
+                            "count": 2,
+                            "id": 24328
+                        },
+                        {
+                            "name": "卷叶螟",
+                            "count": 1,
+                            "id": 20598
+                        },
+                        {
+                            "name": "螟",
+                            "count": 1,
+                            "id": 20793
+                        },
+                        {
+                            "name": "卷叶螟",
+                            "count": 1,
+                            "id": 20598
+                        },
+                        {
+                            "name": "螟",
+                            "count": 1,
+                            "id": 20793
+                        }
+                    ],
+                    "countSum": 120,
+                    "harmTypeCount": 18
+                }
+            ],
+            "imageDate": [
+                {
+                    "date": "2025-08-14"
+                },
+                {
+                    "date": "2025-08-15"
+                },
+                {
+                    "date": "2025-08-16"
+                },
+                {
+                    "date": "2025-08-17"
+                },
+                {
+                    "date": "2025-08-27"
+                },
+                {
+                    "date": "2025-08-28"
+                },
+                {
+                    "date": "2025-08-29"
+                },
+                {
+                    "date": "2025-08-30"
+                },
+                {
+                    "date": "2025-08-31"
+                },
+                {
+                    "date": "2025-09-01"
+                },
+                {
+                    "date": "2025-09-02"
+                }
+            ],
+            "photoCount": 10,
+            "count": 230
+        },
+        "other": null
+    }
+}
