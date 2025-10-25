@@ -1,2 +1,11 @@
+<<<<<<< HEAD
+*.js linguist-language=Java
+*.css linguist-language=Java
+*.ts linguist-language=vue
+*.html linguist-language=vue
+*.sql linguist-language=Java
+*.ftl linguist-language=Java
+=======
 *.keras filter=lfs diff=lfs merge=lfs -text
 youcai-demo01/backend/pest.keras filter=lfs diff=lfs merge=lfs -text
+>>>>>>> 0a83dbd36da81e3a02e916215a54e54813806ab7
