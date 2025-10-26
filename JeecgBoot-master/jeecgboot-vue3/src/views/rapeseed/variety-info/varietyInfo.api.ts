@@ -58,7 +58,7 @@ export const exportVarietyInfo = (params?: any) => {
 
 // 导入品种信息
 export const importVarietyInfo = (params: any) => {
-  return defHttp.uploadFile({ url: Api.Import }, params });
+  return defHttp.uploadFile({ url: Api.Import }, params );
 };
 
 // 获取导入URL
