@@ -9,6 +9,7 @@
 <!--&lt;!&ndash;      />&ndash;&gt;-->
 <!--    </a-card>-->
     <SelectVariety></SelectVariety>
+    <ProductionAdjust></ProductionAdjust>
 <!--    &lt;!&ndash; 生产计划列表区域 &ndash;&gt;-->
 <!--    <a-card :bordered="false" v-if="selectedBaseId" class="table-card">-->
 
@@ -104,6 +105,7 @@ import { getProductionPlanList, deleteProductionPlan, batchDeleteProductionPlan,
 import BaseSelect from './components/BaseSelect.vue';
 import { Icon } from '/@/components/Icon';
   import SelectVariety from "@/views/rapeseed/production-plan/components/SelectVariety.vue";
+  import ProductionAdjust from "@/views/rapeseed/production-plan/components/ProductionAdjust.vue";
 
   const { createMessage } = useMessage();
 

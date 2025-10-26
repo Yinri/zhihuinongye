@@ -24,13 +24,13 @@
         ok-text="确认添加"
         cancel-text="取消"
         @ok="handleAddVariety"
+        class="custom-modal"
       >
         <a-form-model
           ref="varietyForm"
           :model="newVariety"
           :rules="rules"
           layout="vertical"
-          class="variety-form"
         >
           <a-form-model-item
             label="品种名称"
@@ -122,7 +122,7 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
 .crop-variety-wrapper {
   border: 1px solid #d9d9d9; /* 边框样式，颜色可根据需求调整 */
   border-radius: 8px; /* 可选：添加圆角让边框更柔和 */
@@ -182,8 +182,13 @@ export default {
   position: relative;
 }
 /*弹窗输入框样式*/
+.form-item{
+  margin:25px;
+}
 .variety_input{
-  width:100%;
+  top:10px;
+  margin-bottom: 10px;
+  width:90%;
   height: 40px; /* 输入框高度 */
   padding: 0 12px; /* 输入框内边距（文字与边框的距离） */
   border: 1px solid #d9d9d9; /* 边框样式 */
@@ -191,16 +196,16 @@ export default {
   font-size: 14px; /* 输入文字大小 */
   transition: border-color 0.2s; /* 边框颜色过渡动画 */
 }
-.variety-form {
-  padding: 10px 0; /* 表单内边距，避免内容贴边 */
+.custom-modal .ant-modal-footer {
+  margin-top: 20px;
+  height:50px;
+  text-align: center; /* 兼容旧版Ant Design Vue */
+  display: flex;
+  justify-content: center; /* 核心：水平居中 */
+  gap: 16px; /* 可选：增加两个按钮之间的间距 */
 }
-/* 1. 调整两个输入框之间的间隔 */
-.form-item {
-  margin-bottom: 20px; /* 增大表单项底部间距（默认通常是16px），拉开两个输入框距离 */
-}
-
-/* 最后一个输入框可以减少底部间距（可选） */
-.form-item:last-child {
-  margin-bottom: 10px;
+.custom-modal .ant-modal-title {
+  text-align: center; /* 标题文字居中 */
+  width: 100%; /* 确保标题占满容器宽度，避免居中效果受内容长度影响 */
 }
 </style>
