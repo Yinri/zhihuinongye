@@ -10,6 +10,12 @@
 <!--    </a-card>-->
     <SelectVariety></SelectVariety>
     <ProductionAdjust></ProductionAdjust>
+    <PredictionResults></PredictionResults>
+    <DataBasis></DataBasis>
+    <div class="parent-container">
+    <BaseOverview></BaseOverview>
+    <ProgressTrack></ProgressTrack>
+    </div>
 <!--    &lt;!&ndash; 生产计划列表区域 &ndash;&gt;-->
 <!--    <a-card :bordered="false" v-if="selectedBaseId" class="table-card">-->
 
@@ -106,6 +112,10 @@ import BaseSelect from './components/BaseSelect.vue';
 import { Icon } from '/@/components/Icon';
   import SelectVariety from "@/views/rapeseed/production-plan/components/SelectVariety.vue";
   import ProductionAdjust from "@/views/rapeseed/production-plan/components/ProductionAdjust.vue";
+  import PredictionResults from "@/views/rapeseed/production-plan/components/PredictionResults.vue";
+  import DataBasis from "@/views/rapeseed/production-plan/components/DataBasis.vue";
+  import BaseOverview from "@/views/rapeseed/production-plan/components/BaseOverview.vue";
+  import ProgressTrack from "@/views/rapeseed/production-plan/components/ProgressTrack.vue";
 
   const { createMessage } = useMessage();
 
@@ -330,7 +340,12 @@ import { Icon } from '/@/components/Icon';
   background-color: #f0f2f5;
   min-height: calc(100vh - 64px);
 }
-
+.parent-container {
+  display: flex; /* 水平排列子组件 */
+  gap: 10px; /* 两个组件之间的间距，可选 */
+  width: 100%; /* 父容器占满页面宽度 */
+  box-sizing: border-box;
+}
 .page-header {
   margin-bottom: 24px;
   padding: 24px;
