@@ -143,11 +143,10 @@ export default {
 
 /* 文字标签样式 */
 .variety-label {
-  font-weight: 500;
+  font-weight: bold;
   color: #333; /* 文字颜色 */
   white-space: nowrap; /* 防止文字换行 */
   padding-left:5px;
-  font-weight:bold;
 }
 
 /* 按钮容器 */
