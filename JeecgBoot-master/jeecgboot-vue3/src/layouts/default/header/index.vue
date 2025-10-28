@@ -1,46 +1,53 @@
 <template>
-  <Header :class="getHeaderClass">
-    <!-- left start -->
-    <div :class="`${prefixCls}-left`">
-      <!-- logo -->
-      <AppLogo v-if="getShowHeaderLogo || getIsMobile" :class="`${prefixCls}-logo`" :theme="getHeaderTheme" :style="getLogoWidth" />
-      <LayoutTrigger
-        v-if="(getShowContent && getShowHeaderTrigger && !getSplit && !getIsMixSidebar) || getIsMobile"
-        :theme="getHeaderTheme"
-        :sider="false"
-      />
-      <LayoutBreadcrumb v-if="getShowContent && getShowBread" :theme="getHeaderTheme" />
-      <!-- 欢迎语 -->
-      <span v-if="getShowContent && getShowBreadTitle && !getIsMobile" :class="[prefixCls, `${prefixCls}--${getHeaderTheme}`,'headerIntroductionClass']"> {{t('layout.header.welcomeIn')}} {{ title }} </span>
-    </div>
-    <!-- left end -->
 
-    <!-- menu start -->
-    <div :class="`${prefixCls}-menu`" v-if="getShowTopMenu && !getIsMobile">
-      <LayoutMenu :isHorizontal="true" :theme="getHeaderTheme" :splitType="getSplitType" :menuMode="getMenuMode" />
-    </div>
-    <!-- menu-end -->
+    <Header :class="getHeaderClass">
+        <!-- left start -->
+        <div :class="`${prefixCls}-left`">
+          <!-- logo -->
+          <AppLogo v-if="getShowHeaderLogo || getIsMobile" :class="`${prefixCls}-logo`" :theme="getHeaderTheme" :style="getLogoWidth" />
+          <LayoutTrigger
+            v-if="(getShowContent && getShowHeaderTrigger && !getSplit && !getIsMixSidebar) || getIsMobile"
+            :theme="getHeaderTheme"
+            :sider="false"
+          />
+          <LayoutBreadcrumb v-if="getShowContent && getShowBread" :theme="getHeaderTheme" />
+          <!-- 欢迎语 -->
+          <span v-if="getShowContent && getShowBreadTitle && !getIsMobile" :class="[prefixCls, `${prefixCls}--${getHeaderTheme}`,'headerIntroductionClass']"> {{t('layout.header.welcomeIn')}} {{ title }} </span>
+        </div>
+        <!-- left end -->
 
-    <!-- action  -->
-    <div :class="`${prefixCls}-action`">
-      <AppSearch :class="`${prefixCls}-action__item `" v-if="getShowSearch" />
+        <!-- menu start -->
+        <div :class="`${prefixCls}-menu`" v-if="getShowTopMenu && !getIsMobile">
+          <LayoutMenu :isHorizontal="true" :theme="getHeaderTheme" :splitType="getSplitType" :menuMode="getMenuMode" />
+        </div>
+        <!-- menu-end -->
 
-      <ErrorAction v-if="getUseErrorHandle" :class="`${prefixCls}-action__item error-action`" />
+        <!-- action  -->
+        <div :class="`${prefixCls}-action`">
+          <AppSearch :class="`${prefixCls}-action__item `" v-if="getShowSearch" />
 
-      <Notify v-if="getShowNotice" :class="`${prefixCls}-action__item notify-item`" />
+          <ErrorAction v-if="getUseErrorHandle" :class="`${prefixCls}-action__item error-action`" />
 
-      <FullScreen v-if="getShowFullScreen" :class="`${prefixCls}-action__item fullscreen-item`" />
+          <Notify v-if="getShowNotice" :class="`${prefixCls}-action__item notify-item`" />
 
-      <LockScreen v-if="getUseLockPage" />
+          <FullScreen v-if="getShowFullScreen" :class="`${prefixCls}-action__item fullscreen-item`" />
 
-      <AppLocalePicker v-if="getShowLocalePicker" :reload="true" :showText="false" :class="`${prefixCls}-action__item`" />
+          <LockScreen v-if="getUseLockPage" />
 
-      <UserDropDown :theme="getHeaderTheme" />
+          <AppLocalePicker v-if="getShowLocalePicker" :reload="true" :showText="false" :class="`${prefixCls}-action__item`" />
 
-      <SettingDrawer v-if="getShowSetting" :class="`${prefixCls}-action__item`" />
-    </div>
-  </Header>
+          <UserDropDown :theme="getHeaderTheme" />
+
+          <SettingDrawer v-if="getShowSetting" :class="`${prefixCls}-action__item`" />
+        </div>
+<!--        <div class="growth-stage-container">-->
+<!--          <GrowthStageTag />-->
+<!--        </div>-->
+
+    </Header>
+
   <LoginSelect ref="loginSelectRef" @success="loginSelectOk"></LoginSelect>
+
 </template>
 <script lang="ts">
   import { defineComponent, unref, computed, ref, onMounted, toRaw } from 'vue';
@@ -62,7 +69,7 @@
   import { SettingButtonPositionEnum } from '/@/enums/appEnum';
   import { AppLocalePicker } from '/@/components/Application';
 
-  import { UserDropDown, LayoutBreadcrumb, FullScreen, Notify, ErrorAction, LockScreen } from './components';
+  import { UserDropDown, LayoutBreadcrumb, FullScreen, Notify, ErrorAction, LockScreen,GrowthStageTag } from './components';
   import { useAppInject } from '/@/hooks/web/useAppInject';
   import { useDesign } from '/@/hooks/web/useDesign';
 
@@ -72,6 +79,8 @@
   import LoginSelect from '/@/views/sys/login/LoginSelect.vue';
   import { useUserStore } from '/@/store/modules/user';
   import { useI18n } from '/@/hooks/web/useI18n';
+
+
   const { t } = useI18n();
 
   export default defineComponent({
@@ -90,6 +99,7 @@
       ErrorAction,
       LockScreen,
       LoginSelect,
+      GrowthStageTag,
       SettingDrawer: createAsyncComponent(() => import('/@/layouts/default/setting/index.vue'), {
         loading: true,
       }),
@@ -253,4 +263,5 @@
     }
     //update-end---author:scott ---date::2022-09-30  for：默认隐藏顶部菜单面包屑--------------
   }
+
 </style>

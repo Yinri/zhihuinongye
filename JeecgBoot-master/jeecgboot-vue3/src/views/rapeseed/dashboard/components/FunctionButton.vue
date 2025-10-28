@@ -331,7 +331,7 @@ const deletePlot = () => {
 /* 横向按钮组件：修改为绝对定位，基于 image-container 定位 */
 .horizontal-button-component {
   position: absolute;
-  top: 5px; /* 距离顶部的距离，可调整 */
+  top: 20px; /* 距离顶部的距离，可调整 */
   left: 30%;
   transform: translateX(-50%);
   display: flex;
