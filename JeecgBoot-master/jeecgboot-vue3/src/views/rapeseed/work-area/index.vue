@@ -1,40 +1,42 @@
 <template>
   <div>
-    <BasicTable @register="registerTable" :searchInfo="searchInfo">
-      <template #toolbar>
-        <a-button type="primary" @click="handleCreate"> 新增 </a-button>
-        <a-button @click="handleExport"> 导出 </a-button>
-        <Upload
-          :showUploadList="false"
-          :beforeUpload="beforeUpload"
-          :customRequest="handleImport"
-        >
-          <a-button> 导入 </a-button>
-        </Upload>
-      </template>
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'action'">
-          <TableAction
-            :actions="[
-              {
-                icon: 'clarity:note-edit-line',
-                onClick: handleEdit.bind(null, record),
-              },
-              {
-                icon: 'ant-design:delete-outlined',
-                color: 'error',
-                popConfirm: {
-                  title: '是否确认删除',
-                  placement: 'leftTop',
-                  confirm: handleDelete.bind(null, record),
-                },
-              },
-            ]"
-          />
-        </template>
-      </template>
-    </BasicTable>
-    <WorkAreaModal @register="registerModal" @success="handleSuccess" />
+    <Monitor></Monitor>
+    <MonitorPic></MonitorPic>
+<!--    <BasicTable @register="registerTable" :searchInfo="searchInfo">-->
+<!--      <template #toolbar>-->
+<!--        <a-button type="primary" @click="handleCreate"> 新增 </a-button>-->
+<!--        <a-button @click="handleExport"> 导出 </a-button>-->
+<!--        <Upload-->
+<!--          :showUploadList="false"-->
+<!--          :beforeUpload="beforeUpload"-->
+<!--          :customRequest="handleImport"-->
+<!--        >-->
+<!--          <a-button> 导入 </a-button>-->
+<!--        </Upload>-->
+<!--      </template>-->
+<!--      <template #bodyCell="{ column, record }">-->
+<!--        <template v-if="column.dataIndex === 'action'">-->
+<!--          <TableAction-->
+<!--            :actions="[-->
+<!--              {-->
+<!--                icon: 'clarity:note-edit-line',-->
+<!--                onClick: handleEdit.bind(null, record),-->
+<!--              },-->
+<!--              {-->
+<!--                icon: 'ant-design:delete-outlined',-->
+<!--                color: 'error',-->
+<!--                popConfirm: {-->
+<!--                  title: '是否确认删除',-->
+<!--                  placement: 'leftTop',-->
+<!--                  confirm: handleDelete.bind(null, record),-->
+<!--                },-->
+<!--              },-->
+<!--            ]"-->
+<!--          />-->
+<!--        </template>-->
+<!--      </template>-->
+<!--    </BasicTable>-->
+<!--    <WorkAreaModal @register="registerModal" @success="handleSuccess" />-->
   </div>
 </template>
 <script lang="ts" setup>
@@ -43,6 +45,7 @@
   import { useModal } from '/@/components/Modal';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { columns, searchFormSchema } from './workArea.data';
+  import Monitor from "@/views/rapeseed/work-area/components/Monitor.vue";
   import WorkAreaModal from './WorkAreaModal.vue';
   import { 
     getWorkAreaList, 
@@ -55,6 +58,7 @@
   import { PlotSelect } from '/@/views/components/PlotSelect';
   import { GrowthTimeline } from '/@/views/components/GrowthTimeline';
   import { Card, Row, Col, Button, Empty, Spin } from 'ant-design-vue';
+  import MonitorPic from "@/views/rapeseed/work-area/components/MonitorPic.vue";
 
   const searchInfo = reactive<Recordable>({});
   const fileList = ref<any[]>([]);
@@ -263,3 +267,4 @@
     // defaultBaseId.value = '1';
   });
 </script>
+
