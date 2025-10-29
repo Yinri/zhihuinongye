@@ -4,7 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="" />
+    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="收获界面ui">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/data-integration/DataIntegrationModal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/data-integration/DataIntegrationModal.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/disease-control/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/disease-control/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/farming-records/FarmingRecordsModal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/farming-records/FarmingRecordsModal.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/farming-records/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/farming-records/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/fertilization/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/fertilization/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/harvest/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/harvest/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/insect-control/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/insect-control/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/irrigation/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/irrigation/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/production-plan/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/production-plan/index.vue" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -33,6 +45,7 @@
     "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "Spring Boot.JeecgSystemApplication.executor": "Run",
+    "git-widget-placeholder": "master",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/zhihuinongye/JeecgBoot-master",
     "node.js.detected.package.eslint": "true",
@@ -44,7 +57,7 @@
     "project.structure.last.edited": "模块",
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.2",
-    "ts.external.directory.path": "D:\\IntelliJ IDEA 2025.2\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
+    "ts.external.directory.path": "D:\\gitCode\\zhihuinongye\\JeecgBoot-master\\jeecgboot-vue3\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true",
     "应用程序.JeecgSystemApplication.executor": "Run"
   }
