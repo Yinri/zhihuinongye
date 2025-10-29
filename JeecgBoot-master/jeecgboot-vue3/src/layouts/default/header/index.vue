@@ -40,12 +40,8 @@
 
           <SettingDrawer v-if="getShowSetting" :class="`${prefixCls}-action__item`" />
         </div>
-<!--        <div class="growth-stage-container">-->
-<!--          <GrowthStageTag />-->
-<!--        </div>-->
-
     </Header>
-
+    <GrowthStageTag />
   <LoginSelect ref="loginSelectRef" @success="loginSelectOk"></LoginSelect>
 
 </template>

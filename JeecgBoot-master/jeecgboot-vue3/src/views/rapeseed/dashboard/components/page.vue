@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard_page">
-        <FunctionButton></FunctionButton>
-        <WarningBox></WarningBox>
+      <FunctionButton></FunctionButton>
+      <WarningBox></WarningBox>
 
   </div>
 </template>
@@ -24,10 +24,6 @@ body {
   height: 100%;
   display: flex;
   flex-direction: row; /* 横向排列 */
-}
-.dashboard_header{
-  display: flex;
-  flex-direction: column;
 }
 
 </style>
