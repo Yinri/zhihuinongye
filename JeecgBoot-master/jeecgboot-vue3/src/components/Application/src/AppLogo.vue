@@ -6,7 +6,7 @@
   <div class="anticon" :class="getAppLogoClass" @click="goHome">
     <img src="../../../assets/images/logo.png" />
     <div class="ml-2 truncate md:opacity-100" :class="getTitleClass" v-show="showTitle">
-      {{ shortTitle }}
+      {{ "油菜生长决策系统" }}
     </div>
   </div>
 </template>
