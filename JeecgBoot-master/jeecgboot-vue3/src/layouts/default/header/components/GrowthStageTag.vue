@@ -229,7 +229,7 @@ const handleCreate = () => {
   gap: 20px;
   width: 100%;
   box-sizing: border-box;
-  height: 60px;
+  height: 50px;
   padding: 0 20px;
   background-color: #fff;
 
