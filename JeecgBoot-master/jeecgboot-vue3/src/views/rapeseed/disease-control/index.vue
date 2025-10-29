@@ -1,5 +1,5 @@
 <template>
-  <div class="disease-control-page">
+  <div class="insect-control-page">
     <!-- 基地与地块选择区域和生长周期时间轴区域 -->
     <a-card :bordered="false" class="combined-selection-timeline-card">
       <a-row :gutter="16" align="middle">
@@ -7,32 +7,30 @@
         <a-col :span="3">
           <div class="selection-area">
             <div class="selection-title">基地选择</div>
-            <BaseSelect 
-              v-model:value="selectedBaseId" 
-              @change="handleBaseChange" 
+            <BaseSelect
+              v-model:value="selectedBaseId"
+              @change="handleBaseChange"
               :defaultBaseId="defaultBaseId"
               ref="baseSelectRef"
             />
           </div>
         </a-col>
-        
         <!-- 地块选择区域 -->
         <a-col :span="3">
           <div class="selection-area">
             <div class="selection-title">地块选择</div>
-            <PlotSelect 
-              v-model:value="selectedPlotId" 
+            <PlotSelect
+              v-model:value="selectedPlotId"
               :baseId="selectedBaseId"
               @change="handlePlotChange"
               ref="plotSelectRef"
             />
           </div>
         </a-col>
-        
         <!-- 生长周期时间轴区域 -->
         <a-col :span="18">
           <div class="timeline-area">
-            <GrowthTimeline 
+            <GrowthTimeline
               :plotId="selectedPlotId"
               :varietyId="selectedVarietyId"
               :varietyName="selectedVarietyName"
@@ -42,192 +40,322 @@
         </a-col>
       </a-row>
     </a-card>
+    <a-card class="disease-card" :bordered="false">
+      <a-row class="main-content-row">
+        <!-- 实时病害图像 -->
+        <a-col :span="8">
+          <a-card title="实时病害图像" :bordered="false" class="inner-card">
+            <div class="image-container">
+              <img class="disease-image" :src="currentImageUrl" alt="实时病害图像" />
+            </div>
+            <div class="update-time">更新于：{{ lastUpdateTime }}</div>
+          </a-card>
+        </a-col>
+        <a-col :span="8">
+          <a-card title="实时病害预测" :bordered="false" class="inner-card">
+            <div class="disease-row">
+              <!-- 右侧病害信息 -->
+              <div class="prediction-info">
+                <p>病害类型：叶斑病</p>
+                <p>置信度：92%</p>
+                <a-progress :percent="92" />
+              </div>
+            </div>
+            <div class="update-time">更新于：{{lastTime}}</div>
+          </a-card>
+        </a-col>
 
-    <!-- 病害防控列表区域 -->
-    <a-card :bordered="false" v-if="selectedBaseId" class="table-card">
-      <template #toolbar>
-        <a-space>
-          <a-button type="primary" preIcon="ant-design:plus-outlined" @click="handleCreate"> 新增病害防控记录</a-button>
-          <a-button type="primary" preIcon="ant-design:export-outlined" @click="handleExport"> 导出</a-button>
-          <a-upload
-            :fileList="[]"
-            :beforeUpload="handleImport"
-            accept=".xlsx,.xls"
-          >
-            <a-button type="primary" preIcon="ant-design:import-outlined"> 导入</a-button>
-          </a-upload>
-        </a-space>
-      </template>
-      
-      <BasicTable @register="registerTable" :searchInfo="searchInfo" :loading="loading">
-        <template #action="{ record }">
-          <TableAction
-            :actions="[
-              {
-                icon: 'clarity:note-edit-line',
-                onClick: handleEdit.bind(null, record),
-              },
-              {
-                icon: 'ant-design:delete-outlined',
-                color: 'error',
-                popConfirm: {
-                  title: '是否确认删除',
-                  confirm: handleDelete.bind(null, record),
-                },
-              },
-            ]"
+
+
+        <!-- 农药选择及分析结果 -->
+        <a-col :span="8">
+          <a-card title="农药选择与分析" :bordered="false" class="inner-card">
+            <!-- 触发分析按钮 -->
+            <a-button type="primary" @click="handleLLMAnalysis" style="margin-bottom: 12px;">
+              Ai生成防治建议
+            </a-button>
+
+            <!-- 分析结果展示（来自病害报告） -->
+            <div v-if="llmAnalysis" class="analysis-result" style="white-space: pre-line;">
+              {{ llmAnalysis }}
+            </div>
+
+            <!-- 农药选择下拉框，选择后直接显示剂量 -->
+            <a-select
+              class="pesticide-select"
+              v-model="selectedPesticide"
+              placeholder="请选择农药"
+              allowClear
+              @change="handleAnalyze"
+            >
+              <a-select-option
+                v-for="item in pesticideOptions"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </a-select-option>
+            </a-select>
+
+            <!-- 剂量分析 -->
+            <div v-if="analysisResult" class="analysis-result">
+              {{ analysisResult }}
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
+    </a-card>
+
+    <a-card title="历史病害记录" :bordered="false" class="history-card">
+      <a-row :gutter="16" align="middle">
+        <!-- 时间段选择 -->
+        <a-col :span="8">
+          <a-range-picker
+            v-model:value="selectedHistoryRange"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DD HH:mm"
+            show-time
+            style="width: 100%;"
           />
-        </template>
-        
-        <!-- 空状态自定义 -->
-        <template #emptyText>
-          <a-empty description="该地块暂无病害防控记录">
-            <template #image>
-              <Icon icon="ant-design:medicine-box-outlined" style="font-size: 64px; color: #d9d9d9;" />
-            </template>
-            <a-button type="primary" @click="handleCreate">立即创建</a-button>
-          </a-empty>
-        </template>
-      </BasicTable>
+        </a-col>
+        <!-- 查询按钮 -->
+        <a-col :span="2">
+          <a-button type="primary" @click="handleQueryHistory">查询</a-button>
+        </a-col>
+      </a-row>
+
+      <!-- 历史虫情结果展示 -->
+      <div v-if="filteredHistory.length" class="history-grid">
+        <div
+          v-for="record in filteredHistory"
+          :key="record.id"
+          class="history-card-item"
+        >
+          <div class="history-content">
+            <!-- 左侧图片 -->
+            <div class="image-wrapper">
+              <img :src="record.image" alt="病害图片" class="lishi-image" />
+            </div>
+
+            <!-- 右侧病害信息 -->
+            <div class="record-info">
+              <div class="record-time">处理时间：{{ record.time }}</div>
+
+              <!-- 害虫信息横向排列 -->
+              <div class="pest-entry">
+                <div class="disease-name">
+                  病害名称：{{ record.disease }}
+                </div>
+                <div class="disease-count">
+                  置信度：{{ record.confidence }}
+                </div>
+              </div>
+              <!-- 统一农药和剂量 -->
+              <div class="common-info">
+                农药：{{ record.pesticide }} &nbsp; | &nbsp; 剂量：{{ record.dosage }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </a-card>
 
-    <!-- 无数据提示 -->
-    <a-card :bordered="false" v-if="selectedBaseId && selectedPlotId && !loading && dataSource.length === 0" class="empty-card">
-      <a-result
-        status="404"
-        title="该地块暂无病害防控记录"
-        sub-title="您可以点击下方按钮创建新的病害防控记录"
-      >
-        <template #icon>
-          <Icon icon="ant-design:medicine-box-outlined" style="font-size: 64px; color: #d9d9d9;" />
-        </template>
-        <template #extra>
-          <a-button type="primary" @click="handleCreate">创建病害防控记录</a-button>
-        </template>
-      </a-result>
-    </a-card>
-
-    <!-- 未选择基地提示 -->
-    <a-card :bordered="false" v-if="!selectedBaseId" class="empty-card">
-      <a-result
-        status="info"
-        title="请先选择基地和地块"
-        sub-title="选择基地和地块后即可查看和管理该地块的病害防控记录"
-      >
-        <template #icon>
-          <Icon icon="ant-design:home-outlined" style="font-size: 64px; color: #1890ff;" />
-        </template>
-      </a-result>
-    </a-card>
-
-    <!-- 加载状态提示 -->
-    <a-card :bordered="false" v-if="loading && selectedBaseId" class="loading-card">
-      <a-skeleton active :paragraph="{ rows: 5 }" />
-    </a-card>
-
-    <!-- 表单弹窗 -->
-    <DiseaseControlModal @register="registerModal" @success="handleSuccess" :baseId="selectedBaseId" :plotId="selectedPlotId" />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
+import {ref, reactive, onMounted,onUnmounted, watch,nextTick } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
-import { columns, searchFormSchema } from './diseaseControl.data';
-import { getDiseaseControlList, deleteDiseaseControl, exportDiseaseControl, importDiseaseControl } from './diseaseControl.api';
-import DiseaseControlModal from './DiseaseControlModal.vue';
+// import { columns, searchFormSchema } from './seedingQuality.data';
+// import { getInsectControlList, deleteInsectControl, exportInsectControl, importInsectControl } from './diseasdeControl.api';
+import InsectControlModal from './InsectControlModal.vue';
 import BaseSelect from '../production-plan/components/BaseSelect.vue';
 import PlotSelect from '../production-plan/components/PlotSelect.vue';
 import GrowthTimeline from '../production-plan/components/GrowthTimeline.vue';
+import * as echarts from 'echarts'
+import { message } from 'ant-design-vue'
+import { message as createMessage } from 'ant-design-vue'
+
 
 const { createMessage } = useMessage();
-
 // 基地选择相关
 const selectedBaseId = ref<string | number | undefined>(undefined);
 const selectedBaseName = ref<string>('');
 const baseSelectRef = ref();
-
 // 地块选择相关
 const selectedPlotId = ref<string | number | undefined>(undefined);
 const selectedPlotName = ref<string>('');
 const plotSelectRef = ref();
-
 // 品种信息
 const selectedVarietyId = ref<string | number | undefined>(undefined);
 const selectedVarietyName = ref<string>('');
 const currentStageId = ref<string | number | undefined>(undefined);
-
 // 加载状态
 const loading = ref(false);
-
 // 默认基地ID（可以从URL参数或用户设置中获取）
 const defaultBaseId = ref<string | number | undefined>(undefined);
-
 const [registerModal, { openModal }] = useModal();
 const searchInfo = reactive<Recordable>({});
-const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
-  title: '病害防控管理',
-  api: selectedPlotId.value ? (params) => {
-    // 如果有选中的地块ID，添加到查询参数
-    if (selectedPlotId.value) {
-      params.plotId = selectedPlotId.value;
-    }
-    return getDiseaseControlList(params);
-  } : getDiseaseControlList,
-  columns,
-  formConfig: {
-    labelWidth: 120,
-    schemas: searchFormSchema,
-    autoSubmitOnEnter: true,
-  },
-  useSearchForm: true,
-  showTableSetting: true,
-  bordered: true,
-  showIndexColumn: false,
-  actionColumn: {
-    width: 120,
-    title: '操作',
-    dataIndex: 'action',
-    slots: { customRender: 'action' },
-  },
-  beforeFetch: (params) => {
-    // 如果有选中的基地ID或地块ID，添加到查询参数
-    if (selectedBaseId.value) {
-      params.baseId = selectedBaseId.value;
-    }
-    if (selectedPlotId.value) {
-      params.plotId = selectedPlotId.value;
-    }
-    return params;
-  },
-});
+const fileList = ref<any[]>([]);
+const pesticideOptions = ref([])
+const selectedPesticide = ref(null)
+const llmAnalysis = ref('')
+const analysisResult = ref('')
+const selectedHistoryRange = ref([])
+const filteredHistory = ref([])
+// const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
+//   title: '虫害防控管理',
+//   api: selectedPlotId.value ? (params) => {
+//     // 如果有选中的地块ID，添加到查询参数
+//     if (selectedPlotId.value) {
+//       params.plotId = selectedPlotId.value;
+//     }
+//     return getInsectControlList(params);
+//   } : getInsectControlList,
+//   columns,
+//   formConfig: {
+//     labelWidth: 120,
+//     schemas: searchFormSchema,
+//     autoSubmitOnEnter: true,
+//   },
+//   useSearchForm: true,
+//   showTableSetting: true,
+//   bordered: true,
+//   showIndexColumn: false,
+//   actionColumn: {
+//     width: 80,
+//     title: '操作',
+//     dataIndex: 'action',
+//     fixed: 'right',
+//   },
+//   beforeFetch: (params) => {
+//     // 如果有选中的基地ID或地块ID，添加到查询参数
+//     if (selectedBaseId.value) {
+//       params.baseId = selectedBaseId.value;
+//     }
+//     if (selectedPlotId.value) {
+//       params.plotId = selectedPlotId.value;
+//     }
+//     return params;
+//   },
+// });
 
 /**
  * 基地选择变化处理
  */
+// --- 实时虫情图像 ---
+const currentImageUrl = ref('https://tse1.mm.bing.net/th/id/OIP.iIA2SGZVYVnSf-165spLkgHaLH?rs=1&pid=ImgDetMain&o=7&rm=3')
+const lastUpdateTime = ref('2025-10-27 10:30')
+
+const lastTime = ref('2025-10-27 18:30')
+
+
+const prediction = ref({
+  disease: '叶斑病',
+  confidence: 0.92
+})
+// 模拟大模型分析
+const handleLLMAnalysis = async () => {
+  const report = `${prediction.value.disease}：${(prediction.value.confidence*100).toFixed(1)}%`
+  llmAnalysis.value = `根据病害数据（${report}），分析如下：
+1. 叶斑病属中度病害，应尽快防治；
+2. 建议使用以下农药进行喷施。
+推荐农药：吡虫啉（30% 可湿性粉剂，每亩40克）或噻虫嗪（20% 水分散粒剂，每亩25克）。`
+
+  pesticideOptions.value = [
+    { label: '吡虫啉', value: 'imidacloprid' },
+    { label: '噻虫嗪', value: 'thiamethoxam' },
+  ]
+}
+
+// 农药选择后直接显示剂量
+const handleAnalyze = (value) => {
+  if (!value) {
+    analysisResult.value = ''
+    return
+  }
+  const dosageMap = {
+    imidacloprid: '吡虫啉：30% 可湿性粉剂，每亩40克兑水30公斤喷雾。',
+    thiamethoxam: '噻虫嗪：20% 水分散粒剂，每亩25克兑水均匀喷雾。',
+  }
+  analysisResult.value = dosageMap[value]
+}
+
+const historyData = ref([
+  {
+    id: 1,
+    image: 'https://tse1.mm.bing.net/th/id/OIP.iIA2SGZVYVnSf-165spLkgHaLH?rs=1&pid=ImgDetMain&o=7&rm=3',
+    time: '2025-10-28 07:30',
+    disease: '稻瘟病',
+    confidence: 0.94,
+    pesticide: '多菌灵',
+    dosage: '40g/亩',
+  },
+  {
+    id: 2,
+    image: 'https://tse1.mm.bing.net/th/id/OIP.iIA2SGZVYVnSf-165spLkgHaLH?rs=1&pid=ImgDetMain&o=7&rm=3',
+    time: '2025-10-26 09:15',
+    disease: '纹枯病',
+    confidence: 0.87,
+    pesticide: '噻菌铜',
+    dosage: '35g/亩',
+  },
+  {
+    id: 3,
+    image: 'https://tse1.mm.bing.net/th/id/OIP.iIA2SGZVYVnSf-165spLkgHaLH?rs=1&pid=ImgDetMain&o=7&rm=3',
+    time: '2025-10-22 10:00',
+    disease: '稻曲病',
+    confidence: 0.91,
+    pesticide: '丙环唑',
+    dosage: '25ml/亩',
+  },
+])
+
+const handleQueryHistory = () => {
+  const range = selectedHistoryRange.value
+  if (!range || range.length !== 2) {
+    message.warning('请先选择开始时间和结束时间')
+    return
+  }
+  const [startTime, endTime] = range.map((t) => new Date(t).getTime())
+
+  filteredHistory.value = historyData.value.filter((item) => {
+    const recordTime = new Date(item.time).getTime()
+    return recordTime >= startTime && recordTime <= endTime
+  })
+
+  if (filteredHistory.value.length === 0) {
+    message.info('该时间段内无虫情记录')
+  } else {
+    console.log('查询结果：', filteredHistory.value)
+  }
+}
+
+
 function handleBaseChange(baseId) {
   selectedBaseId.value = baseId;
-  
+
   // 获取基地名称
   if (baseSelectRef.value && baseSelectRef.value.baseOptions) {
     const base = baseSelectRef.value.baseOptions.find(item => item.id === baseId);
     selectedBaseName.value = base ? base.baseName : '';
   }
-  
+
   // 清空地块选择
   selectedPlotId.value = undefined;
   selectedPlotName.value = '';
-  
+
   // 清空品种信息
   selectedVarietyId.value = undefined;
   selectedVarietyName.value = '';
   currentStageId.value = undefined;
-  
+
   // 重新加载数据
-  loadDiseaseControlData();
+  loadInsectControlData();
 }
 
 /**
@@ -235,12 +363,12 @@ function handleBaseChange(baseId) {
  */
 function handlePlotChange(plotId) {
   selectedPlotId.value = plotId;
-  
+
   // 获取地块名称
   if (plotSelectRef.value && plotSelectRef.value.plotOptions) {
     const plot = plotSelectRef.value.plotOptions.find(item => item.id === plotId);
     selectedPlotName.value = plot ? plot.plotName : '';
-    
+
     // 获取品种信息（这里假设地块信息中包含品种信息）
     if (plot) {
       selectedVarietyId.value = plot.varietyId;
@@ -249,26 +377,25 @@ function handlePlotChange(plotId) {
       // currentStageId.value = plot.currentStageId;
     }
   }
-  
-  // 重新加载数据
-  loadDiseaseControlData();
-}
 
+  // 重新加载数据
+  loadInsectControlData();
+}
 /**
- * 加载病害防控数据
+ * 加载虫害防控数据
  */
-async function loadDiseaseControlData() {
+async function loadInsectControlData() {
   if (!selectedBaseId.value) {
     return;
   }
-  
+
   try {
     loading.value = true;
     // 重新加载数据
     await reload();
   } catch (error) {
-    console.error('加载病害防控数据失败:', error);
-    createMessage.error('加载病害防控数据失败，请稍后重试');
+    console.error('加载虫害防控数据失败:', error);
+    createMessage.error('加载虫害防控数据失败，请稍后重试');
   } finally {
     loading.value = false;
   }
@@ -279,7 +406,7 @@ function handleCreate() {
     createMessage.warning('请先选择基地和地块');
     return;
   }
-  
+
   openModal(true, {
     isUpdate: false,
     baseId: selectedBaseId.value,
@@ -295,46 +422,49 @@ function handleEdit(record: Recordable) {
 }
 
 async function handleDelete(record: Recordable) {
-  await deleteDiseaseControl(record.id);
+  await deleteInsectControl(record.id);
   createMessage.success('删除成功');
   reload();
 }
 
 function handleSuccess() {
+  createMessage.success('操作成功');
   reload();
 }
 
 async function handleExport() {
-  try {
-    const data = await exportDiseaseControl(searchInfo);
-    if (data) {
-      const blob = new Blob([data], { type: 'application/vnd.ms-excel' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = '病害防控管理.xlsx';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      createMessage.success('导出成功');
-    }
-  } catch (error) {
-    createMessage.error('导出失败');
-  }
+  const data = await getInsectControlList(searchInfo);
+  exportInsectControl(data);
 }
 
-async function handleImport(file) {
+function handleRemove() {
+  fileList.value = [];
+}
+
+function beforeUpload(file) {
+  fileList.value = [...fileList.value, file];
+  return false;
+}
+
+async function handleImport() {
+  if (fileList.value.length === 0) {
+    createMessage.warning('请选择要导入的文件');
+    return;
+  }
+
   const formData = new FormData();
-  formData.append('file', file);
+  fileList.value.forEach((file) => {
+    formData.append('file', file);
+  });
+
   try {
-    await importDiseaseControl(formData);
+    await importInsectControl(formData);
     createMessage.success('导入成功');
     reload();
+    fileList.value = [];
   } catch (error) {
     createMessage.error('导入失败');
   }
-  return false;
 }
 
 // 组件挂载时，可以设置默认基地ID
@@ -343,16 +473,16 @@ onMounted(() => {
   // const defaultBaseId = getDefaultBaseId();
   // if (defaultBaseId) {
   //   selectedBaseId.value = defaultBaseId;
-  //   loadDiseaseControlData();
+  //   loadInsectControlData();
   // }
-  
+
   // 模拟设置默认基地ID，实际项目中应该从API或配置中获取
   // defaultBaseId.value = '1';
 });
 </script>
 
 <style lang="less" scoped>
-.disease-control-page {
+.insect-control-page {
   padding: 24px;
   background-color: #f0f2f5;
   min-height: calc(100vh - 64px);
@@ -360,7 +490,7 @@ onMounted(() => {
 
 .page-header {
   margin-bottom: 24px;
-  
+
   .page-title {
     display: flex;
     align-items: center;
@@ -370,73 +500,95 @@ onMounted(() => {
     color: #262626;
     margin-bottom: 8px;
   }
-  
+
   .page-description {
     color: #8c8c8c;
     font-size: 14px;
   }
 }
 
-// 整合后的基地地块选择和时间轴样式
+.selection-timeline-row {
+  margin-bottom: 16px;
+
+  .selection-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .timeline-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+// 基地地块选择与时间轴组合卡片样式
 .combined-selection-timeline-card {
   margin-bottom: 16px;
-  
+
   :deep(.ant-card-body) {
     padding-left: 8px;
     padding-right: 8px;
     padding-top: 0px;
     padding-bottom: 0px;
   }
-  
-  .selection-area {
-    .selection-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: #262626;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      
-      &::before {
-        content: '';
-        width: 4px;
-        height: 14px;
-        background-color: #1890ff;
-        border-radius: 2px;
-      }
-    }
+
+  .selection-area, .timeline-area {
+    height: 100%;
   }
-  
-  .timeline-area {
-    .timeline-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: #262626;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      
-      &::before {
-        content: '';
-        width: 4px;
-        height: 14px;
-        background-color: #52c41a;
-        border-radius: 2px;
-      }
-    }
-  }
-  
-  // 间距调整
-  .mb-8 {
+
+  .selection-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background-color: #52c41a;
+      margin-right: 8px;
+      border-radius: 2px;
+    }
   }
+
+  .timeline-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background-color: #1890ff;
+      margin-right: 8px;
+      border-radius: 2px;
+    }
+  }
+}
+
+// 间距调整类
+.mb-8 {
+  margin-bottom: 8px;
 }
 
 .table-card {
   margin-top: 16px;
-  
+
   .table-title {
     display: flex;
     align-items: center;
@@ -458,14 +610,14 @@ onMounted(() => {
     .ant-col {
       margin-bottom: 16px;
     }
-    
+
     :deep(.ant-row) {
       flex-direction: column;
-      
+
       .ant-col {
         width: 100% !important;
         margin-bottom: 16px;
-        
+
         &:last-child {
           margin-bottom: 0;
         }
@@ -475,17 +627,217 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .disease-control-page {
+  .insect-control-page {
     padding: 16px;
   }
-  
+
   .combined-selection-timeline-card {
-  :deep(.ant-card-body) {
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-  }
+    :deep(.ant-card-body) {
+      padding-left: 8px;
+      padding-right: 8px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+    }
   }
 }
+
+.disease-card {
+  padding: 24px;
+  background-color: #f0f2f5;
+}
+
+.main-content-row {
+  display: flex;
+  gap: 16px; /* 列间距 */
+  align-items: stretch; /* 三列等高 */
+}
+
+.main-content-row > .ant-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 250px;
+}
+.disease-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.prediction-info {
+  flex: 1;
+}
+.inner-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* 保证卡片内上下元素间距 */
+}
+
+/* ---------- 图像区域 ---------- */
+.image-container {
+  flex: none;
+  height: 600px; /* 固定高度，防止塌陷 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.disease-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.lishi-image {
+  width: 200px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+/* ---------- 图表区域 ---------- */
+.chart-container {
+  width: 100%;
+  height: 600px; /* 图表固定高度，避免被压缩 */
+}
+
+/* ---------- 农药选择与分析 ---------- */
+.pesticide-select {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.analysis-result {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 4px;
+  color: #389e0d;
+  font-weight: 500;
+  text-align: left;
+}
+
+/* ---------- 时间显示 ---------- */
+.update-time {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #888;
+  text-align: right;
+}
+
+
+.history-card {
+  margin-top: 16px;           /* 与上面内容保持间距 */
+  padding: 16px;              /* 内部间距 */
+  background-color: #f0f2f5;  /* 和主卡片统一背景 */
+  border-radius: 8px;         /* 圆角 */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.history-card .ant-row {
+  align-items: flex-start;    /* 左对齐，顶部对齐 */
+  gap: 8px;                   /* 列间距 */
+}
+
+.history-card .ant-col {
+  display: flex;
+  align-items: flex-start;    /* 左对齐 */
+}
+
+.history-card a-select {
+  width: 100%;
+}
+
+.history-card a-button {
+  width: 100%;
+}
+.history-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;           /* 与上面内容保持间距 */
+
+}
+
+.history-card-item {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+}
+
+.history-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.record-info {
+  flex: 1;
+}
+
+.disease-entry {
+  margin: 6px 0;
+}
+
+.common-info {
+  color: #666;
+  font-size: 13px;
+}
+
+.image-wrapper {
+  flex-shrink: 0;
+}
+
+.pest-image {
+  width: 200px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.record-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.record-time {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.pest-entry {
+  margin-bottom: 6px;
+}
+
+.disease-name {
+  font-weight: 500;
+  color: #1677ff;
+}
+
+.disease-count {
+  font-weight: 500;
+  color: #1677ff;
+}
+
+
+.no-data {
+  text-align: center;
+  color: #999;
+  margin-top: 20px;
+}
+
+/* 响应式：小屏幕换行 */
+@media (max-width: 992px) {
+  .main-content-row {
+    flex-direction: column;
+  }
+  .main-content-row > .ant-col {
+    min-width: 100%;
+  }
+}
+
+
 </style>
