@@ -15,7 +15,7 @@
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { BasicForm, useForm } from '/@/components/Form';
   import { formSchema } from './farmingRecords.data';
-  import { saveFarmingRecords, editFarmingRecords } from '/@/api/rapeseed/farmingRecords.api';
+  import { saveFarmingRecords, editFarmingRecords } from './farmingRecords.api';
 
   const emit = defineEmits(['success', 'register']);
   const isUpdate = ref(true);

@@ -15,7 +15,7 @@
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { BasicForm, useForm } from '/@/components/Form';
   import { formSchema } from './dataIntegration.data';
-  import { saveDataIntegration, editDataIntegration } from '/@/api/rapeseed/dataIntegration.api';
+  import { saveDataIntegration, editDataIntegration } from './dataIntegration.api';
 
   const emit = defineEmits(['success', 'register']);
   const isUpdate = ref(true);

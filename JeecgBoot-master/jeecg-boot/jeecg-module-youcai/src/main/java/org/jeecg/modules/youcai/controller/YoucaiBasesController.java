@@ -84,7 +84,7 @@ public class YoucaiBasesController extends JeecgController<YoucaiBases, IYoucaiB
 	 */
 	@AutoLog(value = "基地表-添加")
 	@Operation(summary="基地表-添加")
-	@RequiresPermissions("youcai:youcai_bases:add")
+//	@RequiresPermissions("youcai:youcai_bases:add")
 	@PostMapping(value = "/add")
 	public Result<String> add(@RequestBody YoucaiBases youcaiBases) {
 		youcaiBasesService.save(youcaiBases);
@@ -154,6 +154,18 @@ public class YoucaiBasesController extends JeecgController<YoucaiBases, IYoucaiB
 		return Result.OK(youcaiBases);
 	}
 
+	 @Operation(summary="基地表-查询所有基地") // 接口描述（可选，用于Swagger文档）
+	 @GetMapping(value = "/getAllBases") // 接口路径，前端需请求这个路径
+	 public Result<List<YoucaiBases>> getAllBases() {
+		 // 1. 调用Service层方法，查询所有基地数据
+		 List<YoucaiBases> baseList = youcaiBasesService.list(); // MyBatis-Plus自带的“查询所有”方法
+
+		 // 2. 判断是否有数据，返回对应结果
+		 if (baseList == null || baseList.isEmpty()) {
+			 return Result.error("暂无基地数据"); // 无数据时返回错误提示
+		 }
+		 return Result.OK(baseList); // 有数据时返回成功，携带基地列表
+	 }
     /**
     * 导出excel
     *
