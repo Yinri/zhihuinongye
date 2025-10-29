@@ -1,48 +1,5 @@
 <template>
   <div class="lodging-risk-page">
-    <!-- 基地与地块选择区域和生长周期时间轴区域 -->
-    <a-card :bordered="false" class="combined-selection-timeline-card">
-      <a-row :gutter="16" align="middle">
-        <!-- 基地选择区域 -->
-        <a-col :span="3">
-          <div class="selection-area">
-            <div class="selection-title">基地选择</div>
-            <BaseSelect 
-              v-model:value="selectedBaseId" 
-              @change="handleBaseChange" 
-              :defaultBaseId="defaultBaseId"
-              ref="baseSelectRef"
-            />
-          </div>
-        </a-col>
-        
-        <!-- 地块选择区域 -->
-        <a-col :span="3">
-          <div class="selection-area">
-            <div class="selection-title">地块选择</div>
-            <PlotSelect 
-              v-model:value="selectedPlotId" 
-              :baseId="selectedBaseId"
-              @change="handlePlotChange"
-              ref="plotSelectRef"
-            />
-          </div>
-        </a-col>
-        
-        <!-- 生长周期时间轴区域 -->
-        <a-col :span="18">
-          <div class="timeline-area">
-            <GrowthTimeline 
-              :plotId="selectedPlotId"
-              :varietyId="selectedVarietyId"
-              :varietyName="selectedVarietyName"
-              :currentStageId="currentStageId"
-            />
-          </div>
-        </a-col>
-      </a-row>
-    </a-card>
-
     <!-- 核心预警区域 -->
     <a-card :bordered="false" class="risk-forecast-card">
       <template #title>
@@ -53,7 +10,7 @@
       </template>
       
       <!-- 风险预警卡片容器 -->
-      <div class="risk-forecast-container" v-if="selectedBaseId && selectedPlotId">
+      <div class="risk-forecast-container">
         <div 
           v-for="(day, index) in riskForecastData" 
           :key="index"
@@ -83,15 +40,10 @@
           </div>
         </div>
       </div>
-
-      <!-- 未选择基地或地块时的提示 -->
-      <div class="empty-forecast" v-else>
-        <a-empty description="请先选择基地和地块" />
-      </div>
     </a-card>
 
     <!-- 防控建议区 -->
-    <a-card :bordered="false" class="suggestions-card" v-if="selectedBaseId && selectedPlotId">
+    <a-card :bordered="false" class="suggestions-card">
       <template #title>
         <div class="card-title">
           <Icon icon="ant-design:bulb-outlined" />
@@ -120,7 +72,7 @@
     </a-card>
 
     <!-- 历史记录区 -->
-    <a-card :bordered="false" class="history-card" v-if="selectedBaseId && selectedPlotId">
+    <a-card :bordered="false" class="history-card">
       <template #title>
         <div class="card-title">
           <Icon icon="ant-design:history-outlined" />
@@ -147,42 +99,14 @@
       </div>
     </a-card>
 
-    <!-- 无数据提示 -->
-    <a-card :bordered="false" v-if="selectedBaseId && selectedPlotId && !loading && dataSource.length === 0" class="empty-card">
-      <a-result
-        status="404"
-        title="该地块暂无倒伏风险预警记录"
-        sub-title="您可以点击下方按钮创建新的倒伏风险预警记录"
-      >
-        <template #icon>
-          <Icon icon="ant-design:warning-outlined" style="font-size: 64px; color: #d9d9d9;" />
-        </template>
-        <template #extra>
-          <a-button type="primary" @click="handleCreate">创建预警记录</a-button>
-        </template>
-      </a-result>
-    </a-card>
-
-    <!-- 未选择基地提示 -->
-    <a-card :bordered="false" v-if="!selectedBaseId" class="empty-card">
-      <a-result
-        status="info"
-        title="请先选择基地和地块"
-        sub-title="选择基地和地块后即可查看和管理该地块的倒伏风险预警记录"
-      >
-        <template #icon>
-          <Icon icon="ant-design:home-outlined" style="font-size: 64px; color: #1890ff;" />
-        </template>
-      </a-result>
-    </a-card>
 
     <!-- 加载状态提示 -->
-    <a-card :bordered="false" v-if="loading && selectedBaseId" class="loading-card">
+    <a-card :bordered="false" v-if="loading" class="loading-card">
       <a-skeleton active :paragraph="{ rows: 5 }" />
     </a-card>
 
     <!-- 表单弹窗 -->
-    <LodgingRiskModal @register="registerModal" @success="handleSuccess" :baseId="selectedBaseId" :plotId="selectedPlotId" />
+    <LodgingRiskModal @register="registerModal" @success="handleSuccess" />
   </div>
 </template>
 
@@ -195,32 +119,11 @@ import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './lodgingRisk.data';
 import { getLodgingRiskList, deleteLodgingRisk, exportLodgingRisk, importLodgingRisk } from './lodgingRisk.api';
 import LodgingRiskModal from './LodgingRiskModal.vue';
-import BaseSelect from '../production-plan/components/BaseSelect.vue';
-import PlotSelect from '../production-plan/components/PlotSelect.vue';
-import GrowthTimeline from '../production-plan/components/GrowthTimeline.vue';
 
 const { createMessage } = useMessage();
 
-// 基地选择相关
-const selectedBaseId = ref<string | number | undefined>(undefined);
-const selectedBaseName = ref<string>('');
-const baseSelectRef = ref();
-
-// 地块选择相关
-const selectedPlotId = ref<string | number | undefined>(undefined);
-const selectedPlotName = ref<string>('');
-const plotSelectRef = ref();
-
-// 品种信息
-const selectedVarietyId = ref<string | number | undefined>(undefined);
-const selectedVarietyName = ref<string>('');
-const currentStageId = ref<string | number | undefined>(undefined);
-
 // 加载状态
 const loading = ref(false);
-
-// 默认基地ID（可以从URL参数或用户设置中获取）
-const defaultBaseId = ref<string | number | undefined>(undefined);
 
 // 防控建议折叠面板激活状态
 const activeKey = ref(['1']);
@@ -367,13 +270,7 @@ const fileList = ref<any[]>([]);
 
 const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
   title: '倒伏风险预警管理',
-  api: selectedPlotId.value ? (params) => {
-    // 如果有选中的地块ID，添加到查询参数
-    if (selectedPlotId.value) {
-      params.plotId = selectedPlotId.value;
-    }
-    return getLodgingRiskList(params);
-  } : getLodgingRiskList,
+  api: getLodgingRiskList,
   columns,
   formConfig: {
     labelWidth: 120,
@@ -391,75 +288,14 @@ const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
     fixed: 'right',
   },
   beforeFetch: (params) => {
-    // 如果有选中的基地ID或地块ID，添加到查询参数
-    if (selectedBaseId.value) {
-      params.baseId = selectedBaseId.value;
-    }
-    if (selectedPlotId.value) {
-      params.plotId = selectedPlotId.value;
-    }
-    
     return params;
   },
 });
 
 /**
- * 基地选择变化处理
- */
-function handleBaseChange(baseId) {
-  selectedBaseId.value = baseId;
-  
-  // 获取基地名称
-  if (baseSelectRef.value && baseSelectRef.value.baseOptions) {
-    const base = baseSelectRef.value.baseOptions.find(item => item.id === baseId);
-    selectedBaseName.value = base ? base.baseName : '';
-  }
-  
-  // 清空地块选择
-  selectedPlotId.value = undefined;
-  selectedPlotName.value = '';
-  
-  // 清空品种信息
-  selectedVarietyId.value = undefined;
-  selectedVarietyName.value = '';
-  currentStageId.value = undefined;
-  
-  // 重新加载数据
-  loadLodgingRiskData();
-}
-
-/**
- * 地块选择变化处理
- */
-function handlePlotChange(plotId) {
-  selectedPlotId.value = plotId;
-  
-  // 获取地块名称
-  if (plotSelectRef.value && plotSelectRef.value.plotOptions) {
-    const plot = plotSelectRef.value.plotOptions.find(item => item.id === plotId);
-    selectedPlotName.value = plot ? plot.plotName : '';
-    
-    // 获取品种信息（这里假设地块信息中包含品种信息）
-    if (plot) {
-      selectedVarietyId.value = plot.varietyId;
-      selectedVarietyName.value = plot.varietyName || '';
-      // 这里可以根据实际情况设置当前阶段ID
-      // currentStageId.value = plot.currentStageId;
-    }
-  }
-  
-  // 重新加载数据
-  loadLodgingRiskData();
-}
-
-/**
  * 加载倒伏风险数据
  */
 async function loadLodgingRiskData() {
-  if (!selectedBaseId.value) {
-    return;
-  }
-  
   try {
     loading.value = true;
     // 重新加载数据
@@ -473,15 +309,8 @@ async function loadLodgingRiskData() {
 }
 
 function handleCreate() {
-  if (!selectedBaseId.value || !selectedPlotId.value) {
-    createMessage.warning('请先选择基地和地块');
-    return;
-  }
-
   openModal(true, {
     isUpdate: false,
-    baseId: selectedBaseId.value,
-    plotId: selectedPlotId.value,
   });
 }
 
@@ -538,17 +367,10 @@ async function handleImport() {
   }
 }
 
-// 组件挂载时，可以设置默认基地ID
+// 组件挂载时初始化数据
 onMounted(() => {
-  // 这里可以从用户信息或系统设置中获取默认基地ID
-  // const defaultBaseId = getDefaultBaseId();
-  // if (defaultBaseId) {
-  //   selectedBaseId.value = defaultBaseId;
-  //   loadLodgingRiskData();
-  // }
-  
-  // 模拟设置默认基地ID，实际项目中应该从API或配置中获取
-  // defaultBaseId.value = '1';
+  // 初始化加载数据
+  loadLodgingRiskData();
 });
 </script>
 
@@ -575,55 +397,6 @@ onMounted(() => {
   .page-description {
     color: #8c8c8c;
     font-size: 14px;
-  }
-}
-
-// 基地地块选择与时间轴组合卡片样式
-.combined-selection-timeline-card {
-  margin-bottom: 16px;
-  
-  :deep(.ant-card-body) {
-    padding: 8px 0px;
-  }
-  
-  .selection-area, .timeline-area {
-    height: 100%;
-  }
-  
-  .selection-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: #262626;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    
-    &::before {
-      content: '';
-      width: 4px;
-      height: 14px;
-      background-color: #1890ff;
-      border-radius: 2px;
-    }
-  }
-  
-  .timeline-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: #262626;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    
-    &::before {
-      content: '';
-      width: 4px;
-      height: 14px;
-      background-color: #52c41a;
-      border-radius: 2px;
-    }
   }
 }
 
@@ -775,11 +548,6 @@ onMounted(() => {
     &.risk-low {
       border-left: 3px solid #52c41a;
     }
-  }
-  
-  .empty-forecast {
-    padding: 20px 0;
-    text-align: center;
   }
 }
 

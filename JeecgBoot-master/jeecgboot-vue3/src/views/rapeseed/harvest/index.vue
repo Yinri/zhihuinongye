@@ -13,21 +13,7 @@
             </div>
           </div>
         </a-col>
-        <a-col :span="12">
-          <a-card class="selection-card base-select-card" :bordered="false">
-            <template #title>
-              <div class="selection-title">
-                <Icon icon="ant-design:environment-outlined" />
-                基地选择
-              </div>
-            </template>
-            <BaseSelect
-              ref="baseSelectRef"
-              v-model:value="selectedBaseId"
-              @change="handleBaseChange"
-            />
-          </a-card>
-        </a-col>
+
       </a-row>
     </div>
 
@@ -250,7 +236,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref, onMounted, nextTick, computed } from 'vue';
+import { reactive, ref, nextTick, computed } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
@@ -258,7 +244,6 @@ import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './harvest.data';
 import { getHarvestList, deleteHarvest, exportHarvest, importHarvest } from './harvest.api';
 import HarvestModal from './HarvestModal.vue';
-import BaseSelect from '../production-plan/components/BaseSelect.vue';
 import BarMulti from '/@/components/chart/BarMulti.vue';
 
 const { createMessage } = useMessage();
@@ -266,16 +251,8 @@ const [registerModal, { openModal }] = useModal();
 const searchInfo = reactive<Recordable>({});
 const fileList = ref<any[]>([]);
 
-// 基地选择相关
-const selectedBaseId = ref<string | number | undefined>(undefined);
-const selectedBaseName = ref<string>('');
-const baseSelectRef = ref();
-
 // 加载状态
 const loading = ref(false);
-
-// 默认基地ID（可以从URL参数或用户设置中获取）
-const defaultBaseId = ref<string | number | undefined>(undefined);
 
 // 动态数据
 const harvestStats = ref({
@@ -378,39 +355,31 @@ const chartDataForBarMulti = computed(() => {
 
   // 加载收获统计数据
   async function loadHarvestStats() {
-    if (!selectedBaseId.value) {
-      return;
+    try {
+      // 这里应该调用实际的API获取统计数据
+      // const stats = await getHarvestStats();
+      // harvestStats.value = stats;
+      
+      // 模拟数据
+      harvestStats.value = {
+        harvestedArea: 2456,
+        unharvestedArea: 872,
+        totalYield: 1842,
+        machineCount: 8,
+        harvestedAreaTrend: 12.5,
+        unharvestedAreaTrend: -8.3,
+        totalYieldTrend: 15.2,
+      };
+    } catch (error) {
+      console.error('加载收获统计数据失败:', error);
     }
-  
-  try {
-    // 这里应该调用实际的API获取统计数据
-    // const stats = await getHarvestStats(selectedBaseId.value);
-    // harvestStats.value = stats;
-    
-    // 模拟数据
-    harvestStats.value = {
-      harvestedArea: 2456,
-      unharvestedArea: 872,
-      totalYield: 1842,
-      machineCount: 8,
-      harvestedAreaTrend: 12.5,
-      unharvestedAreaTrend: -8.3,
-      totalYieldTrend: 15.2,
-    };
-  } catch (error) {
-    console.error('加载收获统计数据失败:', error);
   }
-}
 
 // 加载收割机状态数据
 async function loadHarvesterStatus() {
-  if (!selectedBaseId.value) {
-    return;
-  }
-  
   try {
     // 这里应该调用实际的API获取收割机状态
-    // const status = await getHarvesterStatus(selectedBaseId.value);
+    // const status = await getHarvesterStatus();
     // harvesterStatus.value = status;
     
     // 模拟数据
@@ -447,13 +416,9 @@ async function loadHarvesterStatus() {
 
 // 加载产量图表数据
 async function loadYieldChartData() {
-  if (!selectedBaseId.value) {
-    return;
-  }
-  
   try {
     // 这里应该调用实际的API获取图表数据
-    // const chartData = await getYieldChartData(selectedBaseId.value);
+    // const chartData = await getYieldChartData();
     // yieldChartData.value = chartData;
     
     // 模拟数据
@@ -471,12 +436,8 @@ async function loadYieldChartData() {
 
 // 加载地图数据
 async function loadMapData() {
-  if (!selectedBaseId.value) {
-    return;
-  }
-  
   try {
-    // const res = fieldMapApi.getMapData({ baseId: baseId.value });
+    // const res = fieldMapApi.getMapData();
     // mapData.value = res.result;
     
     // 模拟数据
@@ -508,39 +469,14 @@ const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
   showTableSetting: false,
   bordered: true,
   showIndexColumn: false,
-  beforeFetch: (params) => {
-    // 如果有选中的基地ID，添加到查询参数
-    if (selectedBaseId.value) {
-      params.baseId = selectedBaseId.value;
-    }
-    return params;
-  },
 });
 
-/**
- * 基地选择变化处理
- */
-function handleBaseChange(baseId) {
-  selectedBaseId.value = baseId;
-  
-  // 获取基地名称
-  if (baseSelectRef.value && baseSelectRef.value.baseOptions) {
-    const base = baseSelectRef.value.baseOptions.find(item => item.id === baseId);
-    selectedBaseName.value = base ? base.baseName : '';
-  }
-  
-  // 重新加载所有数据
-  loadAllData();
-}
+
 
 /**
  * 加载所有数据
  */
 async function loadAllData() {
-  if (!selectedBaseId.value) {
-    return;
-  }
-  
   try {
     loading.value = true;
     
@@ -564,10 +500,6 @@ async function loadAllData() {
  * 加载收获数据
  */
 async function loadHarvestData() {
-  if (!selectedBaseId.value) {
-    return;
-  }
-  
   try {
     loading.value = true;
     // 重新加载数据
@@ -581,14 +513,8 @@ async function loadHarvestData() {
 }
 
 function handleCreate() {
-  if (!selectedBaseId.value) {
-    createMessage.warning('请先选择基地');
-    return;
-  }
-  
   openModal(true, {
     isUpdate: false,
-    baseId: selectedBaseId.value,
   });
 }
 
@@ -645,10 +571,7 @@ async function handleImport() {
   }
 }
 
-// 页面加载时获取数据
-onMounted(() => {
-  loadAllData();
-});
+
 </script>
 
 <style lang="less" scoped>
@@ -804,18 +727,7 @@ onMounted(() => {
   }
 }
 
-.selection-title, .timeline-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-}
 
-.base-select-card,
-.plot-select-card,
-.confirm-card {
-  height: 100%;
-}
 
 .table-card {
   margin-top: 16px;
@@ -1059,12 +971,6 @@ onMounted(() => {
 
 // 响应式布局
 @media (max-width: 1200px) {
-  .selection-timeline-row {
-    .ant-col {
-      margin-bottom: 16px;
-    }
-  }
-  
   .stat-card {
     .stat-content {
       .stat-info {
@@ -1133,16 +1039,6 @@ onMounted(() => {
 @media (max-width: 768px) {
   .harvest-page {
     padding: 16px;
-  }
-  
-  .selection-timeline-row {
-    .ant-col {
-      margin-bottom: 16px;
-    }
-    
-    .ant-col:first-child {
-      margin-bottom: 0;
-    }
   }
   
   .page-header {

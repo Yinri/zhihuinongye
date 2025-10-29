@@ -100,7 +100,7 @@
 </template>
 
 <script lang="ts" name="rapeseed-production-plan" setup>
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed } from 'vue';
 import { BasicTable, TableAction, ActionItem } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useListPage } from '/@/hooks/system/useListPage';
@@ -108,7 +108,6 @@ import { useMessage } from '/@/hooks/web/useMessage';
 import ProductionPlanModal from './ProductionPlanModal.vue';
 import { columns, searchFormSchema } from './productionPlan.data';
 import { getProductionPlanList, deleteProductionPlan, batchDeleteProductionPlan, getImportUrl, getExportUrl, getProductionPlanByBaseId } from './productionPlan.api';
-import BaseSelect from './components/BaseSelect.vue';
 import { Icon } from '/@/components/Icon';
   import SelectVariety from "@/views/rapeseed/production-plan/components/SelectVariety.vue";
   import ProductionAdjust from "@/views/rapeseed/production-plan/components/ProductionAdjust.vue";
@@ -118,10 +117,6 @@ import { Icon } from '/@/components/Icon';
   import ProgressTrack from "@/views/rapeseed/production-plan/components/ProgressTrack.vue";
 
   const { createMessage } = useMessage();
-
-  // 基地选择相关
-  const selectedBaseId = ref<string | number | undefined>(undefined);
-  const baseSelectRef = ref();
   const loading = ref(false);
 
   // 注册model
@@ -132,7 +127,7 @@ import { Icon } from '/@/components/Icon';
     designScope: 'production-plan-list',
     tableProps: {
       title: '生产计划管理',
-      api: selectedBaseId.value ? getProductionPlanByBaseId : getProductionPlanList,
+      api: getProductionPlanList,
       columns: columns,
       size: 'small',
       formConfig: {
@@ -142,10 +137,6 @@ import { Icon } from '/@/components/Icon';
         width: 120,
       },
       beforeFetch: (params) => {
-        // 如果有选中的基地ID，添加到查询参数
-        if (selectedBaseId.value) {
-          params.baseId = selectedBaseId.value;
-        }
         return Object.assign({ column: 'createTime', order: 'desc' }, params);
       },
       // 使用自定义的fetch方法来支持缓存
@@ -169,35 +160,9 @@ import { Icon } from '/@/components/Icon';
   const [registerTable, { reload, updateTableDataRecord, getForm }, { rowSelection, selectedRows, selectedRowKeys, dataSource }] = tableContext;
 
   /**
-   * 基地加载完成回调
-   */
-  function handleBaseLoaded(baseOptions) {
-    // 可以在这里处理基地加载完成的逻辑
-    console.log('基地列表加载完成:', baseOptions);
-  }
-
-  /**
-   * 基地选择变化处理
-   */
-  function handleBaseChange(baseId) {
-    selectedBaseId.value = baseId;
-    // 清空搜索表单
-    if (getForm) {
-      getForm().resetFields();
-    }
-    // 重新加载数据
-    loadProductionPlanData();
-  }
-
-  /**
    * 刷新数据
    */
   const handleRefresh = async () => {
-    if (!selectedBaseId.value) {
-      createMessage.warning('请先选择基地');
-      return;
-    }
-
     try {
       loading.value = true;
       await reload();
@@ -214,10 +179,6 @@ import { Icon } from '/@/components/Icon';
    * 加载生产计划数据
    */
   async function loadProductionPlanData() {
-    if (!selectedBaseId.value) {
-      return;
-    }
-
     try {
       loading.value = true;
       // 直接从服务器获取数据
@@ -236,13 +197,8 @@ import { Icon } from '/@/components/Icon';
    * 新增事件
    */
   function handleCreate() {
-    if (!selectedBaseId.value) {
-      createMessage.warning('请先选择基地');
-      return;
-    }
     openModal(true, {
       isUpdate: false,
-      baseId: selectedBaseId.value,
     });
   }
 
@@ -323,16 +279,6 @@ import { Icon } from '/@/components/Icon';
       },
     ];
   }
-
-  // 组件挂载时，可以设置默认基地ID
-  onMounted(() => {
-    // 这里可以从用户信息或系统设置中获取默认基地ID
-    // const defaultBaseId = getDefaultBaseId();
-    // if (defaultBaseId) {
-    //   selectedBaseId.value = defaultBaseId;
-    //   loadProductionPlanData();
-    // }
-  });
 </script>
 <style lang="less" scoped>
 .production-plan-page {
@@ -367,12 +313,6 @@ import { Icon } from '/@/components/Icon';
     font-size: 14px;
     color: #8c8c8c;
   }
-}
-
-.base-select-card {
-  margin-bottom: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .table-card {
