@@ -1,6 +1,7 @@
 package org.jeecg.modules.youcai.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
@@ -67,7 +68,7 @@ public class YoucaiPlotsController extends JeecgController<YoucaiPlots, IYoucaiP
 	 */
 	@AutoLog(value = "地块信息表-添加")
 	@Operation(summary="地块信息表-添加")
-	@RequiresPermissions("youcai:youcai_plots:add")
+//	@RequiresPermissions("youcai:youcai_plots:add")
 	@PostMapping(value = "/add")
 	public Result<String> add(@RequestBody YoucaiPlots youcaiPlots) {
 		youcaiPlotsService.save(youcaiPlots);
@@ -136,6 +137,26 @@ public class YoucaiPlotsController extends JeecgController<YoucaiPlots, IYoucaiP
 		}
 		return Result.OK(youcaiPlots);
 	}
+	 /**
+	  * 通过baseid查询
+	  *
+	  * @param baseId
+	  * @return
+	  */
+	 @Operation(summary = "地块信息表-通过baseid查询")
+	 @GetMapping(value = "/queryByBaseId")
+	 public Result<List<YoucaiPlots>> queryByBaseId(@RequestParam(name = "baseid", required = true) String baseid) {
+		 QueryWrapper<YoucaiPlots> queryWrapper = new QueryWrapper<>();
+		 // 注意这里使用数据库实际字段名 base_id，而不是代码中的属性名
+		 queryWrapper.eq("base_id", baseid);
+		 List<YoucaiPlots> youcaiPlotsList = youcaiPlotsService.list(queryWrapper);
+
+		 if (youcaiPlotsList.isEmpty()) {
+			 return Result.error("未找到对应数据");
+		 }
+		 return Result.OK(youcaiPlotsList);
+	 }
+
 
     /**
     * 导出excel
