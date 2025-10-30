@@ -2,19 +2,19 @@
   <div class="header">
     <div class="growth-stage-tag-container">
       <div class="dropdown-group">
-        <!-- 基地下拉框 -->
+        <!-- 基地下拉下拉框 -->
         <div class="custom-select" @click="toggleDropdown('base')">
-          <div class="select-value">{{ selectedBase || '请选择基地' }}</div>
+          <div class="select-value">{{ selectedBase?.baseName || '请选择基地' }}</div>
           <div class="select-icon" :class="{ open: isDropdownOpen.base }">▼</div>
           <div class="select-options" v-if="isDropdownOpen.base">
             <div class="options-scroll">
               <div
                 class="option-item"
                 v-for="item in baseList"
-                :key="item"
-                @click.stop="selectItem('base', item)"
+                :key="item.baseId"
+                @click.stop="selectItem('base', item.baseName)"
               >
-                {{ item }}
+                {{ item.baseName }}
               </div>
             </div>
             <div class="create-option" @click.stop="openCreateDialog">
@@ -23,18 +23,20 @@
           </div>
         </div>
 
-        <!-- 地块下拉框 -->
+        <!-- 地块下拉框（已与基地下拉框结构对齐） -->
         <div class="custom-select" @click="toggleDropdown('plot')">
           <div class="select-value">{{ selectedPlot || '请选择地块' }}</div>
           <div class="select-icon" :class="{ open: isDropdownOpen.plot }">▼</div>
           <div class="select-options" v-if="isDropdownOpen.plot">
-            <div
-              class="option-item"
-              v-for="item in plotList"
-              :key="item"
-              @click.stop="selectItem('plot', item)"
-            >
-              {{ item }}
+            <div class="options-scroll">
+              <div
+                class="option-item"
+                v-for="item in plotList"
+                :key="item"
+                @click.stop="selectItem('plot', item)"
+              >
+                {{ item }}
+              </div>
             </div>
           </div>
         </div>
@@ -137,20 +139,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, Ref, unref } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import { useSelectStore } from '../../../../store/selectStore';
 
-// 下拉框数据
-const baseList = ref<string[]>([]);
-const plotList = ref(['地块A', '地块B']);
+// 定义基地类型接口
+interface BaseItem {
+  baseId: string | number;
+  baseName: string;
+  fullName?: string;
+}
+
+// 下拉框数据（基地和地块均从接口获取）
+const baseList = ref<BaseItem[]>([]);
+const plotList = ref<string[]>([]);
 
 // 状态仓库实例
 const selectStore = useSelectStore();
 
 // 选中值
-const selectedBase = ref('');
-const selectedPlot = ref('地块A');
+const selectedBase = ref<BaseItem | null>(null);
+const selectedPlot = ref('');
 
 // 下拉框状态
 const isDropdownOpen = ref({
@@ -165,7 +174,7 @@ const stageList = ref([
 
 // 弹窗状态与表单数据
 const isDialogOpen = ref(false);
-const fileInput = ref<HTMLInputElement>(null); // 文件输入框引用
+const fileInput = ref<HTMLInputElement>(null);
 const formData = reactive({
   fullName: '',
   manager: '',
@@ -175,10 +184,10 @@ const formData = reactive({
   crop: '中油杂19',
   soilType: '黏土',
   imageUrl: '',
-  imageBase64: '' // 新增：存储图片Base64字符串（无前缀）
+  imageBase64: ''
 });
 
-// 基础提示函数（无外部依赖）
+// 基础提示函数
 const showMessage = (text: string, isError = false) => {
   const div = document.createElement('div');
   div.style.position = 'fixed';
@@ -212,9 +221,17 @@ const fetchBaseList = async () => {
 
     if (res.data?.success) {
       const baseDataList = res.data.result || [];
-      baseList.value = baseDataList.map((item: any) => item.baseName || item.fullName);
+      // 存储完整的基地信息（包含ID和名称）
+      baseList.value = baseDataList.map((item: any) => ({
+        baseId: item.baseId,
+        baseName: item.baseName || item.fullName,
+        fullName: item.fullName
+      }));
       if (baseList.value.length > 0) {
         selectedBase.value = baseList.value[0];
+        selectStore.updateSelectedBase(selectedBase.value.baseName);
+        // 加载第一个基地的地块
+        fetchPlotList();
       }
     } else {
       showMessage('获取基地列表失败：' + (res.data?.message || '未知错误'), true);
@@ -225,12 +242,55 @@ const fetchBaseList = async () => {
   }
 };
 
-// 组件挂载时加载数据
+// 获取当前选中基地的ID
+const getSelectedBaseId = (): string | number | null => {
+  if (!selectedBase.value) return null;
+  // 从基地列表中匹配选中的基地ID（双重校验）
+  const matchedBase = baseList.value.find(
+    item => item.baseName === selectedBase.value?.baseName
+  );
+  return matchedBase ? matchedBase.baseId : null;
+};
+
+// 获取地块列表（根据当前选中的基地ID）
+const fetchPlotList = async () => {
+  // const currentBaseId = getSelectedBaseId();
+  // if (!currentBaseId) {
+  //   plotList.value = [];
+  //   selectedPlot.value = '';
+  //   return;
+  // }
+  const currentBaseId = 1; // 手动固定ID测试
+  try {
+    const res = await axios.get('/jeecgboot/youcai/youcaiPlots/queryByBaseId', {
+      headers: {
+        'X-Access-Token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzYyMDI4OTg2fQ.Ldq9jbKiSjBV86GAKbFx6ZnzK6m6QD4ohLSMB_vtmd4'
+      },
+      params: { baseid: currentBaseId }, // 传递基地ID参数
+      timeout: 10000
+    });
+
+    if (res.data?.success) {
+      const plotDataList = res.data.result || [];
+      plotList.value = plotDataList.map((item: any) => item.plotName || item.fullName);
+      if (plotList.value.length > 0) {
+        selectedPlot.value = plotList.value[0];
+        selectStore.updateSelectedPlot(selectedPlot.value);
+      } else {
+        selectedPlot.value = '';
+      }
+    } else {
+      showMessage('获取地块列表失败：' + (res.data?.message || '未知错误'), true);
+    }
+  } catch (error) {
+    console.error('获取地块列表错误：', error);
+    showMessage('获取地块列表失败，请检查网络', true);
+  }
+};
+
+// 组件挂载时加载基地列表
 onMounted(() => {
-  fetchBaseList().then(() => {
-    if (selectedBase.value) selectStore.updateSelectedBase(selectedBase.value);
-    if (selectedPlot.value) selectStore.updateSelectedPlot(selectedPlot.value);
-  });
+  fetchBaseList();
 });
 
 // 切换下拉框显示状态
@@ -244,8 +304,14 @@ const toggleDropdown = (type: 'base' | 'plot') => {
 // 选择下拉项
 const selectItem = (type: 'base' | 'plot', value: string) => {
   if (type === 'base') {
-    selectedBase.value = value;
-    selectStore.updateSelectedBase(value);
+    // 匹配选中的基地对象
+    const matchedBase = baseList.value.find(item => item.baseName === value);
+    if (matchedBase) {
+      selectedBase.value = matchedBase;
+      selectStore.updateSelectedBase(value);
+      // 切换基地后重新加载地块
+      fetchPlotList();
+    }
   } else {
     selectedPlot.value = value;
     selectStore.updateSelectedPlot(value);
@@ -257,7 +323,7 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
 const openCreateDialog = () => {
   isDropdownOpen.value.base = false;
   isDialogOpen.value = true;
-  resetForm(); // 打开时重置表单
+  resetForm();
 };
 
 // 处理图片上传
@@ -266,7 +332,6 @@ const handleImageUpload = (e: Event) => {
   const file = target.files?.[0];
   if (!file) return;
 
-  // 校验图片格式
   const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
   if (!validTypes.includes(file.type)) {
     showMessage('请选择 JPG 或 PNG 格式的图片', true);
@@ -274,20 +339,19 @@ const handleImageUpload = (e: Event) => {
     return;
   }
 
-  // 校验图片大小（5MB以内）
   if (file.size > 5 * 1024 * 1024) {
     showMessage('图片大小不能超过 5MB', true);
     target.value = '';
     return;
   }
-  // 新增：转为Base64字符串（去掉data:...前缀）
+
   const reader = new FileReader();
   reader.onload = (event) => {
-    const base64Str = (event.target?.result as string).split(',')[1]; // 关键：分割前缀
-    formData.imageBase64 = base64Str; // 存储处理后的Base64
-    formData.imageUrl = URL.createObjectURL(file); // 保留预览
+    const base64Str = (event.target?.result as string).split(',')[1];
+    formData.imageBase64 = base64Str;
+    formData.imageUrl = URL.createObjectURL(file);
   };
-  reader.readAsDataURL(file); // 触发转换
+  reader.readAsDataURL(file);
 };
 
 // 清除已选图片
@@ -295,7 +359,7 @@ const clearImage = () => {
   formData.imageUrl = '';
   formData.imageBase64 = '';
   if (fileInput.value) {
-    fileInput.value.value = ''; // 重置文件输入
+    fileInput.value.value = '';
   }
 };
 
@@ -311,10 +375,8 @@ const resetForm = () => {
   clearImage();
 };
 
-// 处理创建逻辑（核心功能）
+// 处理创建逻辑
 const handleCreate = async () => {
-  // 表单校验
-  // 1. 基地名称（base_name）：非空+长度限制
   if (!formData.fullName.trim()) {
     showMessage('请填写基地全称', true);
     return;
@@ -331,11 +393,6 @@ const handleCreate = async () => {
     showMessage('请填写联系电话', true);
     return;
   }
-  // if (!formData.imageBase64) {
-  //   showMessage('请选择基地图片', true);
-  //   return;
-  // }
-  // 2. 地址（address）：非空+长度限制
   if (!formData.address.trim()) {
     showMessage('请填写基地地址', true);
     return;
@@ -344,42 +401,35 @@ const handleCreate = async () => {
     showMessage('地址不能超过200个字符', true);
     return;
   }
-  // 3. 面积（area）：非空（后端默认0.00，但前端建议填值）
   if (formData.area < 0) {
     showMessage('面积不能为负数', true);
     return;
   }
 
   try {
-    // 构建表单数据（支持文件上传）
-    // 1. 构建JSON格式数据（用imageBase64字段）
     const submitData = {
-      baseName: formData.fullName.trim(),  // 对应实体类 baseName
+      baseName: formData.fullName.trim(),
       manager: formData.manager.trim() || null,
       phone: formData.phone.trim() || null,
       address: formData.address.trim(),
-      area: formData.area > 0 ? formData.area : null,  // 避免传0，若需0则保留
+      area: formData.area > 0 ? formData.area : null,
       crop: formData.crop,
-      soilType: formData.soilType,         // 对应实体类 soilType
-      topViewUrl: formData.imageBase64 || null  // 对应实体类 topViewUrl
+      soilType: formData.soilType,
+      topViewUrl: formData.imageBase64 || null
     };
-    // 调用后端接口
+
     const res = await axios.post('/jeecgboot/youcai/bases/add', submitData, {
       headers: {
         'X-Access-Token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzYyMDI4OTg2fQ.Ldq9jbKiSjBV86GAKbFx6ZnzK6m6QD4ohLSMB_vtmd4',
         'Content-Type': 'application/json'
       },
-      timeout: 30000 // 30秒超时
+      timeout: 30000
     });
 
-    // 处理接口响应
     if (res.data?.success) {
       showMessage('基地创建成功');
-      // 更新基地列表
-      baseList.value.push(formData.fullName.trim());
-      selectedBase.value = formData.fullName.trim();
-      selectStore.updateSelectedBase(selectedBase.value);
-      // 关闭弹窗
+      // 重新加载基地列表（确保能获取到新基地的ID）
+      fetchBaseList();
       isDialogOpen.value = false;
     } else {
       showMessage('创建失败：' + (res.data?.message || '服务器异常'), true);
