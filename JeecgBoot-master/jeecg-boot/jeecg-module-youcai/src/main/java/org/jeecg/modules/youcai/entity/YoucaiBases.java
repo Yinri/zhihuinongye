@@ -34,9 +34,9 @@ public class YoucaiBases implements Serializable {
     private static final long serialVersionUID = 1L;
 
 	/**主键*/
-	@TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO) // 对应数据库自增策略
     @Schema(description = "主键")
-    private java.lang.String id;
+    private Integer id; // 类型改为 Integer，与数据库 int 匹配
 	/**基地名称*/
 	@Excel(name = "基地名称", width = 15)
     @Schema(description = "基地名称")
@@ -53,7 +53,30 @@ public class YoucaiBases implements Serializable {
 	@Excel(name = "基地地址（具体地址）", width = 15)
     @Schema(description = "基地地址（具体地址）")
     private java.lang.String address;
-	/**创建人*/
+    // ---------------------- 新增字段开始 ----------------------
+    /**面积（亩）*/
+    @Excel(name = "面积（亩）", width = 15)
+    @Schema(description = "基地面积（亩）")
+    private BigDecimal area; // 对应表中 decimal 类型，用 BigDecimal 避免精度丢失
+
+    /**种植作物*/
+    @Excel(name = "种植作物", width = 15, dicCode = "crop_type") // 若有字典表，可配置 dicCode
+    @Schema(description = "种植作物（如：中油杂19、其他）")
+    private String crop;
+
+    /**土壤状况*/
+    @Excel(name = "土壤状况", width = 15, dicCode = "soil_type") // 建议配置字典（黏土/沙土/壤土）
+    @Schema(description = "土壤状况（黏土/沙土/壤土）")
+    @Dict(dicCode = "soil_type") // 配合 Jeecg 的 Dict 注解实现字典回显
+    private String soilType;
+
+    /**基地俯视图URL*/
+    @Excel(name = "基地俯视图", width = 15)
+    @Schema(description = "基地俯视图URL（存储图片访问路径）")
+    private String topViewUrl;
+    // ---------------------- 新增字段结束 ----------------------
+
+    /**创建人*/
     @Schema(description = "创建人")
     private java.lang.String createBy;
 	/**创建日期*/
@@ -72,4 +95,6 @@ public class YoucaiBases implements Serializable {
 	/**所属部门*/
     @Schema(description = "所属部门")
     private java.lang.String sysOrgCode;
+
+
 }
