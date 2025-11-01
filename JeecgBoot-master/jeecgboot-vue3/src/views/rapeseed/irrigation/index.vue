@@ -74,6 +74,8 @@
       </a-col>
     </a-row>
 
+    
+
     <!-- 趋势折线图板块（四个方框） -->
     <a-row :gutter="16" class="mt-4">
       <a-col :xs="24" :md="12">
@@ -83,7 +85,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 土壤含水率（近7天）
             </div>
           </template>
-          <div ref="moistureTrendRef" style="width: 100%; height: 220px" />
+          <div ref="moistureTrendRef" class="chart-ref chart-220" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -141,7 +143,7 @@
               <Icon icon="ant-design:area-chart-outlined" /> 干预灌溉 vs 不干预对比
             </div>
           </template>
-          <div ref="comparisonChartRef" style="width: 100%; height: 320px" />
+          <div ref="comparisonChartRef" class="chart-ref chart-320" />
         </a-card>
       </a-col>
     </a-row>
@@ -197,6 +199,93 @@
     </a-row>
 
     <!-- 已删除灌溉管理列表板块 -->
+
+    <!-- 一键灌溉管理（移至页面底部） -->
+    <a-row class="mt-4">
+      <a-col :span="24">
+        <a-card :bordered="false" class="rich-card">
+          <template #title>
+            <div class="table-title">
+              <Icon icon="ant-design:tool-outlined" /> 一键灌溉管理
+            </div>
+          </template>
+          <div class="quick-card">
+            <a-space direction="vertical" style="width: 100%; gap: 8px;">
+              <a-row :gutter="12" justify="center" align="middle">
+                <a-col :xs="24" :sm="12" :md="3">
+                  <div class="form-item form-inline">
+                    <div class="label">算法推荐</div>
+                    <a-switch v-model:checked="quickUseAlgorithm" size="small" />
+                  </div>
+                </a-col>
+                <a-col :xs="24" :sm="12" :md="5">
+                  <div class="form-item">
+                    <div class="label">选择基地</div>
+                    <BaseSelect v-model="selectedBaseId" @change="onBaseChange" />
+                  </div>
+                </a-col>
+                <a-col :xs="24" :sm="12" :md="5">
+                  <div class="form-item">
+                    <div class="label">选择地块</div>
+                    <PlotSelect ref="plotSelectRef" v-model="selectedPlotId" :base-id="selectedBaseId" @change="onPlotChange" />
+                  </div>
+                </a-col>
+                <a-col :xs="24" :sm="12" :md="4">
+                  <div class="form-item">
+                    <div class="label">灌溉面积(亩)</div>
+                    <a-input-number v-model:value="quickArea" :min="0" :step="0.1" style="width: 100%" />
+                  </div>
+                </a-col>
+                <a-col :xs="24" :sm="12" :md="4">
+                  <div class="form-item">
+                    <div class="label">灌溉次数</div>
+                    <a-input-number v-model:value="quickTimes" :min="1" :step="1" style="width: 100%" />
+                  </div>
+                </a-col>
+                <a-col :xs="24" :sm="12" :md="3">
+                  <div class="form-item">
+                    <div class="label">灌溉方式</div>
+                    <a-select v-model:value="quickMethod" :options="irrigationMethodOptions" style="width: 100%" />
+                  </div>
+                </a-col>
+                <!-- 已移除：用水量(立方米/亩) 输入项 -->
+              </a-row>
+
+              <a-row :gutter="12" justify="center" align="middle">
+                <a-col :xs="24" :md="8">
+                  <div class="form-item">
+                    <div class="label">灌溉日期</div>
+                    <a-date-picker v-model:value="quickDate" style="width: 100%" />
+                  </div>
+                </a-col>
+                <a-col :xs="24" :md="16">
+                  <div class="form-item">
+                    <div class="label">备注</div>
+                    <a-input v-model:value="quickRemark" placeholder="备注（可选）" />
+                  </div>
+                </a-col>
+              </a-row>
+
+              <a-divider dashed style="margin: 8px 0;" />
+              <div class="calc-result">
+                <span v-if="quickUseAlgorithm">按建议：{{ recommendedVolumeMm }} mm ≈ {{ algoWaterPerMuM3 }} m³/亩</span>
+                <span v-else>人工设定：每亩 {{ manualWaterPerMu }} m³</span>
+                <span>分次灌溉：{{ quickTimes }} 次，每次约 {{ perTimeWaterM3 }} m³</span>
+                <span>总用水量：{{ totalWaterUsageM3 }} m³，预估时长：{{ durationHours }} 小时</span>
+              </div>
+
+              <div class="quick-actions">
+                <a-space :size="12" align="center">
+                  <a-button type="primary" @click="calcQuickIrrigation" :disabled="!selectedPlotId">计算用水量</a-button>
+                  <a-button @click="generateRecordQuick" :disabled="!selectedPlotId">生成记录</a-button>
+                  <a-button @click="executeAutomationQuick" :disabled="!selectedPlotId">执行自动化（占位）</a-button>
+                </a-space>
+              </div>
+            </a-space>
+          </div>
+        </a-card>
+      </a-col>
+    </a-row>
 
     <!-- 表单弹窗 -->
     <IrrigationModal @register="registerModal" @success="handleSuccess" />
@@ -543,6 +632,79 @@ function refresh() {
   fetchPlotStatusAndSuggest();
   fetchInterventionComparison();
 }
+
+// 快速灌溉管理（状态与计算）
+const quickArea = ref<number>(10);
+const quickMethod = ref<string>('滴灌');
+const quickUseAlgorithm = ref<boolean>(true);
+const manualWaterPerMu = ref<number>(15); // m³/亩（人工设定）
+const quickDate = ref<any>();
+const quickRemark = ref<string>('');
+const quickTimes = ref<number>(1);
+
+const irrigationMethodOptions = [
+  { label: '滴灌', value: '滴灌' },
+  { label: '喷灌', value: '喷灌' },
+  { label: '漫灌', value: '漫灌' },
+  { label: '微灌', value: '微灌' },
+];
+
+const algoWaterPerMuM3 = computed<number>(() => mmToM3PerMu(recommendedVolumeMm.value));
+const waterPerMuM3 = computed<number>(() => (quickUseAlgorithm.value ? algoWaterPerMuM3.value : manualWaterPerMu.value));
+const totalWaterUsageM3 = computed<number>(() => Math.round(waterPerMuM3.value * quickArea.value * 10) / 10);
+const durationHours = computed<number>(() => {
+  const rate = flowRateByMethod(quickMethod.value);
+  if (!rate) return 0;
+  return Math.round((totalWaterUsageM3.value / rate) * 10) / 10;
+});
+const perTimeWaterM3 = computed<number>(() => {
+  const times = Math.max(1, quickTimes.value || 1);
+  return Math.round((totalWaterUsageM3.value / times) * 10) / 10;
+});
+
+function flowRateByMethod(method: string): number {
+  switch (method) {
+    case '滴灌':
+      return 8; // m³/小时（示例值）
+    case '喷灌':
+      return 12;
+    case '漫灌':
+      return 20;
+    case '微灌':
+      return 5;
+    default:
+      return 10;
+  }
+}
+
+function calcQuickIrrigation() {
+  // 计算通过计算属性完成，此处给用户反馈
+  createMessage.success('已计算用水量');
+}
+
+function generateRecordQuick() {
+  const defaults: any = {
+    plotName: selectedPlotName.value,
+    baseId: selectedBaseId.value,
+    plotId: selectedPlotId.value,
+    irrigationMethod: quickMethod.value,
+    irrigationArea: quickArea.value,
+    waterUsage: totalWaterUsageM3.value,
+    irrigationTimes: quickTimes.value,
+    perTimeWater: perTimeWaterM3.value,
+    duration: durationHours.value,
+    irrigationDate: quickDate.value || penmanSuggestion.recommendedTime || undefined,
+    remark: quickRemark.value,
+  };
+  openModal(true, {
+    isUpdate: false,
+    defaultValues: defaults,
+  });
+}
+
+function executeAutomationQuick() {
+  createMessage.info('已触发自动化（占位）');
+}
 </script>
 
 <style lang="less" scoped>
@@ -647,9 +809,70 @@ function refresh() {
   }
 }
 
+/* 快速灌溉管理样式 */
+.quick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.form-inline {
+  flex-direction: row;
+  align-items: center;
+}
+.form-item .label {
+  width: auto;
+  font-size: 13px;
+  color: #555;
+  font-weight: 500;
+}
+
+.calc-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #555;
+  background: #fcfcfc;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+}
+
+.quick-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.chart-ref { width: 100%; }
+.chart-220 { height: 220px; }
+.chart-320 { height: 320px; }
+
 @media (max-width: 768px) {
   .irrigation-page {
     padding: 16px;
   }
+  .statistic-grid {
+    grid-template-columns: 1fr;
+  }
+  .chart-220 { height: 180px; }
+  .chart-320 { height: 260px; }
+}
+
+/* 大屏优化 */
+@media (min-width: 1600px) {
+  .irrigation-page { padding: 32px; }
+  .chart-220 { height: 260px; }
+  .chart-320 { height: 360px; }
+  .quick-card { gap: 16px; }
 }
 </style>

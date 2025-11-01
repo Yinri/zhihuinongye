@@ -40,6 +40,10 @@
       await setFieldsValue({
         ...data.record,
       });
+    } else if (data?.defaultValues) {
+      await setFieldsValue({
+        ...data.defaultValues,
+      });
     }
   });
 
