@@ -150,10 +150,6 @@ public class YoucaiPlotsController extends JeecgController<YoucaiPlots, IYoucaiP
 		 // 注意这里使用数据库实际字段名 base_id，而不是代码中的属性名
 		 queryWrapper.eq("base_id", baseid);
 		 List<YoucaiPlots> youcaiPlotsList = youcaiPlotsService.list(queryWrapper);
-
-		 if (youcaiPlotsList.isEmpty()) {
-			 return Result.error("未找到对应数据");
-		 }
 		 return Result.OK(youcaiPlotsList);
 	 }
 

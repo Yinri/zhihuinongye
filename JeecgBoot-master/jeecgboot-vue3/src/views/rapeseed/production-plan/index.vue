@@ -8,7 +8,9 @@
 <!--&lt;!&ndash;        :defaultBaseId="defaultBaseId"&ndash;&gt;-->
 <!--&lt;!&ndash;      />&ndash;&gt;-->
 <!--    </a-card>-->
+    <QueryPlan></QueryPlan>
     <SelectVariety></SelectVariety>
+<!--    <ShowAllVariety></ShowAllVariety>-->
     <ProductionAdjust></ProductionAdjust>
     <PredictionResults></PredictionResults>
     <DataBasis></DataBasis>
@@ -115,6 +117,8 @@ import { Icon } from '/@/components/Icon';
   import DataBasis from "@/views/rapeseed/production-plan/components/DataBasis.vue";
   import BaseOverview from "@/views/rapeseed/production-plan/components/BaseOverview.vue";
   import ProgressTrack from "@/views/rapeseed/production-plan/components/ProgressTrack.vue";
+  import ShowAllVariety from "@/views/rapeseed/production-plan/components/ShowAllVariety.vue";
+  import QueryPlan from "@/views/rapeseed/production-plan/components/QueryPlan.vue";
 
   const { createMessage } = useMessage();
   const loading = ref(false);

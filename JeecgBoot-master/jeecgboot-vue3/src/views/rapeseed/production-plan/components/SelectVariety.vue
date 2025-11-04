@@ -7,116 +7,199 @@
       <!-- 按钮容器 -->
       <div class="variety-buttons">
         <button
-          v-for="variety in varieties"
+          v-for="variety in displayedVarieties"
           :key="variety.value"
           :class="['variety-btn', { 'active': selectedVariety === variety.value }]"
           @click="selectVariety(variety.value)"
         >
           {{ variety.label }}
         </button>
-        <button class="add-btn" @click="showAddDialog = true">+</button>
+        <button class="add-btn" @click="openAddDialog()">+</button>
       </div>
 
       <!-- 新增品种弹窗 -->
       <a-modal
-        title="添加作物品种"
+        title="选择更多作物品种"
         v-model:visible="showAddDialog"
         ok-text="确认添加"
         cancel-text="取消"
         @ok="handleAddVariety"
+        @cancel="resetDialogState()"
+        :width="600"
+        :bodyStyle="{ maxHeight: '400px', padding: '20px' }"
         class="custom-modal"
       >
-        <a-form-model
-          ref="varietyForm"
-          :model="newVariety"
-          :rules="rules"
-          layout="vertical"
-        >
-          <a-form-model-item
-            label="品种名称"
-            prop="label"
-            class="form-item"
+        <!-- 原生搜索容器，无任何表单包裹 -->
+        <div class="search-container">
+          <input
+            type="text"
+            v-model="searchKeyword"
+            placeholder="搜索未显示的品种..."
+            class="search-input"
+            @keyup.enter="handleSearch"
+          />
+          <button
+            class="search-btn"
+            @click="handleSearch"
           >
-            <a-input
-              v-model="newVariety.label"
-              placeholder="请输入作物品种名称"
-              class="variety_input"
-            />
-          </a-form-model-item>
-          <a-form-model-item
-            label="品种标识"
-            prop="value"
-            class="form-item"
+            搜索
+          </button>
+        </div>
+
+        <!-- 未显示品种列表 -->
+        <div class="variety-list">
+          <div v-if="filteredUnselectedVarieties.length === 0" class="no-result">
+            未找到匹配的品种
+          </div>
+
+          <div
+            v-for="v in filteredUnselectedVarieties"
+            :key="v.value"
+            :class="{ 'selected': selectedToAdd === v.value }"
+            @click="selectedToAdd = v.value"
+            style="display: flex; justify-content: space-between; align-items: center;"
           >
-            <a-input
-              v-model="newVariety.value"
-              placeholder="请输入品种标识（英文/数字）"
-              class="variety_input"
-            />
-          </a-form-model-item>
-        </a-form-model>
+            {{ v.label }}
+            <span style="color:#999;font-size: 0.9em;">id:{{ v.value }}</span>
+          </div>
+        </div>
       </a-modal>
     </div>
   </div>
 </template>
 
 <script>
+import { getAllVariety } from '../base.api';
+import { Modal } from 'ant-design-vue';
+
 export default {
+  components: {
+    aModal: Modal
+  },
   data() {
     return {
       // 品种列表
-      varieties: [
-        {label: '中油杂 19', value: 'zhongyouza19'},
-        {label: '华油杂 62', value: 'huayouza62'},
-        {label: '阳光 2009', value: 'yangguang2009'}
-      ],
+      varieties: [],
       // 当前选中品种
-      selectedVariety: 'yangguang2009',
+      selectedVariety: '',
       // 弹窗显示状态
       showAddDialog: false,
-      // 新品种表单数据
-      newVariety: {
-        label: '',
-        value: ''
-      },
-      // 表单验证规则
-      rules: {
-        label: [
-          {required: true, message: '请输入品种名称', trigger: 'blur'}
-        ],
-        value: [
-          {required: true, message: '请输入品种标识', trigger: 'blur'},
-          {pattern: /^[a-zA-Z0-9]+$/, message: '标识只能包含英文和数字', trigger: 'blur'}
-        ]
-      }
+
+      allVarieties: [], // 存储接口返回的所有品种
+      displayedVarieties: [], // 显示的品种
+      searchKeyword: '', // 搜索关键词
+      filteredUnselectedVarieties: [], // 筛选后的未显示品种
+      selectedToAdd: '' // 弹窗中选中要添加的品种
     };
+  },
+  created() {
+    this.fetchVarieties();
+  },
+  computed: {
+    hasMoreVarieties() {
+      return this.allVarieties.length > this.displayedVarieties.length;
+    }
   },
   methods: {
     // 选择品种
     selectVariety(value) {
       this.selectedVariety = value;
     },
-    // 处理添加品种
-    handleAddVariety() {
-      this.$refs.varietyForm.validate(valid => {
-        if (valid) {
-          // 检查是否已存在相同标识的品种
-          const exists = this.varieties.some(v => v.value === this.newVariety.value);
-          if (exists) {
-            this.$message.error('该品种标识已存在，请更换');
-            return;
-          }
 
-          // 添加新品种
-          this.varieties.push({...this.newVariety});
-          // 自动选中新添加的品种
-          this.selectedVariety = this.newVariety.value;
-          // 关闭弹窗并重置表单
-          this.showAddDialog = false;
-          this.$refs.varietyForm.resetFields();
-          this.$message.success('品种添加成功');
+    // 获取品种列表
+    async fetchVarieties() {
+      try {
+        const response = await getAllVariety();
+        const rawVarieties = response || [];
+
+        // 去重：根据 varietyName 去重
+        const uniqueVarieties = Array.from(
+          new Map(rawVarieties.map(item => [item.varietyName, item])).values()
+        );
+
+        // 映射为 label/value 格式
+        this.allVarieties = uniqueVarieties.map(item => ({
+          label: item.varietyName,
+          value: item.id.toString()
+        }));
+
+        // 显示前3个品种
+        this.displayedVarieties = this.allVarieties.slice(0, 3);
+
+        // 初始化选中第一个
+        if (this.displayedVarieties.length) {
+          this.selectedVariety = this.displayedVarieties[0].value;
         }
+      } catch (error) {
+        console.error('获取品种列表失败:', error);
+        this.$message.error('获取品种列表失败，请重试');
+      }
+    },
+
+    // 打开弹窗（清空搜索框+初始化列表）
+    openAddDialog() {
+      this.showAddDialog = true;
+      // 清空搜索框和选中状态
+      this.searchKeyword = '';
+      this.selectedToAdd = '';
+      // 初始化筛选列表
+      this.$nextTick(() => {
+        this.handleSearch();
       });
+    },
+
+    // 重置弹窗状态
+    resetDialogState() {
+      this.searchKeyword = '';
+      this.selectedToAdd = '';
+    },
+
+    // 核心搜索逻辑（原生实现，无任何框架干扰）
+    handleSearch() {
+      // 强制转为字符串并去空格
+      const keyword = String(this.searchKeyword).toLowerCase().trim();
+
+      // 1. 先筛选出未显示的品种
+      const unselected = this.allVarieties.filter(v =>
+        !this.displayedVarieties.some(d => d.value === v.value)
+      );
+
+      // 2. 执行搜索筛选
+      if (keyword === '') {
+        // 关键词为空时显示所有未显示品种
+        this.filteredUnselectedVarieties = [...unselected];
+      } else {
+        this.filteredUnselectedVarieties = unselected.filter(v =>
+          v.label.toLowerCase().includes(keyword) ||
+          v.value.toLowerCase().includes(keyword)
+        );
+      }
+
+      // 打印日志方便排查（可删除）
+      console.log('搜索关键词:', keyword);
+      console.log('未显示品种数:', unselected.length);
+      console.log('筛选结果数:', this.filteredUnselectedVarieties.length);
+    },
+
+    // 处理添加品种（替换显示的品种）
+    handleAddVariety() {
+      if (!this.selectedToAdd) {
+        this.$message.warning('请选择要添加的品种');
+        return;
+      }
+
+      const varietyToAdd = this.allVarieties.find(v => v.value === this.selectedToAdd);
+      if (varietyToAdd) {
+        if (this.displayedVarieties.length < 3) {
+          this.displayedVarieties.push(varietyToAdd);
+        } else {
+          this.displayedVarieties.splice(-1, 1, varietyToAdd);
+        }
+
+        this.selectedVariety = varietyToAdd.value;
+        this.resetDialogState();
+        this.showAddDialog = false;
+      }
     }
   }
 };
@@ -124,39 +207,39 @@ export default {
 
 <style>
 .crop-variety-wrapper {
-  border: 1px solid #d9d9d9; /* 边框样式，颜色可根据需求调整 */
-  border-radius: 8px; /* 可选：添加圆角让边框更柔和 */
-  padding: 1px; /* 内边距，避免内容紧贴边框 */
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 1px;
   display: flex;
   align-items: center;
   gap: 16px;
   background-color: white;
-  width:100%;
+  width: 100%;
+  margin-top: 5px;
 }
-/* 外层容器使用flex布局，实现水平排列 */
+
 .crop-variety-selector {
   display: flex;
-  align-items: center; /* 垂直居中对齐 */
-  gap: 16px; /* 文字和按钮之间的间距 */
-  padding: 10px 0; /* 添加上下内边距 */
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+  width: 100%;
 }
 
-/* 文字标签样式 */
 .variety-label {
   font-weight: bold;
-  color: #333; /* 文字颜色 */
-  white-space: nowrap; /* 防止文字换行 */
-  padding-left:5px;
+  color: #333;
+  white-space: nowrap;
+  padding-left: 5px;
 }
 
-/* 按钮容器 */
 .variety-buttons {
   display: flex;
-  gap: 10px; /* 按钮之间的间距 */
-  flex-wrap: wrap; /* 当按钮过多时自动换行 */
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
-/* 按钮样式 */
 .variety-btn {
   padding: 6px 14px;
   border: 1px solid #d1d5db;
@@ -180,31 +263,88 @@ export default {
   cursor: pointer;
   position: relative;
 }
-/*弹窗输入框样式*/
-.form-item{
-  margin:25px;
+
+/* 原生搜索框样式 */
+.search-container {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 16px;
+  width: 90%;
 }
-.variety_input{
-  top:10px;
-  margin-bottom: 10px;
-  width:90%;
-  height: 40px; /* 输入框高度 */
-  padding: 0 12px; /* 输入框内边距（文字与边框的距离） */
-  border: 1px solid #d9d9d9; /* 边框样式 */
-  border-radius: 6px; /* 输入框圆角（与外层边框风格统一） */
-  font-size: 14px; /* 输入文字大小 */
-  transition: border-color 0.2s; /* 边框颜色过渡动画 */
+
+.search-input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  flex: 1;
+  font-size: 14px;
 }
+
+.search-input:focus {
+  outline: none;
+  border-color: #22c55e;
+}
+
+/* 搜索按钮样式 */
+.search-btn {
+  padding: 0 16px;
+  height: 40px;
+  background-color: #22c55e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-btn:hover {
+  background-color: #16a34a;
+}
+
 .custom-modal .ant-modal-footer {
   margin-top: 20px;
-  height:50px;
-  text-align: center; /* 兼容旧版Ant Design Vue */
+  height: 50px;
+  text-align: center;
   display: flex;
-  justify-content: center; /* 核心：水平居中 */
-  gap: 16px; /* 可选：增加两个按钮之间的间距 */
+  justify-content: center;
+  gap: 16px;
 }
+
 .custom-modal .ant-modal-title {
-  text-align: center; /* 标题文字居中 */
-  width: 100%; /* 确保标题占满容器宽度，避免居中效果受内容长度影响 */
+  text-align: center;
+  width: 100%;
+}
+
+.variety-list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 10px auto;
+  width: 90%;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+}
+
+.variety-list > div {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.variety-list > div:hover {
+  background: #f5f5f5;
+}
+
+.variety-list > div.selected {
+  background: #e6f7ed;
+  border-left: 3px solid #22c55e;
+}
+
+/* 无结果提示样式 */
+.no-result {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  background: #fafafa;
 }
 </style>

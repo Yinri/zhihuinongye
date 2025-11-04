@@ -25,17 +25,17 @@
 
         <!-- 地块下拉框（已与基地下拉框结构对齐） -->
         <div class="custom-select" @click="toggleDropdown('plot')">
-          <div class="select-value">{{ selectedPlot || '请选择地块' }}</div>
+          <div class="select-value">{{ selectedPlot?.plotName || '请选择地块' }}</div>
           <div class="select-icon" :class="{ open: isDropdownOpen.plot }">▼</div>
           <div class="select-options" v-if="isDropdownOpen.plot">
             <div class="options-scroll">
               <div
                 class="option-item"
                 v-for="item in plotList"
-                :key="item"
+                :key="item.plotId"
                 @click.stop="selectItem('plot', item)"
               >
-                {{ item }}
+                {{ item.plotName }}
               </div>
             </div>
           </div>
@@ -48,10 +48,12 @@
           v-for="(stage, index) in stageList"
           :key="stage"
           :style="{'--index': index}"
+          :class="{ active: currentGrowthStage === stage }"
         >
           {{ stage }}
         </div>
       </div>
+
     </div>
   </div>
 
@@ -88,13 +90,6 @@
             <input type="number" v-model.number="formData.area" placeholder="请输入面积" min="0">
             <span>亩</span>
           </div>
-        </div>
-        <div class="form-item">
-          <label>种植作物</label>
-          <select v-model="formData.crop">
-            <option value="中油杂19">中油杂19</option>
-            <option value="其他">其他</option>
-          </select>
         </div>
         <div class="form-item">
           <label>土壤状况</label>
@@ -139,9 +134,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import {ref, reactive, onMounted, watch} from 'vue';
 import axios from 'axios';
 import { useSelectStore } from '../../../../store/selectStore';
+import {getBaseList, getPlotsByBaseId,getPlotById,createBase} from '../../../../views/rapeseed/production-plan/base.api';
 
 // 定义基地类型接口
 interface BaseItem {
@@ -152,14 +148,17 @@ interface BaseItem {
 
 // 下拉框数据（基地和地块均从接口获取）
 const baseList = ref<BaseItem[]>([]);
-const plotList = ref<string[]>([]);
+const plotList = ref<{ plotId: string | number; plotName: string }[]>([]);
+
+// 存储当前地块的生长阶段
+const currentGrowthStage = ref('');
 
 // 状态仓库实例
 const selectStore = useSelectStore();
 
 // 选中值
 const selectedBase = ref<BaseItem | null>(null);
-const selectedPlot = ref('');
+const selectedPlot = ref<{ plotId: string | number; plotName: string } | null>(null);
 
 // 下拉框状态
 const isDropdownOpen = ref({
@@ -181,7 +180,6 @@ const formData = reactive({
   phone: '',
   address: '',
   area: 0,
-  crop: '中油杂19',
   soilType: '黏土',
   imageUrl: '',
   imageBase64: ''
@@ -212,30 +210,24 @@ const showMessage = (text: string, isError = false) => {
 // 获取基地列表
 const fetchBaseList = async () => {
   try {
-    const res = await axios.get('/jeecgboot/youcai/bases/getAllBases', {
-      headers: {
-        'X-Access-Token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzYyMDI4OTg2fQ.Ldq9jbKiSjBV86GAKbFx6ZnzK6m6QD4ohLSMB_vtmd4'
-      },
-      timeout: 10000
-    });
-
-    if (res.data?.success) {
-      const baseDataList = res.data.result || [];
-      // 存储完整的基地信息（包含ID和名称）
-      baseList.value = baseDataList.map((item: any) => ({
-        baseId: item.baseId,
-        baseName: item.baseName || item.fullName,
-        fullName: item.fullName
-      }));
-      if (baseList.value.length > 0) {
-        selectedBase.value = baseList.value[0];
-        selectStore.updateSelectedBase(selectedBase.value.baseName);
-        // 加载第一个基地的地块
-        fetchPlotList();
-      }
-    } else {
-      showMessage('获取基地列表失败：' + (res.data?.message || '未知错误'), true);
+    const res=await getBaseList();
+    const baseDataList = res;
+    // 存储完整的基地信息（包含ID和名称）
+    baseList.value = baseDataList.map((item: any) => ({
+      baseId: item.id,
+      baseName: item.baseName || item.fullName,
+      fullName: item.fullName
+    }));
+    if (baseList.value.length > 0) {
+      selectedBase.value = baseList.value[0];
+      selectStore.updateSelectedBase({
+        baseId: selectedBase.value.baseId,
+        baseName: selectedBase.value.baseName
+      });
+      // 加载第一个基地的地块
+      fetchPlotList();
     }
+
   } catch (error) {
     console.error('获取基地列表错误：', error);
     showMessage('获取基地列表失败，请检查网络', true);
@@ -254,37 +246,36 @@ const getSelectedBaseId = (): string | number | null => {
 
 // 获取地块列表（根据当前选中的基地ID）
 const fetchPlotList = async () => {
-  // const currentBaseId = getSelectedBaseId();
-  // if (!currentBaseId) {
-  //   plotList.value = [];
-  //   selectedPlot.value = '';
-  //   return;
-  // }
-  const currentBaseId = 1; // 手动固定ID测试
+  const currentBaseId = getSelectedBaseId();
+  if (!currentBaseId) {
+    plotList.value = [];
+    selectedPlot.value = null;
+    selectStore.updateSelectedPlot(null);
+    currentGrowthStage.value = ''; // 清空生长阶段
+    return;
+  }
   try {
-    const res = await axios.get('/jeecgboot/youcai/youcaiPlots/queryByBaseId', {
-      headers: {
-        'X-Access-Token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzYyMDI4OTg2fQ.Ldq9jbKiSjBV86GAKbFx6ZnzK6m6QD4ohLSMB_vtmd4'
-      },
-      params: { baseid: currentBaseId }, // 传递基地ID参数
-      timeout: 10000
-    });
-
-    if (res.data?.success) {
-      const plotDataList = res.data.result || [];
-      plotList.value = plotDataList.map((item: any) => item.plotName || item.fullName);
-      if (plotList.value.length > 0) {
-        selectedPlot.value = plotList.value[0];
-        selectStore.updateSelectedPlot(selectedPlot.value);
-      } else {
-        selectedPlot.value = '';
-      }
+    const res = await getPlotsByBaseId(currentBaseId);
+    plotList.value = res.map((item: any) => ({
+      plotId: item.id, // 按接口实际字段名（如id/plot_id）调整
+      plotName: item.plotName  // 按接口实际字段名调整
+    }));
+    // 选中第一个地块（若有）
+    if (plotList.value.length > 0) {
+      selectedPlot.value = plotList.value[0]; // 存储完整对象
+      // 同步到全局状态（后续步骤会修改全局方法）
+      selectStore.updateSelectedPlot(plotList.value[0]);
+      fetchPlotGrowthStage(plotList.value[0].plotId);
     } else {
-      showMessage('获取地块列表失败：' + (res.data?.message || '未知错误'), true);
+      plotList.value = [];
+      selectedPlot.value = null;
+      selectStore.updateSelectedPlot(null);
+      currentGrowthStage.value = '';
     }
   } catch (error) {
     console.error('获取地块列表错误：', error);
     showMessage('获取地块列表失败，请检查网络', true);
+    currentGrowthStage.value = '';
   }
 };
 
@@ -308,7 +299,10 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
     const matchedBase = baseList.value.find(item => item.baseName === value);
     if (matchedBase) {
       selectedBase.value = matchedBase;
-      selectStore.updateSelectedBase(value);
+      selectStore.updateSelectedBase({
+        baseId: matchedBase.baseId,
+        baseName: matchedBase.baseName
+      });
       // 切换基地后重新加载地块
       fetchPlotList();
     }
@@ -370,7 +364,6 @@ const resetForm = () => {
   formData.phone = '';
   formData.address = '';
   formData.area = 0;
-  formData.crop = '中油杂19';
   formData.soilType = '黏土';
   clearImage();
 };
@@ -413,32 +406,44 @@ const handleCreate = async () => {
       phone: formData.phone.trim() || null,
       address: formData.address.trim(),
       area: formData.area > 0 ? formData.area : null,
-      crop: formData.crop,
       soilType: formData.soilType,
       topViewUrl: formData.imageBase64 || null
     };
 
-    const res = await axios.post('/jeecgboot/youcai/bases/add', submitData, {
-      headers: {
-        'X-Access-Token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzYyMDI4OTg2fQ.Ldq9jbKiSjBV86GAKbFx6ZnzK6m6QD4ohLSMB_vtmd4',
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    });
-
-    if (res.data?.success) {
+    const res=await createBase(submitData);
+    console.log(res)
       showMessage('基地创建成功');
       // 重新加载基地列表（确保能获取到新基地的ID）
       fetchBaseList();
       isDialogOpen.value = false;
-    } else {
-      showMessage('创建失败：' + (res.data?.message || '服务器异常'), true);
-    }
   } catch (error) {
     console.error('创建基地请求错误：', error);
     showMessage('网络请求失败，请检查接口地址或Token', true);
   }
 };
+// 根据地块ID查询生长阶段
+const fetchPlotGrowthStage = async (plotId: string | number) => {
+  try {
+    const res = await getPlotById(plotId); // 后端接口：按plotId查地块详情
+    currentGrowthStage.value = res.growthStage || ''; // 假设接口返回result.growthStage
+  } catch (error) {
+    console.error('获取地块生长阶段失败：', error);
+    currentGrowthStage.value = '';
+  }
+};
+
+// 监听选中地块变化，实时更新生长阶段
+watch(
+  () => selectedPlot.value?.plotId,
+  (newPlotId) => {
+    if (newPlotId) {
+      fetchPlotGrowthStage(newPlotId);
+    } else {
+      currentGrowthStage.value = ''; // 未选地块时清空
+    }
+  },
+  { immediate: true } // 初始加载时执行
+);
 </script>
 
 <style scoped lang="less">
@@ -563,7 +568,19 @@ const handleCreate = async () => {
         100%,
         70%
       );
+      &.active {
+        font-weight: 700; // 字体加粗（700=bold）
+        border: 2px solid #2d8cf0; // 蓝色外边框（醒目不突兀）
+        border-radius: 4px; // 边框圆角，更美观
+        box-shadow: 0 0 10px rgba(45, 140, 240, 0.3); // 淡蓝色阴影，增强层次感
 
+        // 箭头颜色同步原背景色，避免边框冲突
+        &:after {
+          border-left-color: hsl(calc(60 + (var(--index) * 10)),
+          100%,
+          70%);
+        }
+      }
       &:not(:last-child) {
         margin-right: 10px;
         z-index: 1;
@@ -583,6 +600,7 @@ const handleCreate = async () => {
         );
         z-index: 2;
       }
+
     }
   }
 }
