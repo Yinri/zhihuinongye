@@ -7,7 +7,7 @@
         <div class="basis-card">
           <p class="card-title">前三年平均单产</p>
           <p class="card-value">{{ avgThreeYearYield || '未录入' }} kg / 亩</p>
-          <button @click="showYearInput = true" class="edit-btn">录入数据</button>
+          <button @click="handleShowModal" class="edit-btn">录入数据</button>
           <div class="increase-rate-container">
             <label class="rate-label">递增率：</label>
             <select v-model="increaseRate" class="rate-select">
@@ -37,7 +37,7 @@
       <div class="modal">
         <div class="modal-header">
           <h4>录入前三年单产数据</h4>
-          <button @click="showYearInput = false" class="close-btn">×</button>
+          <button @click="closeModal" class="close-btn">×</button>
         </div>
         <div class="modal-body">
           <div class="year-input-item" v-for="(year, index) in threeYears" :key="index">
@@ -47,12 +47,12 @@
               v-model.number="yearValues[index]"
               class="year-input"
               min="0"
-              placeholder="请输入"
+              :placeholder="yearValues[index] === undefined ? '无历史数据' : '请输入'"
             />
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="showYearInput = false" class="cancel-btn">取消</button>
+          <button @click="closeModal" class="cancel-btn">取消</button>
           <button @click="calculateAvg" class="confirm-btn">确认</button>
         </div>
       </div>
@@ -61,34 +61,167 @@
 </template>
 
 <script>
+import { getVarietyHistoryByVarietyId } from '../base.api';
+import { useCropVarietyStore } from '@/store/selectStore';
+import { storeToRefs } from 'pinia';
+import { message } from 'ant-design-vue';
+
 export default {
   name: 'YieldCalcBasis',
+  // 1. 修复 Pinia 引入方式：Vue2 选项式 API 需通过 setup 注入
+  setup() {
+    const cropStore = useCropVarietyStore();
+    const { selected } = storeToRefs(cropStore); // 保持 selected 响应式
+    return {
+      selected // 暴露给选项式 API 使用
+    };
+  },
   data() {
     const currentYear = new Date().getFullYear();
     return {
       showYearInput: false,
-      threeYears: [currentYear - 3, currentYear - 2, currentYear - 1],
-      yearValues: [null, null, null],
+      threeYears: [currentYear - 3, currentYear - 2, currentYear - 1], // 前三年年份
+      yearValues: [undefined, undefined, undefined], // 初始化改为 undefined（避免 null 警告）
       avgThreeYearYield: null,
-      increaseRate: '12'
+      increaseRate: '12' // 递增率默认值
     };
   },
+  watch: {
+    // 监听 Pinia 中选中品种的 ID 变化
+    'selected.id': {
+      immediate: true, // 组件初始化时立即执行一次
+      handler(newId, oldId) {
+        // 新ID存在且与旧ID不同时，才更新数据
+        if (newId && newId !== oldId) {
+          this.fetchAndUpdateAvg(); // 封装拉取数据和计算平均的逻辑
+        } else if (newId) {
+          // 初始化时已有品种ID，直接加载
+          this.fetchAndUpdateAvg();
+        } else {
+          // 未选择品种时，清空数据
+          this.avgThreeYearYield = null;
+          this.yearValues = [undefined, undefined, undefined];
+        }
+      }
+    }
+  },
   methods: {
-    calculateAvg() {
-      const validValues = this.yearValues.filter(v => v !== null && v !== '');
-      if (validValues.length !== 3) {
-        alert('请完善三年的单产数据');
+    async fetchAndUpdateAvg() {
+      try {
+        // 1. 拉取当前品种的历史产量
+        const response = await getVarietyHistoryByVarietyId(
+          this.selected.id,
+          1,
+          10,
+          {}
+        );
+
+        // 2. 筛选当前品种数据（兼容不同响应格式）
+        const records = response?.data?.records || response?.records || [];
+        const currentVarietyYields = records.filter(
+          item => String(item.varietyId).trim() === String(this.selected.id).trim()
+        );
+
+        // 3. 匹配前三年数据
+        this.yearValues = this.threeYears.map(targetYear => {
+          const targetYearStr = String(targetYear).trim();
+          const matchedItem = currentVarietyYields.find(
+            item => String(item.year).trim() === targetYearStr && item.yield != null
+          );
+          return matchedItem ? matchedItem.yield : undefined;
+        });
+
+        // 4. 自动计算平均单产（如果三年数据都存在）
+        this.autoCalculateAvg();
+
+      } catch (error) {
+        console.error('切换品种后拉取数据失败：', error);
+        this.avgThreeYearYield = null;
+        this.yearValues = [undefined, undefined, undefined];
+      }
+    },
+
+    // 自动计算平均单产（复用原有逻辑，增加自动触发）
+    autoCalculateAvg() {
+      const validValues = this.yearValues.filter(v =>
+        v !== undefined && v !== null && !isNaN(Number(v))
+      );
+      // 有数据就计算，无需用户手动点击确认
+      if (validValues.length > 0) {
+        const sum = validValues.reduce((total, val) => total + Number(val), 0);
+        this.avgThreeYearYield = (sum / validValues.length).toFixed(1);
+      } else {
+        this.avgThreeYearYield = null; // 无数据时清空
+      }
+    },
+    // 2. 优化弹窗打开逻辑：先判断品种ID，再拉取数据
+    async handleShowModal() {
+      // 检查是否已选择品种（避免无意义请求）
+      if (!this.selected?.id) {
+        alert('请先选择作物品种');
         return;
       }
-      const sum = validValues.reduce((total, val) => total + val, 0);
-      this.avgThreeYearYield = (sum / 3).toFixed(1);
+      // 拉取数据后显示弹窗
+      await this.fetchThreeYearYield();
+      this.showYearInput = true;
+    },
+
+    // 3. 修复接口请求：传递正确参数 + 适配返回格式
+    async fetchThreeYearYield() {
+      try {
+        // 接口参数：从 Pinia 获取 varietyId + 分页参数（后端默认 pageNo=1, pageSize=10）
+        const response = await getVarietyHistoryByVarietyId({
+          varietyId: this.selected.id, // 动态获取选中品种ID
+          pageNo: 1,
+          pageSize: 10
+        });
+        const currentVarietyYields = response.records.filter(
+          item => item.varietyId.toString() === this.selected.id
+        );
+        // 筛选前三年数据（匹配年份 + 取单产字段，需与后端字段一致，这里假设为 yieldPerAcre）
+        this.yearValues = this.threeYears.map(targetYear => {
+          // 关键：两者都转为字符串后再匹配（彻底避免类型/格式问题）
+          const targetYearStr = String(targetYear); // 如 2022 → "2022"
+          const matchedItem = currentVarietyYields.find(
+            item => String(item.year) === targetYearStr && item.yield != null
+          );
+          return matchedItem ? matchedItem.yield : undefined;
+        });
+      } catch (error) {
+        // 4. 优化错误提示：使用项目统一的消息组件
+        alert('拉取历史产量数据失败，请重试');
+        console.error('历史产量请求错误：', error);
+        this.yearValues = [undefined, undefined, undefined]; // 失败后重置
+      }
+    },
+
+    // 5. 优化平均值计算：兼容 0 作为有效数据
+    calculateAvg() {
+      const validValues = this.yearValues.filter(v =>
+        v !== undefined && v !== null && !isNaN(Number(v))
+      );
+      if (validValues.length === 0) {
+        message.warning('请至少录入一年的单产数据');
+        return;
+      }
+      const sum = validValues.reduce((total, val) => total + Number(val), 0);
+      this.avgThreeYearYield = (sum / validValues.length).toFixed(1);
       this.showYearInput = false;
+      message.success(`已计算 ${validValues.length} 年平均单产`);
+    },
+
+    // 原有关闭弹窗方法：增加数据重置
+    closeModal() {
+      this.showYearInput = false;
+      // 可选：关闭时重置输入框（根据需求决定是否保留）
+      // this.yearValues = [undefined, undefined, undefined];
     }
   }
 };
 </script>
 
 <style scoped>
+/* 样式部分无修改，保持原代码 */
 .yield-calc-basis {
   border: 1px solid #d9d9d9;
   margin-top: 5px;
@@ -114,7 +247,7 @@ export default {
 
 .basis-cards {
   display: flex;
-  gap: 200px; /* 调大板块之间的间距 */
+  gap: 200px;
   width: 90%;
   justify-content: center;
   flex-wrap: wrap;
@@ -133,9 +266,8 @@ export default {
   gap: 12px;
 }
 
-/* 统一所有卡片的样式，确保一致性 */
 .info-card {
-  background-color: #f0f0f0; /* 与前三年卡片样式统一 */
+  background-color: #f0f0f0;
 }
 
 .card-title {
@@ -189,7 +321,6 @@ export default {
   padding-top: 8px;
 }
 
-/* 弹窗样式保持不变 */
 .modal-overlay {
   position: fixed;
   top: 0;

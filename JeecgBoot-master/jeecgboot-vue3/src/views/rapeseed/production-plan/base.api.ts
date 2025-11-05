@@ -19,6 +19,8 @@ enum Api {
   getPlotPlanByPlotId='/youcai/youcaiProductionPlans/queryByPlotId',
   //查询所有品种信息
   getAllVariety='/youcai/youcaiRapeVarieties/getAll',
+  //通过品种id查询该品种的历年产量
+  getVarietyHistoryByVarietyId='/youcai/youcaiHistoricalYield/queryByVarietyId',
 }
 
 /**
@@ -91,4 +93,21 @@ export const getPlotPlanByPlotId: Function = (plotId) => {
  */
 export const getAllVariety: Function = () => {
   return defHttp.get({ url: Api.getAllVariety });
+};
+
+/**
+ * 通过品种ID查询该品种的历年产量数据
+ * @param varietyId 品种ID
+ * @param pageNo 页码（默认1）
+ * @param pageSize 每页条数（默认10）
+ * @param otherParams 其他筛选参数（如年份、区域等，可选）
+ * @returns 分页的产量历史数据
+ */
+export const getVarietyHistoryByVarietyId: Function = (params) => {
+  // 从对象中解构参数，设置默认值
+  const { varietyId, pageNo = 1, pageSize = 10, ...otherParams } = params || {};
+  return defHttp.get({
+    url: Api.getVarietyHistoryByVarietyId,
+    params: { varietyId, pageNo, pageSize, ...otherParams }
+  });
 };

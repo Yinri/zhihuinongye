@@ -23,3 +23,38 @@ export const useSelectStore = defineStore('select', {
     }
   }
 });
+
+
+// 定义并导出store，命名规范：use+模块名+Store
+export const useCropVarietyStore = defineStore('cropVariety', {
+  // 状态：存储选中的品种信息
+  state: () => ({
+    selected: {
+      id: '', // 品种ID（对应value）
+      name: '' // 品种名称（对应label）
+    }
+  }),
+
+  // 动作：修改状态的方法（推荐通过方法修改，便于追踪和扩展）
+  actions: {
+    // 更新选中的品种
+    setSelectedVariety(variety) {
+      // 校验参数，确保传入有效数据
+      if (variety && variety.id && variety.name) {
+        this.selected = { ...variety } // 解构赋值，确保响应式
+      }
+    },
+
+    // 清空选中状态（可选，根据业务需求）
+    clearSelected() {
+      this.selected = { id: '', name: '' }
+    }
+  },
+
+  //  getter：派生状态（可选，用于格式化或计算）
+  getters: {
+    isSelected: (state) => {
+      return !!state.selected.id // 判断是否有选中的品种
+    }
+  }
+})

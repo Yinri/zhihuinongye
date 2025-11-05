@@ -1,4 +1,3 @@
--- 假设基地表名为 youcai_bases（根据实际表名修改）
 ALTER TABLE youcai_plots
     ADD COLUMN growth_stage VARCHAR(20)
     COMMENT '生长阶段（枚举值：未播种、已播种、苗期、蕾薹期、开花期、角果成熟期、收获与整地）'

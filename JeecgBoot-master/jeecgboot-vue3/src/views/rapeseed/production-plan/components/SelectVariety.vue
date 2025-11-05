@@ -71,7 +71,8 @@
 <script>
 import { getAllVariety } from '../base.api';
 import { Modal } from 'ant-design-vue';
-
+import { useCropVarietyStore } from '@/store/selectStore';
+import { storeToRefs } from 'pinia'; // 用于保持解构后的数据响应式
 export default {
   components: {
     aModal: Modal
@@ -94,6 +95,7 @@ export default {
   },
   created() {
     this.fetchVarieties();
+    this.initStore();
   },
   computed: {
     hasMoreVarieties() {
@@ -104,8 +106,30 @@ export default {
     // 选择品种
     selectVariety(value) {
       this.selectedVariety = value;
+      // 找到选中品种的完整信息（name和id）
+      const selectedItem = this.displayedVarieties.find(
+        item => item.value === value
+      );
+      if (selectedItem) {
+        // 调用store方法更新状态
+        const cropStore = useCropVarietyStore();
+        cropStore.setSelectedVariety({
+          id: selectedItem.value,
+          name: selectedItem.label
+        });
+      }
     },
-
+    // 获取品种列表后，初始化选中状态到store
+    initStore() {
+      if (this.displayedVarieties.length) {
+        const firstVariety = this.displayedVarieties[0];
+        const cropStore = useCropVarietyStore();
+        cropStore.setSelectedVariety({
+          id: firstVariety.value,
+          name: firstVariety.label
+        });
+      }
+    },
     // 获取品种列表
     async fetchVarieties() {
       try {
@@ -196,7 +220,7 @@ export default {
           this.displayedVarieties.splice(-1, 1, varietyToAdd);
         }
 
-        this.selectedVariety = varietyToAdd.value;
+        this.selectVariety(varietyToAdd.value);
         this.resetDialogState();
         this.showAddDialog = false;
       }
