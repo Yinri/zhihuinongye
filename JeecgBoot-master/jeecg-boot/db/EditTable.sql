@@ -26,3 +26,16 @@ ALTER TABLE youcai_rape_varieties
 -- 4. 添加唯一约束
 ALTER TABLE youcai_rape_varieties
     ADD CONSTRAINT uk_youcai_variety_name UNIQUE (variety_name);
+
+DROP TABLE IF EXISTS youcai_historical_yield;
+CREATE TABLE `youcai_historical_yield` (
+                                           `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                           `year` int(4) NOT NULL COMMENT '年份（如2022）',
+                                           `yield` decimal(10,2) NOT NULL COMMENT '单产（kg/亩）',
+                                           `variety_id` int(11) NOT NULL COMMENT '品种ID（关联品种表）',
+                                           `plot` varchar(100) DEFAULT NULL COMMENT '地块名称',
+                                           `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '录入时间',
+                                           PRIMARY KEY (`id`),
+    -- 仅保留外键关联，无其他索引
+                                           CONSTRAINT `fk_yield_variety` FOREIGN KEY (`variety_id`) REFERENCES `youcai_rape_varieties` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='油菜历史产量表';
