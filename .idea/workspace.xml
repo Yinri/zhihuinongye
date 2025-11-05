@@ -4,8 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="更改了菜单">
+    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="新的菜单sql">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/harvest/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/harvest/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/lodgingRisk.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/lodgingRisk.api.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,6 +43,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Docker.JeecgBoot-master/docker-compose-cloud.yml.jeecg-boot-demo: Compose 部署.executor": "Run",
     "Maven.jeecg-boot-parent [clean].executor": "Run",
     "Maven.jeecg-boot-parent [install].executor": "Run",
     "Maven.jeecg-module-system [install].executor": "Run",
@@ -67,11 +71,19 @@
     "ts.external.directory.path": "D:\\gitCode\\zhihuinongye\\JeecgBoot-master\\jeecgboot-vue3\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true",
     "应用程序.JeecgSystemApplication.executor": "Run"
+  },
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "mysql"
+    ]
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot\db" />
     </key>
   </component>
   <component name="RunManager" selected="Spring Boot.JeecgSystemApplication">
@@ -88,6 +100,11 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="EditTable.sql" type="DatabaseScript" editBeforeRun="true" temporary="true" nameIsGenerated="true">
+      <script-file value="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/db/EditTable.sql" />
+      <script-mode>FILE</script-mode>
+      <method v="2" />
+    </configuration>
     <configuration name="JeecgSystemApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="jeecg-system-start" />
       <option name="SHORTEN_COMMAND_LINE" value="ARGS_FILE" />
@@ -102,8 +119,29 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
+      <deployment type="docker-compose.yml">
+        <settings />
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration name="JeecgBoot-master/docker-compose-cloud.yml.jeecg-boot-demo: Compose 部署" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="services">
+            <list>
+              <option value="jeecg-boot-demo" />
+            </list>
+          </option>
+          <option name="sourceFilePath" value="JeecgBoot-master/docker-compose-cloud.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="数据库脚本.EditTable.sql" />
+        <item itemvalue="Docker.JeecgBoot-master/docker-compose-cloud.yml.jeecg-boot-demo: Compose 部署" />
         <item itemvalue="应用程序.JeecgSystemApplication" />
       </list>
     </recent_temporary>
@@ -138,6 +176,10 @@
       <workItem from="1761899609865" duration="36000" />
       <workItem from="1761900408101" duration="117000" />
       <workItem from="1761900588422" duration="102000" />
+      <workItem from="1761900711516" duration="151000" />
+      <workItem from="1761900903100" duration="72000" />
+      <workItem from="1761983083140" duration="34518000" />
+      <workItem from="1762325202553" duration="8388000" />
     </task>
     <task id="LOCAL-00001" summary="修改了引入bug">
       <option name="closed" value="true" />
@@ -163,7 +205,23 @@
       <option name="project" value="LOCAL" />
       <updated>1761900512815</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="新的菜单sql">
+      <option name="closed" value="true" />
+      <created>1761900764238</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1761900764238</updated>
+    </task>
+    <task id="LOCAL-00005" summary="新的菜单sql">
+      <option name="closed" value="true" />
+      <created>1761900775607</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1761900775607</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -173,6 +231,7 @@
     <MESSAGE value="修改了引入bug" />
     <MESSAGE value="去掉之前的生长阶段设计" />
     <MESSAGE value="更改了菜单" />
-    <option name="LAST_COMMIT_MESSAGE" value="更改了菜单" />
+    <MESSAGE value="新的菜单sql" />
+    <option name="LAST_COMMIT_MESSAGE" value="新的菜单sql" />
   </component>
 </project>

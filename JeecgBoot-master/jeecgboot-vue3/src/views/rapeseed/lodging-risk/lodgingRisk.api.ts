@@ -19,6 +19,8 @@ enum Api {
   Export = '/rapeseed/lodgingRisk/export',
   // 导入
   Import = '/rapeseed/lodgingRisk/importExcel',
+  // 获取倒伏风险预警数据
+  RiskData = '/rapeseed/lodgingRisk/riskData',
 }
 
 // 获取倒伏风险预警列表
@@ -59,4 +61,9 @@ export const exportLodgingRisk = (params?: any) => {
 // 导入倒伏风险预警
 export const importLodgingRisk = (params: any) => {
   return defHttp.uploadFile({ url: Api.Import }, params );
+};
+
+// 获取倒伏风险预警数据
+export const getLodgingRiskData = (params?: any) => {
+  return defHttp.get({ url: Api.RiskData, params });
 };
