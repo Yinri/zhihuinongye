@@ -170,6 +170,16 @@ spring:
     host: 127.0.0.1
     port: 6379
     password: ''
+# Python算法服务配置
+python:
+  service:
+    # Python服务地址（同一服务器）
+    url: http://localhost:8000
+    # API密钥
+    api-key: dev-test-key-123
+    # 是否启用
+    enabled: true
+
 #mybatis plus 设置
 mybatis-plus:
   mapper-locations: classpath*:org/jeecg/**/xml/*Mapper.xml
