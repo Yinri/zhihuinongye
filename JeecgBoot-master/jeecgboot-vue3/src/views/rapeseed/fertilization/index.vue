@@ -222,8 +222,8 @@ import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './fertilization.data';
 import { getFertilizationList, deleteFertilization, exportFertilization, importFertilization, getPlotNutrientStatus, getFertilizationRecommendation, getWeatherForecast, executeQuickFertilization, planQuickFertilization } from './fertilization.api';
 import FertilizationModal from './FertilizationModal.vue';
-import BaseSelect from '../production-plan/components/BaseSelect.vue';
-import PlotSelect from '../production-plan/components/PlotSelect.vue';
+import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
+import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
 import { Tag } from 'ant-design-vue';
 import { useECharts } from '/@/hooks/web/useECharts';
 

@@ -300,8 +300,8 @@ import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
 import { getPlotStatus, getPenmanPredict, getInterventionComparison } from './irrigation.api';
 import IrrigationModal from './IrrigationModal.vue';
-import BaseSelect from '../production-plan/components/BaseSelect.vue';
-import PlotSelect from '../production-plan/components/PlotSelect.vue';
+import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
+import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
 // GrowthTimeline 已移除对应板块
 import { useECharts } from '/@/hooks/web/useECharts';
 import { Tag } from 'ant-design-vue';

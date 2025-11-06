@@ -1,8 +1,8 @@
 /**
  * 基地管理API
  */
-import { defHttp } from '/@/utils/http/axios';
-import { getUrl } from '/@/utils';
+import { defHttp } from '/src/utils/http/axios';
+import { getUrl } from '/src/utils';
 
 enum Api {
   // 获取基地列表
@@ -21,6 +21,10 @@ enum Api {
   getAllVariety='/youcai/youcaiRapeVarieties/getAll',
   //通过品种id查询该品种的历年产量
   getVarietyHistoryByVarietyId='/youcai/youcaiHistoricalYield/queryByVarietyId',
+  //新增品种的历年产量
+  addVarietyHistory='/youcai/youcaiHistoricalYield/add',
+  //更新品种的历年产量（根据id更新）
+  updateVarietyHistory='/youcai/youcaiHistoricalYield/edit',
 }
 
 /**
@@ -111,3 +115,28 @@ export const getVarietyHistoryByVarietyId: Function = (params) => {
     params: { varietyId, pageNo, pageSize, ...otherParams }
   });
 };
+
+/**
+ * 新增品种的历年产量数据（适配单条提交）
+ * @param data 单条产量数据（对象格式，不可传数组）
+ * @returns 新增结果
+ */
+export const addVarietyHistory: Function = (data) => {
+  return defHttp.post({
+    url: Api.addVarietyHistory,
+    data
+  });
+};
+
+/**
+ * 更新品种的历年产量数据（适配单条提交）
+ * @param data 单条待更新数据（必须含id，对象格式）
+ * @returns 更新结果
+ */
+export const updateVarietyHistory: Function = (data) => {
+  return defHttp.post({
+    url: Api.updateVarietyHistory,
+    data
+  });
+};
+

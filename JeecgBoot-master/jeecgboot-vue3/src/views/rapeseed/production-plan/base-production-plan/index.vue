@@ -9,13 +9,16 @@
 <!--&lt;!&ndash;      />&ndash;&gt;-->
 <!--    </a-card>-->
     <QueryPlan></QueryPlan>
-    <SelectVariety></SelectVariety>
-<!--    <ShowAllVariety></ShowAllVariety>-->
+<!--    <SelectVariety></SelectVariety>-->
+    <ShowAllVariety></ShowAllVariety>
     <ProductionAdjust></ProductionAdjust>
     <PredictionResults></PredictionResults>
-    <DataBasis></DataBasis>
+<!--    <DataBasis></DataBasis>-->
     <div class="parent-container">
     <BaseOverview></BaseOverview>
+
+<!--        <DataBasis></DataBasis>-->
+
     <ProgressTrack></ProgressTrack>
     </div>
 <!--    &lt;!&ndash; 生产计划列表区域 &ndash;&gt;-->
@@ -103,22 +106,22 @@
 
 <script lang="ts" name="rapeseed-production-plan" setup>
   import { ref, computed } from 'vue';
-import { BasicTable, TableAction, ActionItem } from '/@/components/Table';
-import { useModal } from '/@/components/Modal';
-import { useListPage } from '/@/hooks/system/useListPage';
-import { useMessage } from '/@/hooks/web/useMessage';
-import ProductionPlanModal from './ProductionPlanModal.vue';
-import { columns, searchFormSchema } from './productionPlan.data';
-import { getProductionPlanList, deleteProductionPlan, batchDeleteProductionPlan, getImportUrl, getExportUrl, getProductionPlanByBaseId } from './productionPlan.api';
-import { Icon } from '/@/components/Icon';
-  import SelectVariety from "@/views/rapeseed/production-plan/components/SelectVariety.vue";
-  import ProductionAdjust from "@/views/rapeseed/production-plan/components/ProductionAdjust.vue";
-  import PredictionResults from "@/views/rapeseed/production-plan/components/PredictionResults.vue";
-  import DataBasis from "@/views/rapeseed/production-plan/components/DataBasis.vue";
-  import BaseOverview from "@/views/rapeseed/production-plan/components/BaseOverview.vue";
-  import ProgressTrack from "@/views/rapeseed/production-plan/components/ProgressTrack.vue";
-  import ShowAllVariety from "@/views/rapeseed/production-plan/components/ShowAllVariety.vue";
-  import QueryPlan from "@/views/rapeseed/production-plan/components/QueryPlan.vue";
+import { BasicTable, TableAction, ActionItem } from '/src/components/Table';
+import { useModal } from '/src/components/Modal';
+import { useListPage } from '/src/hooks/system/useListPage';
+import { useMessage } from '/src/hooks/web/useMessage';
+import ProductionPlanModal from '../ProductionPlanModal.vue';
+import { columns, searchFormSchema } from '../productionPlan.data';
+import { getProductionPlanList, deleteProductionPlan, batchDeleteProductionPlan, getImportUrl, getExportUrl, getProductionPlanByBaseId } from '../productionPlan.api';
+import { Icon } from '/src/components/Icon';
+  import SelectVariety from "@/views/rapeseed/production-plan/plot-production-plan/components/SelectVariety.vue";
+  import ProductionAdjust from "@/views/rapeseed/production-plan/plot-production-plan/components/ProductionAdjust.vue";
+  import PredictionResults from "@/views/rapeseed/production-plan/plot-production-plan/components/PredictionResults.vue";
+  import DataBasis from "@/views/rapeseed/production-plan/plot-production-plan/components/DataBasis.vue";
+  import BaseOverview from "@/views/rapeseed/production-plan/plot-production-plan/components/BaseOverview.vue";
+  import ProgressTrack from "@/views/rapeseed/production-plan/plot-production-plan/components/ProgressTrack.vue";
+  import ShowAllVariety from "@/views/rapeseed/production-plan/plot-production-plan/components/ShowAllVariety.vue";
+  import QueryPlan from "@/views/rapeseed/production-plan/plot-production-plan/components/QueryPlan.vue";
 
   const { createMessage } = useMessage();
   const loading = ref(false);
@@ -288,13 +291,25 @@ import { Icon } from '/@/components/Icon';
 .production-plan-page {
   padding: 5px;
   background-color: #f0f2f5;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 100px);
 }
 .parent-container {
   display: flex; /* 水平排列子组件 */
   gap: 10px; /* 两个组件之间的间距，可选 */
   width: 100%; /* 父容器占满页面宽度 */
   box-sizing: border-box;
+  align-items: flex-start;
+}
+.prediction-card {
+  display: flex;
+  flex-direction: column; /* 垂直排列子组件 */
+  flex: 1; /* 占满剩余宽度，可根据需要调整 */
+}
+
+/* ProgressTrack 组件：单独占一部分宽度 */
+.ProgressTrack {
+  flex: 1; /* 与左侧区域平分宽度，可根据需要调整比例 */
+  min-width: 300px; /* 避免过窄 */
 }
 .page-header {
   margin-bottom: 24px;

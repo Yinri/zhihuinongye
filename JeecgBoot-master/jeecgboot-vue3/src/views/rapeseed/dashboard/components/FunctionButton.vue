@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useSelectStore } from '/@/store/selectStore'; // 全局状态
 // 导入基地/地块查询接口（根据实际API路径调整）
-import { getBaseById, getPlotById } from '/@/views/rapeseed/production-plan/base.api';
+import { getBaseById, getPlotById } from '/src/views/rapeseed/production-plan/plot-production-plan/base.api';
 // 弹窗显示控制
 const showBaseInfoModal = ref(false);
 const showPlotInfoModal = ref(false);

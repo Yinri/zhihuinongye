@@ -129,9 +129,9 @@ import { Icon } from '/@/components/Icon';
 import PlotInfoModal from './PlotInfoModal.vue';
 import { columns, searchFormSchema } from './plotInfo.data';
 import { getPlotInfoList, deletePlotInfo, batchDeletePlotInfo, getImportUrl, getExportUrl } from './plotInfo.api';
-import BaseSelect from '../production-plan/components/BaseSelect.vue';
-import PlotSelect from '../production-plan/components/PlotSelect.vue';
-import GrowthTimeline from '../production-plan/components/GrowthTimeline.vue';
+import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
+import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
+import GrowthTimeline from '@/views/rapeseed/production-plan/plot-production-plan/components/GrowthTimeline.vue';
 
 const { createMessage } = useMessage();
 

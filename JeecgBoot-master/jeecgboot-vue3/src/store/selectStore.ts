@@ -1,7 +1,7 @@
 // store/selectStore.ts
 import { defineStore } from 'pinia';
 
-// 定义并导出状态仓库，命名为“select”（对应下拉框相关状态）
+// 保存下拉框选中的基地id和基地名，地块id和地块名
 export const useSelectStore = defineStore('select', {
   // 1. 存储状态（基地、地块的选中值）
   state: () => ({
@@ -25,13 +25,17 @@ export const useSelectStore = defineStore('select', {
 });
 
 
-// 定义并导出store，命名规范：use+模块名+Store
+// 保存选中的品种id和name
 export const useCropVarietyStore = defineStore('cropVariety', {
   // 状态：存储选中的品种信息
   state: () => ({
     selected: {
       id: '', // 品种ID（对应value）
       name: '' // 品种名称（对应label）
+    },
+    yieldCalcData: {
+      avgThreeYearYield: null, // 前三年平均单产
+      increaseRate: '12' // 递增率（默认12%，与组件默认一致）
     }
   }),
 
@@ -43,6 +47,10 @@ export const useCropVarietyStore = defineStore('cropVariety', {
       if (variety && variety.id && variety.name) {
         this.selected = { ...variety } // 解构赋值，确保响应式
       }
+    },
+    updateYieldCalcData(data) {
+      // 合并新数据，保留未传入的原有字段
+      this.yieldCalcData = { ...this.yieldCalcData, ...data };
     },
 
     // 清空选中状态（可选，根据业务需求）
@@ -58,3 +66,4 @@ export const useCropVarietyStore = defineStore('cropVariety', {
     }
   }
 })
+

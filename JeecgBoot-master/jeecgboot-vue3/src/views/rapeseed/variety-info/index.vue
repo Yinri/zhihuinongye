@@ -130,9 +130,9 @@ import { Icon } from '/@/components/Icon';
 import VarietyInfoModal from './VarietyInfoModal.vue';
 import { columns, searchFormSchema } from './varietyInfo.data';
 import { getVarietyInfoList, deleteVarietyInfo, batchDeleteVarietyInfo, getImportUrl, getExportUrl } from './varietyInfo.api';
-import BaseSelect from '../production-plan/components/BaseSelect.vue';
-import PlotSelect from '../production-plan/components/PlotSelect.vue';
-import GrowthTimeline from '../production-plan/components/GrowthTimeline.vue';
+import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
+import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
+import GrowthTimeline from '@/views/rapeseed/production-plan/plot-production-plan/components/GrowthTimeline.vue';
 
 const { createMessage } = useMessage();
 

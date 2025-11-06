@@ -137,7 +137,7 @@
 import {ref, reactive, onMounted, watch} from 'vue';
 import axios from 'axios';
 import { useSelectStore } from '../../../../store/selectStore';
-import {getBaseList, getPlotsByBaseId,getPlotById,createBase} from '../../../../views/rapeseed/production-plan/base.api';
+import {getBaseList, getPlotsByBaseId,getPlotById,createBase} from '../../../../views/rapeseed/production-plan/plot-production-plan/base.api';
 
 // 定义基地类型接口
 interface BaseItem {

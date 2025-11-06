@@ -173,9 +173,9 @@ import { Icon } from '/@/components/Icon';
 // import { columns, searchFormSchema } from './seedingQuality.data';
 // import { getInsectControlList, deleteInsectControl, exportInsectControl, importInsectControl } from './diseasdeControl.api';
 import InsectControlModal from './InsectControlModal.vue';
-import BaseSelect from '../production-plan/components/BaseSelect.vue';
-import PlotSelect from '../production-plan/components/PlotSelect.vue';
-import GrowthTimeline from '../production-plan/components/GrowthTimeline.vue';
+import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
+import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
+import GrowthTimeline from '@/views/rapeseed/production-plan/plot-production-plan/components/GrowthTimeline.vue';
 import * as echarts from 'echarts'
 import { message } from 'ant-design-vue'
 import { message as createMessage } from 'ant-design-vue'

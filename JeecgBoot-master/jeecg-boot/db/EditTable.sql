@@ -26,7 +26,21 @@ ALTER TABLE youcai_rape_varieties
 ALTER TABLE youcai_rape_varieties
     ADD CONSTRAINT uk_youcai_variety_name UNIQUE (variety_name);
 
+
+
+
+-- 先检查是否已存在该索引
+SHOW INDEX FROM youcai_rape_varieties WHERE Key_name = 'uk_youcai_variety_name';
+
+-- 若存在且需要修改，可先删除再重建（谨慎操作，确保无重复数据）
+DROP INDEX uk_youcai_variety_name ON youcai_rape_varieties;
+-- 重新添加唯一索引（确保variety_name无重复值）
+ALTER TABLE youcai_rape_varieties ADD CONSTRAINT uk_youcai_variety_name UNIQUE (variety_name);
+
+-- 确保表已删除（若之前删除失败，可能是有外键关联或数据残留）
 DROP TABLE IF EXISTS youcai_historical_yield;
+
+-- 重建表并添加唯一索引
 CREATE TABLE `youcai_historical_yield` (
                                            `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
                                            `year` int(4) NOT NULL COMMENT '年份（如2022）',
@@ -35,6 +49,8 @@ CREATE TABLE `youcai_historical_yield` (
                                            `plot` varchar(100) DEFAULT NULL COMMENT '地块名称',
                                            `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '录入时间',
                                            PRIMARY KEY (`id`),
-    -- 仅保留外键关联，无其他索引
+    -- 关键：添加品种+年份的唯一约束，防止重复数据
+                                           UNIQUE KEY `uk_variety_year` (`variety_id`, `year`),
+    -- 外键关联品种表（确保variety_id在品种表中存在）
                                            CONSTRAINT `fk_yield_variety` FOREIGN KEY (`variety_id`) REFERENCES `youcai_rape_varieties` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='油菜历史产量表';
