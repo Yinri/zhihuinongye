@@ -53,6 +53,15 @@ public class YoucaiBases implements Serializable {
 	@Excel(name = "基地地址（具体地址）", width = 15)
     @Schema(description = "基地地址（具体地址）")
     private java.lang.String address;
+
+    /**纬度*/
+    @Excel(name = "纬度", width = 15)
+    @Schema(description = "纬度")
+    private java.math.BigDecimal latitude;
+    /**经度*/
+    @Excel(name = "经度", width = 15)
+    @Schema(description = "经度")
+    private java.math.BigDecimal longitude;
     // ---------------------- 新增字段开始 ----------------------
     /**面积（亩）*/
     @Excel(name = "面积（亩）", width = 15)

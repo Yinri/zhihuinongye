@@ -179,7 +179,16 @@ python:
     api-key: dev-test-key-123
     # 是否启用
     enabled: true
-
+weather:
+  qweather:
+    # 和风天气API密钥
+    api-key: ca68b3e96262486f97cd1470ed37adbd
+    timeout: 5000
+    retry-count: 3
+    retry-delay: 1000
+    host: n94jaauanj.re.qweatherapi.com
+    # 是否启用
+    enabled: true
 #mybatis plus 设置
 mybatis-plus:
   mapper-locations: classpath*:org/jeecg/**/xml/*Mapper.xml
@@ -192,8 +201,8 @@ mybatis-plus:
       # 默认数据库表下划线命名
       table-underline: true
   configuration:
-#    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用
-#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     # 返回类型为Map,显示null对应的字段
     call-setters-on-nulls: true
 #jeecg专用配置

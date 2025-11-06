@@ -5,6 +5,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
+import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
 import org.jeecg.modules.youcai.entity.YoucaiLodgingRiskWarning;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
 
@@ -27,13 +28,28 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
  * @Date:   2025-10-18
  * @Version: V1.0
  */
-@Tag(name="倒伏风险预警表")
+@Tag(name="倒伏风险预警")
 @RestController
-@RequestMapping("/youcai/lodgingRiskWarning")
+@RequestMapping("/rapeseed/lodgingRisk")
 @Slf4j
 public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLodgingRiskWarning, IYoucaiLodgingRiskWarningService> {
 	@Autowired
 	private IYoucaiLodgingRiskWarningService youcaiLodgingRiskWarningService;
+
+     /**
+      * 根据地块Id查询倒伏风险数据
+      */
+	
+    @AutoLog(value = "倒伏风险预警表-获取倒伏风险数据")
+    @Operation(summary="倒伏风险预警表-获取倒伏风险数据")
+    @GetMapping(value = "/riskData/{plotId}")
+	public Result<LodgingRiskAssessmentResponseDTO> riskAssessment(@PathVariable Integer plotId) {
+        LodgingRiskAssessmentResponseDTO riskData = youcaiLodgingRiskWarningService.riskAssessmentById(plotId);
+		return Result.OK(riskData);
+	}
+
+
+
 	
 	/**
 	 * 分页列表查询

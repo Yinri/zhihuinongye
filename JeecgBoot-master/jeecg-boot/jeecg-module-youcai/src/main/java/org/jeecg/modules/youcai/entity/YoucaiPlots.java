@@ -34,9 +34,9 @@ public class YoucaiPlots implements Serializable {
     private static final long serialVersionUID = 1L;
 
 	/**地块ID*/
-	@TableId(type = IdType.ASSIGN_ID)
+	@TableId(type = IdType.AUTO)
     @Schema(description = "地块ID")
-    private java.lang.Integer id;
+    private Integer id;
 	/**地块名称*/
 	@Excel(name = "地块名称", width = 15)
     @Schema(description = "地块名称")

@@ -1,5 +1,7 @@
 package org.jeecg.modules.youcai.service;
 
+import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentRequestDTO;
+import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
 import org.jeecg.modules.youcai.entity.YoucaiLodgingRiskWarning;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -9,6 +11,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @Date:   2025-10-18
  * @Version: V1.0
  */
-public interface IYoucaiLodgingRiskWarningService extends IService<YoucaiLodgingRiskWarning> {
-
+public interface IYoucaiLodgingRiskWarningService extends IService<YoucaiLodgingRiskWarning> {    
+    LodgingRiskAssessmentResponseDTO riskAssessmentById(Integer plotId);
 }
