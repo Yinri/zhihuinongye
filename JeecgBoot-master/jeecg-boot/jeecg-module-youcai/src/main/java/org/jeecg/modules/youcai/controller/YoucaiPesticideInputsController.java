@@ -1,10 +1,12 @@
 package org.jeecg.modules.youcai.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
+import org.jeecg.config.shiro.IgnoreAuth;
 import org.jeecg.modules.youcai.entity.YoucaiPesticideInputs;
 import org.jeecg.modules.youcai.service.IYoucaiPesticideInputsService;
 
@@ -161,5 +163,20 @@ public class YoucaiPesticideInputsController extends JeecgController<YoucaiPesti
     public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
         return super.importExcel(request, response, YoucaiPesticideInputs.class);
     }
+
+	@Operation(summary="农药投入表-查询农药")
+	@GetMapping("/name/list")
+	 public Result<List<String>> getPesticideNameList() {
+		 try {
+			 List<String> pesticideNames = youcaiPesticideInputsService.listDistinctPesticideNames();
+			 return Result.OK(pesticideNames);
+		 } catch (Exception e) {
+			 log.error("获取农药列表失败", e);
+			 return Result.error("获取农药列表失败");
+		 }
+	 }
+
+
+
 
 }

@@ -13,8 +13,6 @@ enum Api {
   Delete = '/rapeseed/lodgingRisk/delete',
   // 批量删除
   BatchDelete = '/rapeseed/lodgingRisk/batchDelete',
-  // 详情
-  Detail = '/rapeseed/lodgingRisk/queryById',
   // 导出
   Export = '/rapeseed/lodgingRisk/export',
   // 导入
@@ -48,10 +46,6 @@ export const batchDeleteLodgingRisk = (ids: string[], params?: AxiosRequestConfi
   return defHttp.delete({ url: Api.BatchDelete, data: { ids } });
 };
 
-// 获取倒伏风险预警详情
-export const getLodgingRiskById = (id: string) => {
-  return defHttp.get({ url: `${Api.Detail}/${id}` });
-};
 
 // 导出倒伏风险预警
 export const exportLodgingRisk = (params?: any) => {
@@ -64,6 +58,6 @@ export const importLodgingRisk = (params: any) => {
 };
 
 // 获取倒伏风险预警数据
-export const getLodgingRiskData = (params?: any) => {
-  return defHttp.get({ url: Api.RiskData, params });
+export const getLodgingRiskDataById = (plotId: string) => {
+  return defHttp.get({ url:`${Api.RiskData}/${plotId}` });
 };

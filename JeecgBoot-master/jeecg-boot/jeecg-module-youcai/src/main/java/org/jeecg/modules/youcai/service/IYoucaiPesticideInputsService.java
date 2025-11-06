@@ -3,6 +3,8 @@ package org.jeecg.modules.youcai.service;
 import org.jeecg.modules.youcai.entity.YoucaiPesticideInputs;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+
 /**
  * @Description: 农药投入表
  * @Author: jeecg-boot
@@ -10,5 +12,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @Version: V1.0
  */
 public interface IYoucaiPesticideInputsService extends IService<YoucaiPesticideInputs> {
-
+    List<String> listDistinctPesticideNames();
 }
