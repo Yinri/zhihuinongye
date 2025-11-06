@@ -4,6 +4,7 @@
       <div class="main-value">200-220</div>
       <div class="unit">公斤 / 亩</div>
     </div>
+
     <div class="yield-ranges">
       <!-- 品种潜力范围（文字在进度条左侧） -->
       <div class="range-item">

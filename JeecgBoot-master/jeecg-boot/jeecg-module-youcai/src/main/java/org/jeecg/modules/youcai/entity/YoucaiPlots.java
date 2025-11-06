@@ -49,6 +49,10 @@ public class YoucaiPlots implements Serializable {
 	@Excel(name = "地块面积(亩)", width = 15)
     @Schema(description = "地块面积(亩)")
     private java.math.BigDecimal area;
+    /**生长阶段*/
+    @Excel(name = "生长阶段", width = 15, dicCode = "base_growth_stage")
+    @Schema(description = "生长阶段（未播种/已播种/苗期/蕾薹期/开花期/角果成熟期/收获与整地）")
+    private java.lang.String growthStage;
 	/**纬度*/
 	@Excel(name = "纬度", width = 15)
     @Schema(description = "纬度")
@@ -81,4 +85,5 @@ public class YoucaiPlots implements Serializable {
     @Schema(description = "删除标志（0-正常，1-删除）")
     @TableLogic
     private java.lang.Integer delFlag;
+
 }

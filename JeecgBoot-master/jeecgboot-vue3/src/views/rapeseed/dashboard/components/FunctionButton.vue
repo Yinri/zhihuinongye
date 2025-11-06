@@ -1,32 +1,32 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-
+import { ref, onMounted, watch } from 'vue';
+import { useSelectStore } from '/@/store/selectStore'; // 全局状态
+// 导入基地/地块查询接口（根据实际API路径调整）
+import { getBaseById, getPlotById } from '/@/views/rapeseed/production-plan/base.api';
 // 弹窗显示控制
 const showBaseInfoModal = ref(false);
-const showEditBaseModal = ref(false);
 const showPlotInfoModal = ref(false);
-const showEditPlotModal = ref(false);
-const showAddPlotModal = ref(false);
+
+const selectStore = useSelectStore();
 
 // 表单数据
 const baseForm = ref({
-  abbreviation: '基地a',
-  fullName: '阳光现代农业示范基地',
-  manager: '张三',
-  phone: '138XXXX1234',
-  address: '某某市某某区某某路 123 号',
-  area: 500,
-  crop: '中油杂19',
-  soilType: ['黏土'] as string[]
+  abbreviation: '',
+  fullName: '',
+  manager: '',
+  phone: '',
+  address: '',
+  area:0,
+  soilType: [''] as string[]
 });
 
 const plotForm = ref({
-  name: '地块A',
-  code: 'PL-001',
-  base: '基地a',
-  area: 6.2,
-  growthStage: '播种期',
-  location: '基地东区 1 号区域，紧邻灌溉渠北侧'
+  name: '',
+  code: '',
+  base: '',
+  area: 0,
+  growthStage: '',
+  location: ''
 });
 
 const newPlot = ref({
@@ -35,23 +35,92 @@ const newPlot = ref({
   opacity: 50,
   area: 0
 });
+// 监听全局状态变化，同步更新数据（可选：切换基地/地块时自动刷新）
+watch(
+  () => [selectStore.selectedBase.baseId, selectStore.selectedPlot.plotId],
+  ([newBaseId, newPlotId]) => {
+    // 若弹窗已打开，自动刷新数据
+    if (showBaseInfoModal.value && newBaseId) {
+      fetchBaseInfo(newBaseId);
+    }
+    if (showPlotInfoModal.value && newPlotId) {
+      fetchPlotInfo(newPlotId);
+    }
+  },
+  { immediate: false }
+);
 
-// 表单提交方法
-const submitBaseForm = () => {
-  console.log('提交基地信息：', baseForm.value);
-  showEditBaseModal.value = false;
+// 查询基地详情
+const fetchBaseInfo = async (baseId: string | number) => {
+  try {
+    const res = await getBaseById(baseId);
+    const baseData = res || {}; // 假设接口数据在result中，根据实际调整
+    // 赋值给表单（字段名需与接口返回一致）
+    baseForm.value = {
+      fullName: baseData.baseName || '',
+      manager: baseData.manager || '',
+      phone: baseData.phone || '',
+      address: baseData.address || '',
+      area: baseData.area || 0,
+      soilType: baseData.soilType ? (Array.isArray(baseData.soilType) ? baseData.soilType : [baseData.soilType]) : []
+    };
+  } catch (error) {
+    console.error('获取基地详情失败：', error);
+    // 错误时重置表单
+    baseForm.value = {
+      abbreviation: '', fullName: '', manager: '', phone: '', address: '', area: 0, crop: '', soilType: []
+    };
+  }
 };
-const submitPlotForm = () => {
-  console.log('提交地块信息：', plotForm.value);
-  showEditPlotModal.value = false;
+
+// 查询地块详情（需后端提供按地块ID查询的接口）
+const fetchPlotInfo = async (plotId: string | number) => {
+  try {
+    const res = await getPlotById(plotId); // 新增：地块详情接口（需后端提供）
+    const plotData = res|| {};
+    // 赋值给表单（字段名需与接口返回一致）
+    plotForm.value = {
+      name: plotData.plotName || '',
+      code: plotData.id || '',
+      base: selectStore.selectedBase.baseName || '', // 所属基地名称从全局状态获取
+      area: plotData.area || 0,
+      growthStage: plotData.growthStage || '',
+      location: plotData.location || ''
+    };
+  } catch (error) {
+    console.error('获取地块详情失败：', error);
+    // 错误时重置表单
+    plotForm.value = {
+      name: '', code: '', base: '', area: 0, growthStage: '', location: ''
+    };
+  }
 };
-const saveNewPlot = () => {
-  console.log('保存新增地块：', newPlot.value);
-  showAddPlotModal.value = false;
+// 点击基地信息按钮
+const handleOpenBaseModal = () => {
+  const currentBaseId = selectStore.selectedBase.baseId;
+  console.log("zzzzzzzzzz",currentBaseId)
+  if (!currentBaseId) {
+    alert('请先选择基地'); // 或使用之前的 showMessage 提示
+    return;
+  }
+  // 查询数据后打开弹窗
+  fetchBaseInfo(currentBaseId).then(() => {
+    showBaseInfoModal.value = true;
+  });
 };
-const deletePlot = () => {
-  console.log('删除地块');
-  showAddPlotModal.value = false;
+
+// 点击地块信息按钮
+const handleOpenPlotModal = () => {
+  const currentPlotId = selectStore.selectedPlot.plotId;
+
+  if (!currentPlotId) {
+    alert('请先选择地块'); // 或使用之前的 showMessage 提示
+    return;
+  }
+  // 查询数据后打开弹窗
+  fetchPlotInfo(currentPlotId).then(() => {
+    showPlotInfoModal.value = true;
+  });
 };
 </script>
 
@@ -61,40 +130,27 @@ const deletePlot = () => {
     <div class="image-container">
     <!-- 悬浮按钮容器（原按钮组件，新增定位样式） -->
       <div class="horizontal-button-component">
-        <button @click="showBaseInfoModal = true" class="horizontal-btn">
+        <button @click="handleOpenBaseModal" class="horizontal-btn">
             <i class="icon-base"></i> 基地信息
           </button>
-          <button @click="showEditBaseModal = true" class="horizontal-btn">
-            <i class="icon-edit"></i> 修改基地信息
-          </button>
-          <button @click="showPlotInfoModal = true" class="horizontal-btn">
+          <button @click="handleOpenPlotModal" class="horizontal-btn">
             <i class="icon-plot"></i> 地块信息
-          </button>
-          <button @click="showEditPlotModal = true" class="horizontal-btn">
-            <i class="icon-edit"></i> 修改地块信息
-          </button>
-          <button @click="showAddPlotModal = true" class="horizontal-btn">
-            <i class="icon-add"></i> 增加地块
           </button>
         </div>
 
         <!-- 新增：图片元素 -->
         <img
-          src="../icons/image1.jpg"
+          src="../icons/image2.jpg"
         alt="基地/地块示意图"
         class="content-image"
         >
     </div>
   </div>
-  <!-- 弹窗部分（完全未修改） -->
+  <!-- 弹窗部分 -->
   <div v-if="showBaseInfoModal" class="modal-overlay" @click="showBaseInfoModal = false">
     <div class="modal-container" @click.stop>
       <div class="modal-header">基地信息</div>
       <div class="modal-body">
-        <div class="form-item">
-          <label>简称</label>
-          <input type="text" :value="baseForm.abbreviation" disabled>
-        </div>
         <div class="form-item">
           <label>全称</label>
           <input type="text" :value="baseForm.fullName" disabled>
@@ -116,10 +172,6 @@ const deletePlot = () => {
           <input type="text" :value="baseForm.area + ' 亩'" disabled>
         </div>
         <div class="form-item">
-          <label>种植作物</label>
-          <input type="text" :value="baseForm.crop" disabled>
-        </div>
-        <div class="form-item">
           <label>土壤状况</label>
           <div class="checkbox-group">
             <label><input type="checkbox" :checked="baseForm.soilType.includes('黏土')" disabled> 黏土</label>
@@ -134,57 +186,6 @@ const deletePlot = () => {
     </div>
   </div>
 
-  <div v-if="showEditBaseModal" class="modal-overlay" @click="showEditBaseModal = false">
-    <div class="modal-container" @click.stop>
-      <div class="modal-header">修改基地信息</div>
-      <div class="modal-body">
-        <div class="form-item">
-          <label>简称</label>
-          <input type="text" v-model="baseForm.abbreviation" placeholder="基地a">
-        </div>
-        <div class="form-item">
-          <label>全称</label>
-          <input type="text" v-model="baseForm.fullName" placeholder="阳光现代农业示范基地">
-        </div>
-        <div class="form-item">
-          <label>基地负责人</label>
-          <input type="text" v-model="baseForm.manager" placeholder="张三">
-        </div>
-        <div class="form-item">
-          <label>电话</label>
-          <input type="text" v-model="baseForm.phone" placeholder="138XXXX1234">
-        </div>
-        <div class="form-item">
-          <label>地址</label>
-          <textarea v-model="baseForm.address" placeholder="某某市某某区某某路 123 号"></textarea>
-        </div>
-        <div class="form-item">
-          <label>面积</label>
-          <input type="number" v-model.number="baseForm.area" placeholder="500">
-          <span>亩</span>
-        </div>
-        <div class="form-item">
-          <label>种植作物</label>
-          <select v-model="baseForm.crop">
-            <option value="中油杂19">中油杂19</option>
-            <option value="其他">其他</option>
-          </select>
-        </div>
-        <div class="form-item">
-          <label>土壤状况</label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" v-model="baseForm.soilType" value="黏土"> 黏土</label>
-            <label><input type="checkbox" v-model="baseForm.soilType" value="沙土"> 沙土</label>
-            <label><input type="checkbox" v-model="baseForm.soilType" value="壤土"> 壤土</label>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button @click="submitBaseForm">确定</button>
-        <button @click="showEditBaseModal = false">返回</button>
-      </div>
-    </div>
-  </div>
 
   <div v-if="showPlotInfoModal" class="modal-overlay" @click="showPlotInfoModal = false">
     <div class="modal-container" @click.stop>
@@ -221,77 +222,6 @@ const deletePlot = () => {
     </div>
   </div>
 
-  <div v-if="showEditPlotModal" class="modal-overlay" @click="showEditPlotModal = false">
-    <div class="modal-container" @click.stop>
-      <div class="modal-header">修改地块信息</div>
-      <div class="modal-body">
-        <div class="form-item">
-          <label>地块名</label>
-          <input type="text" v-model="plotForm.name" placeholder="地块A">
-        </div>
-        <div class="form-item">
-          <label>地块编号</label>
-          <input type="text" v-model="plotForm.code" placeholder="PL-001">
-        </div>
-        <div class="form-item">
-          <label>所属基地</label>
-          <input type="text" v-model="plotForm.base" placeholder="基地a">
-        </div>
-        <div class="form-item">
-          <label>地块面积</label>
-          <input type="number" v-model.number="plotForm.area" placeholder="6.2">
-          <span>亩</span>
-        </div>
-        <div class="form-item">
-          <label>生长阶段</label>
-          <input type="text" v-model="plotForm.growthStage" placeholder="播种期">
-        </div>
-        <div class="form-item">
-          <label>地块位置</label>
-          <textarea v-model="plotForm.location" placeholder="基地东区 1 号区域，紧邻灌溉渠北侧"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button @click="submitPlotForm">确定</button>
-        <button @click="showEditPlotModal = false">返回</button>
-      </div>
-    </div>
-  </div>
-
-  <div v-if="showAddPlotModal" class="modal-overlay" @click="showAddPlotModal = false">
-    <div class="modal-container" @click.stop>
-      <div class="modal-header">增加地块</div>
-      <div class="modal-body">
-        <div class="form-item">
-          <label>地块名</label>
-          <input type="text" v-model="newPlot.name" placeholder="请输入">
-        </div>
-        <div class="form-item">
-          <label>颜色</label>
-          <select v-model="newPlot.color">
-            <option value="blue">蓝色</option>
-            <option value="green">绿色</option>
-            <option value="red">红色</option>
-          </select>
-        </div>
-        <div class="form-item">
-          <label>透明度</label>
-          <input type="range" v-model.number="newPlot.opacity" min="0" max="100" step="1">
-          <span>{{ newPlot.opacity }}%</span>
-        </div>
-        <div class="form-item">
-          <label>面积</label>
-          <input type="number" v-model.number="newPlot.area" placeholder="请输入">
-          <span>亩</span>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button @click="saveNewPlot">保存</button>
-        <button @click="showAddPlotModal = false">取消</button>
-        <button class="delete-btn" @click="deletePlot">删除</button>
-      </div>
-    </div>
-  </div>
 </template>
 
 <style scoped lang="less">/* 新增：的父容器图片与按钮样式 */
@@ -332,7 +262,7 @@ const deletePlot = () => {
 .horizontal-button-component {
   position: absolute;
   top: 20px; /* 距离顶部的距离，可调整 */
-  left: 30%;
+  left: 11%;
   transform: translateX(-50%);
   display: flex;
   gap: 5px;

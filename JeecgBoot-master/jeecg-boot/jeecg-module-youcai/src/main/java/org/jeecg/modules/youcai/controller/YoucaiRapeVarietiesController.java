@@ -1,10 +1,12 @@
 package org.jeecg.modules.youcai.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
+import org.jeecg.modules.youcai.entity.YoucaiBases;
 import org.jeecg.modules.youcai.entity.YoucaiRapeVarieties;
 import org.jeecg.modules.youcai.service.IYoucaiRapeVarietiesService;
 
@@ -67,14 +69,26 @@ public class YoucaiRapeVarietiesController extends JeecgController<YoucaiRapeVar
 	 */
 	@AutoLog(value = "油菜品种表-添加")
 	@Operation(summary="油菜品种表-添加")
-	@RequiresPermissions("youcai:youcai_rape_varieties:add")
+//	@RequiresPermissions("youcai:youcai_rape_varieties:add")
 	@PostMapping(value = "/add")
 	public Result<String> add(@RequestBody YoucaiRapeVarieties youcaiRapeVarieties) {
 		youcaiRapeVarietiesService.save(youcaiRapeVarieties);
 
 		return Result.OK("添加成功！");
 	}
-	
+
+
+	 /**
+	  * 查询所有油菜品种
+	  *
+	  * @return 所有油菜品种列表
+	  */
+	 @Operation(summary = "查询所有油菜品种")
+	 @GetMapping(value = "/getAll")
+	 public Result<List<YoucaiRapeVarieties>> getAllVarieties() {
+		 List<YoucaiRapeVarieties> list = youcaiRapeVarietiesService.list();
+		 return Result.OK(list);
+	 }
 	/**
 	 *  编辑
 	 *

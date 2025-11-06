@@ -19,6 +19,12 @@ enum Api {
   Export = '/rapeseed/irrigation/export',
   // 导入
   Import = '/rapeseed/irrigation/importExcel',
+  // 地块生长与土壤水分状态
+  PlotStatus = '/rapeseed/irrigation/plotStatus',
+  // Penman 预测与灌溉建议
+  PenmanPredict = '/rapeseed/irrigation/penmanPredict',
+  // 干预/不干预对比数据
+  InterventionComparison = '/rapeseed/irrigation/interventionComparison',
 }
 
 // 获取智慧灌溉列表
@@ -59,4 +65,19 @@ export const exportIrrigation = (params?: any) => {
 // 导入智慧灌溉
 export const importIrrigation = (params: any) => {
   return defHttp.uploadFile({ url: Api.Import }, params );
+};
+
+// 获取选中地块的生长阶段与土壤水分
+export const getPlotStatus = (plotId: string | number) => {
+  return defHttp.get({ url: `${Api.PlotStatus}/${plotId}` });
+};
+
+// 基于 Penman 算法的灌溉建议（是否需要、时间、方式等）
+export const getPenmanPredict = (plotId: string | number) => {
+  return defHttp.get({ url: `${Api.PenmanPredict}` , params: { plotId } });
+};
+
+// 干预灌溉 vs 不干预灌溉 对比数据（用于图表）
+export const getInterventionComparison = (plotId: string | number) => {
+  return defHttp.get({ url: `${Api.InterventionComparison}`, params: { plotId } });
 };

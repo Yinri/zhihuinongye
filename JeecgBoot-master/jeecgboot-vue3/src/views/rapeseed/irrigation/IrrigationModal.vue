@@ -40,6 +40,11 @@
       await setFieldsValue({
         ...data.record,
       });
+    } else if (data?.defaultValues) {
+      // 新增时支持默认值（灌溉建议预填）
+      await setFieldsValue({
+        ...data.defaultValues,
+      });
     }
   });
 

@@ -58,7 +58,22 @@ public class YoucaiProductionPlansController extends JeecgController<YoucaiProdu
 		IPage<YoucaiProductionPlans> pageList = youcaiProductionPlansService.page(page, queryWrapper);
 		return Result.OK(pageList);
 	}
-	
+	 /**
+	  * 通过plotId查询单个生产计划（新增接口）
+	  * 适用于单个地块仅关联一个生产计划的场景
+	  */
+	 @Operation(summary="生产计划表-通过plotId查询单个计划")
+	 @GetMapping(value = "/queryByPlotId")
+	 public Result<YoucaiProductionPlans> queryByPlotId(@RequestParam(name="plotId", required=true) String plotId) {
+		 QueryWrapper<YoucaiProductionPlans> queryWrapper = new QueryWrapper<>();
+		 queryWrapper.eq("plot_id", plotId);
+
+		 YoucaiProductionPlans productionPlan = youcaiProductionPlansService.getOne(queryWrapper);
+		 if (productionPlan == null) {
+			 return Result.OK(null); // 无数据时返回空，前端可通过null判断是否有计划
+		 }
+		 return Result.OK(productionPlan);
+	 }
 	/**
 	 *   添加
 	 *
@@ -67,7 +82,7 @@ public class YoucaiProductionPlansController extends JeecgController<YoucaiProdu
 	 */
 	@AutoLog(value = "生产计划表-添加")
 	@Operation(summary="生产计划表-添加")
-	@RequiresPermissions("youcai:youcai_production_plans:add")
+//	@RequiresPermissions("youcai:youcai_production_plans:add")
 	@PostMapping(value = "/add")
 	public Result<String> add(@RequestBody YoucaiProductionPlans youcaiProductionPlans) {
 		youcaiProductionPlansService.save(youcaiProductionPlans);

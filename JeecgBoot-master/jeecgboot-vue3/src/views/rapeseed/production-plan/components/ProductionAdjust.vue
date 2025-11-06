@@ -2,6 +2,7 @@
   <div class="yield-adjust-wrapper">
     <div class="yield-label">
       <img src="../icons/icon1.svg" class="icon-yield" alt="产量图标">目标产量
+      <span class="yield-formula">（目标产量 = 前三年平均单产 × (1 + 递增率)）</span>
     </div>
     <button class="adjust-btn" @click="handleAdjust">
       <img src="../icons/icon2.svg" class="icon-pencil" alt="产量图标">
@@ -105,6 +106,12 @@ export default {
   fill: #2f5496;
 }
 
+.yield-formula {
+  font-size: 12px;
+  color: #666;
+  font-weight: normal;
+  margin-left: 6px;
+}
 .adjust-btn {
   display: flex;
   align-items: center;

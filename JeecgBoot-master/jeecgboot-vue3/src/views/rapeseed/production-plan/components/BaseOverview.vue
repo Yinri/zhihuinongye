@@ -7,7 +7,7 @@
     </div>
 
     <!-- 航拍图片 -->
-    <img src="../icons/image1.jpg" alt="基地土壤航拍图" class="aerial-image">
+    <img src="../icons/image2.jpg" alt="基地土壤航拍图" class="aerial-image">
 
     <!-- 图片下方的信息区域（数据列表 + 图例） -->
     <div class="bottom-info">
