@@ -29,7 +29,7 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
  */
 @Tag(name="倒伏风险预警表")
 @RestController
-@RequestMapping("/youcai/youcaiLodgingRiskWarning")
+@RequestMapping("/youcai/lodgingRiskWarning")
 @Slf4j
 public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLodgingRiskWarning, IYoucaiLodgingRiskWarningService> {
 	@Autowired
