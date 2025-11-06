@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="新的菜单sql">
+    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="不知道是什么东西">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/harvest/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/harvest/index.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/index.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/lodgingRisk.api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/lodging-risk/lodgingRisk.api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-boot-module/jeecg-module-demo/src/main/java/org/jeecg/modules/demo/cloud/service/JcloudDemoService.java" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-boot-module/jeecg-module-demo/src/main/java/org/jeecg/modules/demo/cloud/service/JcloudDemoService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,43 +40,43 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Docker.JeecgBoot-master/docker-compose-cloud.yml.jeecg-boot-demo: Compose 部署.executor": "Run",
-    "Maven.jeecg-boot-parent [clean].executor": "Run",
-    "Maven.jeecg-boot-parent [install].executor": "Run",
-    "Maven.jeecg-module-system [install].executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "Spring Boot.JeecgSystemApplication.executor": "Run",
-    "git-widget-placeholder": "master",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/gitCode/zhihuinongye/JeecgBoot-master/jeecg-boot",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "pnpm",
-    "prettierjs.PrettierConfiguration.Package": "D:\\油菜\\JeecgBoot-master\\jeecgboot-vue3\\node_modules\\prettier",
-    "project.structure.last.edited": "模块",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.2",
-    "ts.external.directory.path": "D:\\gitCode\\zhihuinongye\\JeecgBoot-master\\jeecgboot-vue3\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true",
-    "应用程序.JeecgSystemApplication.executor": "Run"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Docker.JeecgBoot-master/docker-compose-cloud.yml.jeecg-boot-demo: Compose 部署.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.jeecg-boot-parent [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.jeecg-boot-parent [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.jeecg-module-system [install].executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Spring Boot.JeecgSystemApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/gitCode/zhihuinongye/JeecgBoot-master/jeecg-boot&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;D:\\油菜\\JeecgBoot-master\\jeecgboot-vue3\\node_modules\\prettier&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;模块&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\gitCode\\zhihuinongye\\JeecgBoot-master\\jeecgboot-vue3\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
+    &quot;应用程序.JeecgSystemApplication.executor&quot;: &quot;Run&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "mysql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;mysql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot" />
@@ -179,7 +178,9 @@
       <workItem from="1761900711516" duration="151000" />
       <workItem from="1761900903100" duration="72000" />
       <workItem from="1761983083140" duration="34518000" />
-      <workItem from="1762325202553" duration="8388000" />
+      <workItem from="1762325202553" duration="9081000" />
+      <workItem from="1762343038832" duration="858000" />
+      <workItem from="1762394910914" duration="611000" />
     </task>
     <task id="LOCAL-00001" summary="修改了引入bug">
       <option name="closed" value="true" />
@@ -221,7 +222,31 @@
       <option name="project" value="LOCAL" />
       <updated>1761900775607</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="收获管理页面-地块标记">
+      <option name="closed" value="true" />
+      <created>1762342373185</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1762342373185</updated>
+    </task>
+    <task id="LOCAL-00007" summary="倒伏风险预警界面-完善">
+      <option name="closed" value="true" />
+      <created>1762342413382</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1762342413382</updated>
+    </task>
+    <task id="LOCAL-00008" summary="不知道是什么东西">
+      <option name="closed" value="true" />
+      <created>1762342448659</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1762342448659</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -232,6 +257,9 @@
     <MESSAGE value="去掉之前的生长阶段设计" />
     <MESSAGE value="更改了菜单" />
     <MESSAGE value="新的菜单sql" />
-    <option name="LAST_COMMIT_MESSAGE" value="新的菜单sql" />
+    <MESSAGE value="收获管理页面-地块标记" />
+    <MESSAGE value="倒伏风险预警界面-完善" />
+    <MESSAGE value="不知道是什么东西" />
+    <option name="LAST_COMMIT_MESSAGE" value="不知道是什么东西" />
   </component>
 </project>
