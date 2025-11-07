@@ -1,0 +1,236 @@
+package org.jeecg.modules.youcai.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 倒伏风险评估响应DTO
+ * @author system
+ * @date 2025-11-05
+ */
+@Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class LodgingRiskAssessmentResponseDTO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 当前风险
+     */
+    private CurrentRiskDTO currentRisk;
+
+    /**
+     * 未来7天预测
+     */
+    private Forecast7DaysDTO forecast7Days;
+
+    /**
+     * 综合防护建议
+     */
+    private ComprehensiveSuggestionsDTO comprehensiveSuggestions;
+
+    /**
+     * 计算时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "GMT")
+    private Date calculationTime;
+
+    /**
+     * 当前风险DTO
+     */
+    @Data
+
+    public static class CurrentRiskDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 风险评分
+         */
+
+        private Double riskScore;
+
+        /**
+         * 风险等级
+         */
+
+        private String riskLevel;
+
+        /**
+         * 倒伏概率
+         */
+
+        private String lodgingProbability;
+
+        /**
+         * 归一化因子
+         */
+
+        private NormalizedFactorsDTO normalizedFactors;
+
+        /**
+         * 原始因子
+         */
+
+        private OriginalFactorsDTO originalFactors;
+
+        /**
+         * 因子贡献度
+         */
+
+        private Map<String, Object> factorContributions;
+
+        /**
+         * 高风险因子
+         */
+
+        private List<HighRiskFactorDTO> highRiskFactors;
+
+        /**
+         * 建议
+         */
+
+        private Map<String, Object> suggestions;
+    }
+
+    /**
+     * 归一化因子DTO
+     */
+    @Data
+    public static class NormalizedFactorsDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private Double plantHeight;
+
+        private Double stemDiameter;
+
+        private Double slendernessRatio;
+
+        private Double windSpeed3d;
+
+        private Double rainfall7d;
+
+
+        private Double growthStage;
+
+        private Double density;
+
+        private Double soilType;
+    }
+
+    /**
+     * 原始因子DTO
+     */
+    @Data
+    public static class OriginalFactorsDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private Double plantHeight;
+
+        private Double stemDiameter;
+
+        private Double windSpeed3d;
+
+        private Double rainfall7d;
+
+        private String growthStage;
+
+        private Double density;
+
+        private String soilType;
+    }
+
+    /**
+     * 高风险因子DTO
+     */
+    @Data
+    public static class HighRiskFactorDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private String key;
+
+        private String name;
+
+        private Double normalizedValue;
+
+        private String status;
+    }
+
+    /**
+     * 未来7天预测DTO
+     */
+    @Data
+    public static class Forecast7DaysDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private Integer plotId;
+
+        private List<DailyRiskDTO> dailyRisks;
+
+        private String maxRiskDate;
+
+        private Double maxRiskScore;
+    }
+
+    /**
+     * 每日风险DTO
+     */
+    @Data
+    public static class DailyRiskDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        private Date date;
+
+        private Double riskScore;
+
+        private String riskLevel;
+
+        private String lodgingProbability;
+
+        private WeatherDTO weather;
+    }
+
+    /**
+     * 天气DTO
+     */
+    @Data
+    public static class WeatherDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private Double windSpeed;
+
+        private Double rainfall;
+    }
+
+    /**
+     * 综合防护建议DTO
+     */
+    @Data
+    public static class ComprehensiveSuggestionsDTO implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private List<String> riskAlert;
+
+        private List<String> immediate;
+
+        private List<String> shortTerm;
+
+        private List<String> mediumTerm;
+        private List<String> longTerm;
+    }
+}
