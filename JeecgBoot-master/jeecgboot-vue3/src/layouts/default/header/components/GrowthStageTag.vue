@@ -307,8 +307,13 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
       fetchPlotList();
     }
   } else {
-    selectedPlot.value = value;
-    selectStore.updateSelectedPlot(value);
+    // 匹配选中的地块对象
+    const matchedPlot = plotList.value.find(item => item.plotName === value);
+    if (matchedPlot) {
+      selectedPlot.value = matchedPlot;
+      // 传递完整的地块对象而不是字符串
+      selectStore.updateSelectedPlot(matchedPlot);
+    }
   }
   isDropdownOpen.value[type] = false;
 };
@@ -411,8 +416,7 @@ const handleCreate = async () => {
     };
 
     const res=await createBase(submitData);
-    console.log(res)
-      showMessage('基地创建成功');
+    showMessage('基地创建成功');
       // 重新加载基地列表（确保能获取到新基地的ID）
       fetchBaseList();
       isDialogOpen.value = false;
