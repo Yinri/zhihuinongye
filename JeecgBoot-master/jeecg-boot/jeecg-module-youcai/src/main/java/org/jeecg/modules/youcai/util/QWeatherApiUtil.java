@@ -125,13 +125,22 @@ public class QWeatherApiUtil {
         
         for (QWeatherResponse.WeatherDaily daily : response.getDaily()) {
             DailyWeatherDTO dto = new DailyWeatherDTO();
-            dto.setDate(daily.getFxDate());
+            
+            // 确保日期格式正确
+            String date = daily.getFxDate();
+            if (date != null && date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                dto.setDate(date);
+            } else {
+                log.warn("日期格式不正确: {}, 使用当前日期", date);
+                dto.setDate(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
+            }
             
             // 风速转换：和风天气API返回的km/h需要转换为m/s
             if (daily.getWindSpeedDay() != null && !daily.getWindSpeedDay().isEmpty()) {
                 try {
                     double windSpeedKmh = Double.parseDouble(daily.getWindSpeedDay());
                     double windSpeedMs = windSpeedKmh / 3.6; // km/h转m/s
+                    windSpeedMs = Math.round(windSpeedMs * 100) / 100.0;
                     dto.setWindSpeed(windSpeedMs);
                 } catch (NumberFormatException e) {
                     log.warn("风速数据解析失败：{}", daily.getWindSpeedDay());
@@ -155,6 +164,8 @@ public class QWeatherApiUtil {
             }
             
             result.add(dto);
+            log.info("转换天气数据 - 日期: {}, 风速: {}m/s, 降雨量: {}mm", 
+                    dto.getDate(), dto.getWindSpeed(), dto.getRainfall());
         }
         
         return result;
