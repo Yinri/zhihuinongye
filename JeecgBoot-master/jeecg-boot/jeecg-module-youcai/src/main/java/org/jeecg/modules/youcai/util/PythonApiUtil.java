@@ -135,7 +135,7 @@ public class PythonApiUtil {
                                 response.getComprehensiveSuggestions().getLongTerm() != null ? response.getComprehensiveSuggestions().getLongTerm().size() : 0);
                     }
                 })
-                .doOnError(error -> log.error("调用Python服务失败: {}", error.getMessage(), error))
+                .doOnError(error -> log.warn("调用Python服务失败: {}", error.getMessage(), error))
                 .onErrorReturn(new LodgingRiskAssessmentResponseDTO());
     }
 }

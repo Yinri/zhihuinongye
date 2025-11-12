@@ -7,6 +7,8 @@ import org.jeecg.modules.youcai.entity.YoucaiBases;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
 import org.jeecg.modules.youcai.entity.YoucaiLodgingRiskWarning;
 import org.jeecg.modules.youcai.entity.YoucaiPlots;
+import org.jeecg.modules.youcai.entity.YoucaiProjectInfo;
+import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.entity.iotEntity.sensor.SensorListRequest;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import org.jeecg.modules.youcai.entity.iotEntity.project.ProjectInfo;
@@ -17,12 +19,16 @@ import org.jeecg.modules.youcai.mapper.YoucaiGrowthMonitoringMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiLodgingRiskWarningMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
+import org.jeecg.modules.youcai.service.IYoucaiProjectInfoService;
+import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.jeecg.modules.youcai.util.PythonApiUtil;
 import org.jeecg.modules.youcai.util.QWeatherApiUtil;
 import org.jeecg.common.exception.JeecgBootException;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -45,11 +51,6 @@ import reactor.core.publisher.Mono;
 @Service
 @Slf4j
 public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgingRiskWarningMapper, YoucaiLodgingRiskWarning> implements IYoucaiLodgingRiskWarningService {
-
-    // 设置各API调用的超时时间（秒）
-    private static final int IOT_API_TIMEOUT = 20; // 增加IoT API超时时间到10秒
-    private static final int WEATHER_API_TIMEOUT = 10;
-    private static final int PYTHON_API_TIMEOUT = 15;
     
     @Autowired
     private YoucaiPlotsMapper youcaiPlotsMapper;
@@ -69,6 +70,12 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     @Autowired
     private PythonApiUtil pythonApiUtil;
     
+    @Autowired
+    private IYoucaiProjectInfoService youcaiProjectInfoService;
+    
+    @Autowired
+    private IYoucaiSensorInfoService youcaiSensorInfoService;
+    
     @Override
     public LodgingRiskAssessmentResponseDTO riskAssessmentById(Integer plotId) {
         log.info("开始评估地块倒伏风险，地块ID: {}", plotId);
@@ -85,7 +92,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             // 2. 并行获取IoT传感器数据和天气预报数据
         CompletableFuture<Void> iotFuture = CompletableFuture.runAsync(() -> {
             try {
-                fetchIoTSensorDataWithTimeout(requestDTO, plotId);
+                fetchIoTSensorData(requestDTO, plotId);
             } catch (Exception e) {
                 log.error("获取IoT传感器数据失败: {}", e.getMessage(), e);
             }
@@ -93,21 +100,16 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
 
         CompletableFuture<Void> weatherFuture = CompletableFuture.runAsync(() -> {
             try {
-                fetchWeatherDataWithTimeout(requestDTO, plotId);
+                fetchWeatherData(requestDTO, plotId);
             } catch (Exception e) {
                 log.error("获取天气预报数据失败: {}", e.getMessage(), e);
             }
         });
 
-        // 等待所有数据获取完成，设置超时
+        // 等待所有数据获取完成
         try {
             CompletableFuture.allOf(iotFuture, weatherFuture)
-                .get(20, TimeUnit.SECONDS);
-        } catch (java.util.concurrent.TimeoutException e) {
-            log.warn("获取IoT传感器数据和天气预报数据超时，地块ID: {}", plotId);
-            // 取消未完成的任务
-            iotFuture.cancel(true);
-            weatherFuture.cancel(true);
+                .get();
         } catch (Exception e) {
             log.error("获取IoT传感器数据和天气预报数据异常: {}", e.getMessage(), e);
             // 取消未完成的任务
@@ -116,7 +118,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
         }
             
             // 3. 调用Python服务进行风险评估
-            LodgingRiskAssessmentResponseDTO response = callPythonServiceWithTimeout(requestDTO);
+            LodgingRiskAssessmentResponseDTO response = callPythonService(requestDTO);
             
             long endTime = System.currentTimeMillis();
             log.info("倒伏风险评估完成，地块ID: {}, 耗时: {}ms", plotId, endTime - startTime);
@@ -173,88 +175,110 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     }
     
     /**
-     * 带超时控制的IoT传感器数据获取
+     * IoT传感器数据获取（优先查询本地数据库）
      */
-    private void fetchIoTSensorDataWithTimeout(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
+    private void fetchIoTSensorData(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
         try {
             log.debug("开始获取IoT传感器数据，地块ID: {}", plotId);
             
-            // 获取项目列表，添加超时和错误处理
-            Mono<ApiResponse> projectListMono = ioTApiUtil.getProjectList()
-                .timeout(Duration.ofSeconds(IOT_API_TIMEOUT))
-                .doOnError(e -> log.warn("获取IoT项目列表超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
-                .switchIfEmpty(Mono.fromCallable(() -> {
-                    log.warn("获取IoT项目列表返回空响应，地块ID: {}", plotId);
-                    return createEmptyApiResponse();
-                }));
+            // 1. 优先查询本地数据库中的项目信息
+            LambdaQueryWrapper<YoucaiProjectInfo> projectQuery = new LambdaQueryWrapper<>();
+            projectQuery.eq(YoucaiProjectInfo::getIsDelete, 0)
+                       .last("LIMIT 1"); // 只取第一个项目
+            List<YoucaiProjectInfo> localProjects = youcaiProjectInfoService.list(projectQuery);
             
-            ApiResponse projectResponse = projectListMono.block();
+            Integer projectId = null;
+            boolean needFetchProjectFromAPI = false;
             
-            if (projectResponse == null || projectResponse.getCode() != 1 || projectResponse.getData() == null) {
-                log.warn("获取IoT项目列表失败，地块ID: {}", plotId);
-                return;
+            // 2. 如果本地有项目信息，使用本地项目ID
+            if (localProjects != null && !localProjects.isEmpty()) {
+                projectId = localProjects.get(0).getProjectId();
+                log.debug("从本地数据库获取到项目ID: {}", projectId);
+            } else {
+                // 3. 如果本地没有项目信息，从API获取
+                needFetchProjectFromAPI = true;
+                log.debug("本地数据库无项目信息，将从API获取");
+                
+                // 获取项目列表
+                ApiResponse projectResponse = ioTApiUtil.getProjectList().block();
+                
+                if (projectResponse == null || projectResponse.getCode() != 1 || projectResponse.getData() == null) {
+                    log.warn("获取IoT项目列表失败，地块ID: {}", plotId);
+                    return;
+                }
+                
+                // 解析项目列表，获取第一个项目ID
+                List<ProjectInfo> projectList = parseProjectList(projectResponse.getData());
+                if (projectList.isEmpty()) {
+                    log.warn("IoT项目列表为空，地块ID: {}", plotId);
+                    return;
+                }
+                
+                projectId = projectList.get(0).getQ() != null ? 
+                    projectList.get(0).getQ().getId() : 0;
+                
+                if (projectId == 0) {
+                    log.warn("项目ID为空，地块ID: {}", plotId);
+                    return;
+                }
+                
+                // 保存项目信息到本地数据库
+                saveProjectInfoToLocalDB(projectList.get(0));
             }
             
-            // 解析项目列表，获取第一个项目ID
-            List<ProjectInfo> projectList = parseProjectList(projectResponse.getData());
-            if (projectList.isEmpty()) {
-                log.warn("IoT项目列表为空，地块ID: {}", plotId);
-                return;
+            // 4. 查询本地数据库中的传感器信息
+            LambdaQueryWrapper<YoucaiSensorInfo> sensorQuery = new LambdaQueryWrapper<>();
+            sensorQuery.eq(YoucaiSensorInfo::getProjectId, projectId)
+                      .eq(YoucaiSensorInfo::getSensorTypeId, 1) // 1=气象传感器
+                      .eq(YoucaiSensorInfo::getIsDelete, 0)
+                      .last("LIMIT 1"); // 只取第一个传感器
+            List<YoucaiSensorInfo> localSensors = youcaiSensorInfoService.list(sensorQuery);
+            
+            String deviceCode = null;
+            boolean needFetchSensorFromAPI = false;
+            
+            // 5. 如果本地有传感器信息，使用本地传感器信息
+            if (localSensors != null && !localSensors.isEmpty()) {
+                deviceCode = localSensors.get(0).getSensorSerial();
+                log.debug("从本地数据库获取到传感器设备编码: {}", deviceCode);
+            } else {
+                // 6. 如果本地没有传感器信息，从API获取
+                needFetchSensorFromAPI = true;
+                log.debug("本地数据库无传感器信息，将从API获取");
+                
+                // 获取气象传感器列表
+                SensorListRequest sensorListRequest = new SensorListRequest();
+                sensorListRequest.setProjectId(projectId);
+                sensorListRequest.setSensorTypeId(1); // 1=气象传感器
+                
+                ApiResponse sensorListResponse = ioTApiUtil.getSensorList(sensorListRequest).block();
+                
+                if (sensorListResponse == null || sensorListResponse.getCode() != 1 || sensorListResponse.getData() == null) {
+                    log.warn("获取IoT传感器列表失败，地块ID: {}", plotId);
+                    return;
+                }
+                
+                // 解析传感器列表，获取第一个传感器
+                List<SensorInfo> sensorList = parseSensorList(sensorListResponse.getData());
+                if (sensorList.isEmpty()) {
+                    log.warn("IoT传感器列表为空，地块ID: {}", plotId);
+                    return;
+                }
+                
+                deviceCode = sensorList.get(0).getQ() != null ? 
+                    sensorList.get(0).getQ().getSensorSerial() : null;
+                
+                if (deviceCode == null) {
+                    log.warn("传感器设备编码为空，地块ID: {}", plotId);
+                    return;
+                }
+                
+                // 保存传感器信息到本地数据库
+                saveSensorInfoToLocalDB(sensorList.get(0), projectId);
             }
             
-            Integer projectId = projectList.get(0).getQ() != null ? 
-                projectList.get(0).getQ().getId() : 0;
-            
-            if (projectId == 0) {
-                log.warn("项目ID为空，地块ID: {}", plotId);
-                return;
-            }
-            
-            // 获取气象传感器列表，添加超时和错误处理
-            SensorListRequest sensorListRequest = new SensorListRequest();
-            sensorListRequest.setProjectId(projectId);
-            sensorListRequest.setSensorTypeId(1); // 1=气象传感器
-            
-            Mono<ApiResponse> sensorListMono = ioTApiUtil.getSensorList(sensorListRequest)
-                .timeout(Duration.ofSeconds(IOT_API_TIMEOUT))
-                .doOnError(e -> log.warn("获取IoT传感器列表超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
-                .switchIfEmpty(Mono.fromCallable(() -> {
-                    log.warn("获取IoT传感器列表返回空响应，地块ID: {}", plotId);
-                    return createEmptyApiResponse();
-                }));
-            
-            ApiResponse sensorListResponse = sensorListMono.block();
-            
-            if (sensorListResponse == null || sensorListResponse.getCode() != 1 || sensorListResponse.getData() == null) {
-                log.warn("获取IoT传感器列表失败，地块ID: {}", plotId);
-                return;
-            }
-            
-            // 解析传感器列表，获取第一个传感器
-            List<SensorInfo> sensorList = parseSensorList(sensorListResponse.getData());
-            if (sensorList.isEmpty()) {
-                log.warn("IoT传感器列表为空，地块ID: {}", plotId);
-                return;
-            }
-            
-            String deviceCode = sensorList.get(0).getQ() != null ? 
-                sensorList.get(0).getQ().getSensorSerial() : null;
-            
-            if (deviceCode == null) {
-                log.warn("传感器设备编码为空，地块ID: {}", plotId);
-                return;
-            }
-            
-            // 获取传感器实时数据，添加超时和错误处理
-            Mono<ApiResponse> sensorDataMono = ioTApiUtil.getSensorRealTimeData(deviceCode)
-                .timeout(Duration.ofSeconds(IOT_API_TIMEOUT))
-                .doOnError(e -> log.warn("获取IoT传感器实时数据超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
-                .switchIfEmpty(Mono.fromCallable(() -> {
-                    log.warn("获取IoT传感器实时数据返回空响应，地块ID: {}", plotId);
-                    return createEmptyApiResponse();
-                }));
-            
-            ApiResponse sensorDataResponse = sensorDataMono.block();
+            // 7. 获取传感器实时数据
+            ApiResponse sensorDataResponse = ioTApiUtil.getSensorRealTimeData(deviceCode).block();
             
             if (sensorDataResponse == null || sensorDataResponse.getCode() != 1 || sensorDataResponse.getData() == null) {
                 log.warn("获取IoT传感器实时数据失败，地块ID: {}", plotId);
@@ -272,20 +296,9 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     }
     
     /**
-     * 创建空的API响应对象
+     * 天气预报数据获取
      */
-    private ApiResponse createEmptyApiResponse() {
-        ApiResponse response = new ApiResponse();
-        response.setCode(0);
-        response.setMsg("请求超时或失败");
-        response.setData(null);
-        return response;
-    }
-    
-    /**
-     * 带超时控制的天气预报数据获取
-     */
-    private void fetchWeatherDataWithTimeout(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
+    private void fetchWeatherData(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
         try {
             log.debug("开始获取天气预报数据，地块ID: {}", plotId);
             
@@ -316,11 +329,8 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             String location = base.getLongitude().toString() + "," + base.getLatitude().toString();
             log.debug("使用基地坐标获取天气: {}", location);
             
-            // 获取7天天气预报，添加超时和错误处理
+            // 获取7天天气预报
             List<DailyWeatherDTO> weatherList = qWeatherApiUtil.get7DayWeatherForecast(location)
-                .timeout(Duration.ofSeconds(WEATHER_API_TIMEOUT))
-                .doOnError(e -> log.warn("获取天气预报数据超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
-                .onErrorReturn(List.of())
                 .block();
             
             if (weatherList != null && !weatherList.isEmpty()) {
@@ -340,21 +350,40 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     }
     
     /**
-     * 带超时控制的Python服务调用
+     * Python服务调用
      */
-    private LodgingRiskAssessmentResponseDTO callPythonServiceWithTimeout(LodgingRiskAssessmentRequestDTO requestDTO) {
+    private LodgingRiskAssessmentResponseDTO callPythonService(LodgingRiskAssessmentRequestDTO requestDTO) {
         try {
             log.debug("开始调用Python服务进行风险评估");
             
-            // 调用Python服务，添加超时和错误处理
+            // 使用标志位记录是否发生错误
+            final boolean[] errorOccurred = {false};
+            
+            // 调用Python服务
             LodgingRiskAssessmentResponseDTO response = pythonApiUtil.assessLodgingRisk(requestDTO)
-                .timeout(Duration.ofSeconds(PYTHON_API_TIMEOUT))
-                .doOnError(e -> log.warn("Python风险评估服务超时，错误: {}", e.getMessage()))
+                .doOnError(e -> {
+                    errorOccurred[0] = true;
+                    log.warn("Python风险评估服务调用失败，错误: {}", e.getMessage());
+                })
                 .onErrorReturn(createEmptyLodgingRiskResponse())
                 .block();
             
+            // 检查响应是否有效
             if (response != null) {
-                log.info("Python服务调用成功，返回倒伏风险评估结果");
+                // 检查响应是否为空响应（所有关键字段为null）
+                boolean isEmptyResponse = response.getCurrentRisk() == null && 
+                                           response.getForecast7Days() == null && 
+                                           response.getComprehensiveSuggestions() == null;
+                
+                if (isEmptyResponse) {
+                    if (errorOccurred[0]) {
+                        log.warn("Python服务调用失败，返回空响应");
+                    } else {
+                        log.warn("Python服务返回空响应，可能服务未正确处理请求");
+                    }
+                } else {
+                    log.info("Python服务调用成功，返回倒伏风险评估结果");
+                }
                 return response;
             } else {
                 log.warn("Python服务返回结果为空，使用默认响应");
@@ -476,6 +505,124 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             // 不抛出异常，允许流程继续
         }
     }
+    
+    /**
+     * 保存项目信息到本地数据库
+     */
+    private void saveProjectInfoToLocalDB(ProjectInfo projectInfo) {
+        try {
+            if (projectInfo == null || projectInfo.getQ() == null) {
+                log.warn("项目信息为空，无法保存到本地数据库");
+                return;
+            }
+            
+            ProjectInfo.Project projectData = projectInfo.getQ();
+            ProjectInfo.ProjectAdmin projectAdmin = projectInfo.getS();
+            
+            // 检查是否已存在相同的项目ID
+            LambdaQueryWrapper<YoucaiProjectInfo> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(YoucaiProjectInfo::getProjectId, projectData.getId())
+                       .eq(YoucaiProjectInfo::getIsDelete, 0);
+            YoucaiProjectInfo existingProject = youcaiProjectInfoService.getOne(queryWrapper);
+            
+            if (existingProject != null) {
+                log.debug("项目ID {} 已存在于本地数据库，更新同步时间", projectData.getId());
+                // 更新同步时间
+                existingProject.setSyncTime(LocalDateTime.now());
+                youcaiProjectInfoService.updateById(existingProject);
+                return;
+            }
+            
+            // 创建新的项目信息记录
+            YoucaiProjectInfo youcaiProjectInfo = new YoucaiProjectInfo();
+            youcaiProjectInfo.setProjectId(projectData.getId());
+            youcaiProjectInfo.setProjectName(projectData.getProjectName());
+            youcaiProjectInfo.setProjectCode(projectData.getProjectCode());
+            youcaiProjectInfo.setProjectDesc(projectData.getProjectDesc());
+            youcaiProjectInfo.setProjectAddress(projectData.getProjectAdress());
+            youcaiProjectInfo.setLongitude(projectData.getLng());
+            youcaiProjectInfo.setLatitude(projectData.getLat());
+            youcaiProjectInfo.setAdminId(projectAdmin.getId());
+            youcaiProjectInfo.setAdminUserName(projectAdmin.getUserName());
+            youcaiProjectInfo.setAdminFullName(projectAdmin.getFullName());
+            youcaiProjectInfo.setAdminPhone(projectAdmin.getPhone());
+            youcaiProjectInfo.setIsDelete(0);
+            youcaiProjectInfo.setProjectCreateTime(projectData.getDateCreated());
+            youcaiProjectInfo.setSyncTime(LocalDateTime.now());
+            youcaiProjectInfo.setCreateTime(LocalDateTime.now());
+            
+            boolean saved = youcaiProjectInfoService.save(youcaiProjectInfo);
+            if (saved) {
+                log.info("成功保存项目信息到本地数据库，项目ID: {}, 项目名称: {}", 
+                    projectData.getId(), projectData.getProjectName());
+            } else {
+                log.warn("保存项目信息到本地数据库失败，项目ID: {}", projectData.getId());
+            }
+            
+        } catch (Exception e) {
+            log.error("保存项目信息到本地数据库异常: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 保存传感器信息到本地数据库
+     */
+    private void saveSensorInfoToLocalDB(SensorInfo sensorInfo, Integer projectId) {
+        try {
+            if (sensorInfo == null || sensorInfo.getQ() == null) {
+                log.warn("传感器信息为空，无法保存到本地数据库");
+                return;
+            }
+            
+            SensorInfo.Sensor sensorData = sensorInfo.getQ();
+            
+            // 检查是否已存在相同的传感器ID
+            LambdaQueryWrapper<YoucaiSensorInfo> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(YoucaiSensorInfo::getSensorId, sensorData.getId())
+                       .eq(YoucaiSensorInfo::getIsDelete, 0);
+            YoucaiSensorInfo existingSensor = youcaiSensorInfoService.getOne(queryWrapper);
+            
+            if (existingSensor != null) {
+                log.debug("传感器ID {} 已存在于本地数据库，更新同步时间", sensorData.getId());
+                // 更新同步时间
+                existingSensor.setSyncTime(LocalDateTime.now());
+                youcaiSensorInfoService.updateById(existingSensor);
+                return;
+            }
+            
+            // 创建新的传感器信息记录
+            YoucaiSensorInfo youcaiSensorInfo = new YoucaiSensorInfo();
+            youcaiSensorInfo.setSensorId(sensorData.getId());
+            youcaiSensorInfo.setSensorName(sensorData.getSensorName());
+            youcaiSensorInfo.setSensorSerial(sensorData.getSensorSerial());
+            youcaiSensorInfo.setSensorTypeId(sensorData.getSensorTypeId());
+            youcaiSensorInfo.setSensorDataTypeIds(sensorData.getSensorDataTypeIds());
+            youcaiSensorInfo.setSensorDataTypeNames(sensorData.getSensorDataTypeNames());
+            youcaiSensorInfo.setNums(sensorData.getNums());
+            youcaiSensorInfo.setTime(sensorData.getTime());
+            youcaiSensorInfo.setState(sensorData.getState());
+            youcaiSensorInfo.setLongitude(sensorData.getLng());
+            youcaiSensorInfo.setLatitude(sensorData.getLat());
+            youcaiSensorInfo.setProtocolName(sensorInfo.getTraName());
+            youcaiSensorInfo.setIsDelete(0);
+            youcaiSensorInfo.setSensorCreateTime(sensorData.getDateCreated());
+            youcaiSensorInfo.setSyncTime(LocalDateTime.now());
+            youcaiSensorInfo.setProjectId(projectId);
+            youcaiSensorInfo.setCreateTime(LocalDateTime.now());
+            
+            boolean saved = youcaiSensorInfoService.save(youcaiSensorInfo);
+            if (saved) {
+                log.info("成功保存传感器信息到本地数据库，传感器ID: {}, 传感器名称: {}", 
+                    sensorData.getId(), sensorData.getSensorName());
+            } else {
+                log.warn("保存传感器信息到本地数据库失败，传感器ID: {}", sensorData.getId());
+            }
+            
+        } catch (Exception e) {
+            log.error("保存传感器信息到本地数据库异常: {}", e.getMessage(), e);
+        }
+    }
 }
+
 
 
