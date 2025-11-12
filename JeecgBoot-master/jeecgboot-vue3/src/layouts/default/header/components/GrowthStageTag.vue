@@ -135,7 +135,6 @@
 
 <script setup lang="ts">
 import {ref, reactive, onMounted, watch} from 'vue';
-import axios from 'axios';
 import { useSelectStore } from '../../../../store/selectStore';
 import {getBaseList, getPlotsByBaseId,getPlotById,createBase} from '../../../../views/rapeseed/production-plan/plot-production-plan/base.api';
 
@@ -144,6 +143,8 @@ interface BaseItem {
   baseId: string | number;
   baseName: string;
   fullName?: string;
+  longitude?: string;  // 添加经度字段
+  latitude?: string;   // 添加纬度字段
 }
 
 // 下拉框数据（基地和地块均从接口获取）
@@ -216,13 +217,17 @@ const fetchBaseList = async () => {
     baseList.value = baseDataList.map((item: any) => ({
       baseId: item.id,
       baseName: item.baseName || item.fullName,
-      fullName: item.fullName
+      fullName: item.fullName,
+      longitude: item.longitude || '',  // 添加经度信息
+      latitude: item.latitude || ''    // 添加纬度信息
     }));
     if (baseList.value.length > 0) {
       selectedBase.value = baseList.value[0];
       selectStore.updateSelectedBase({
         baseId: selectedBase.value.baseId,
-        baseName: selectedBase.value.baseName
+        baseName: selectedBase.value.baseName,
+        longitude: selectedBase.value.longitude,  // 添加经度
+        latitude: selectedBase.value.latitude     // 添加纬度
       });
       // 加载第一个基地的地块
       fetchPlotList();
@@ -299,22 +304,32 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
     const matchedBase = baseList.value.find(item => item.baseName === value);
     if (matchedBase) {
       selectedBase.value = matchedBase;
+      // 更新全局状态，包含经纬度信息
       selectStore.updateSelectedBase({
         baseId: matchedBase.baseId,
-        baseName: matchedBase.baseName
+        baseName: matchedBase.baseName,
+        longitude: matchedBase.longitude,  // 添加经度
+        latitude: matchedBase.latitude     // 添加纬度
       });
-      // 切换基地后重新加载地块
+      // 重置地块选择
+      selectedPlot.value = null;
+      selectStore.updateSelectedPlot(null);
+      currentGrowthStage.value = '';
+      // 加载该基地的地块
       fetchPlotList();
     }
-  } else {
+  } else if (type === 'plot') {
     // 匹配选中的地块对象
     const matchedPlot = plotList.value.find(item => item.plotName === value);
     if (matchedPlot) {
       selectedPlot.value = matchedPlot;
-      // 传递完整的地块对象而不是字符串
+      // 同步到全局状态
       selectStore.updateSelectedPlot(matchedPlot);
+      // 获取地块生长阶段
+      fetchPlotGrowthStage(matchedPlot.plotId);
     }
   }
+  // 关闭下拉框
   isDropdownOpen.value[type] = false;
 };
 

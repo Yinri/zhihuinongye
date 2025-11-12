@@ -7,15 +7,22 @@ export const useSelectStore = defineStore('select', {
   state: () => ({
     selectedBase: {
       baseId: '', // 新增：存储基地ID
-      baseName: '' // 保留：存储基地名称
+      baseName: '', // 保留：存储基地名称
+      longitude: '', // 新增：存储基地经度
+      latitude: '' // 新增：存储基地纬度
     },// 基地下拉框当前选中值
     selectedPlot: { plotId: '', plotName: '' } // 地块：ID+名称
   }),
   // 2. 定义修改状态的方法（规范地更新选中值）
   actions: {
     // 更新基地选中值
-    updateSelectedBase(baseInfo: { baseId: string | number; baseName: string }) {
-      this.selectedBase = baseInfo; // 接收完整对象，同时更新ID和名称
+    updateSelectedBase(baseInfo: { baseId: string | number; baseName: string; longitude?: string; latitude?: string }) {
+      this.selectedBase = {
+        baseId: baseInfo.baseId,
+        baseName: baseInfo.baseName,
+        longitude: baseInfo.longitude || '',
+        latitude: baseInfo.latitude || ''
+      }; // 接收完整对象，同时更新ID、名称和经纬度
     },
     // 更新地块选中值
     updateSelectedPlot(plotInfo: { plotId: string | number; plotName: string } | null) {
