@@ -18,10 +18,14 @@ import org.jeecg.modules.youcai.mapper.YoucaiLodgingRiskWarningMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
+import org.jeecg.modules.youcai.util.PythonApiUtil;
 import org.jeecg.modules.youcai.util.QWeatherApiUtil;
 import org.jeecg.common.exception.JeecgBootException;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,261 +37,443 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 /**
- * @Description: 倒伏风险预警表
+ * @Description: 倒伏风险预警表（优化版本）
  * @Author: jeecg-boot
  * @Date:   2025-10-18
- * @Version: V1.0
+ * @Version: V2.0
  */
 @Service
 @Slf4j
 public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgingRiskWarningMapper, YoucaiLodgingRiskWarning> implements IYoucaiLodgingRiskWarningService {
+
+    // 设置各API调用的超时时间（秒）
+    private static final int IOT_API_TIMEOUT = 20; // 增加IoT API超时时间到10秒
+    private static final int WEATHER_API_TIMEOUT = 10;
+    private static final int PYTHON_API_TIMEOUT = 15;
     
     @Autowired
     private YoucaiPlotsMapper youcaiPlotsMapper;
 
     @Autowired
+    private YoucaiBasesMapper youcaiBasesMapper;
+
+    @Autowired
     private YoucaiGrowthMonitoringMapper youcaiGrowthMonitoringMapper;
 
     @Autowired
-    private YoucaiBasesMapper youcaiBasesMapper;
-    
+    private QWeatherApiUtil qWeatherApiUtil;
+
     @Autowired
     private IoTApiUtil ioTApiUtil;
     
     @Autowired
-    private QWeatherApiUtil qWeatherApiUtil;
+    private PythonApiUtil pythonApiUtil;
     
     @Override
     public LodgingRiskAssessmentResponseDTO riskAssessmentById(Integer plotId) {
+        log.info("开始评估地块倒伏风险，地块ID: {}", plotId);
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            // 1. 获取基础数据（地块、基地、生长监测数据）
+            LodgingRiskAssessmentRequestDTO requestDTO = buildBasicRequestData(plotId);
+            if (requestDTO == null) {
+                log.warn("基础数据获取失败，地块ID: {}", plotId);
+                return null;
+            }
+            
+            // 2. 并行获取IoT传感器数据和天气预报数据
+        CompletableFuture<Void> iotFuture = CompletableFuture.runAsync(() -> {
+            try {
+                fetchIoTSensorDataWithTimeout(requestDTO, plotId);
+            } catch (Exception e) {
+                log.error("获取IoT传感器数据失败: {}", e.getMessage(), e);
+            }
+        });
 
-        // 组装LodgingRiskAssessmentRequestDTO
+        CompletableFuture<Void> weatherFuture = CompletableFuture.runAsync(() -> {
+            try {
+                fetchWeatherDataWithTimeout(requestDTO, plotId);
+            } catch (Exception e) {
+                log.error("获取天气预报数据失败: {}", e.getMessage(), e);
+            }
+        });
+
+        // 等待所有数据获取完成，设置超时
+        try {
+            CompletableFuture.allOf(iotFuture, weatherFuture)
+                .get(20, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            log.warn("获取IoT传感器数据和天气预报数据超时，地块ID: {}", plotId);
+            // 取消未完成的任务
+            iotFuture.cancel(true);
+            weatherFuture.cancel(true);
+        } catch (Exception e) {
+            log.error("获取IoT传感器数据和天气预报数据异常: {}", e.getMessage(), e);
+            // 取消未完成的任务
+            iotFuture.cancel(true);
+            weatherFuture.cancel(true);
+        }
+            
+            // 3. 调用Python服务进行风险评估
+            LodgingRiskAssessmentResponseDTO response = callPythonServiceWithTimeout(requestDTO);
+            
+            long endTime = System.currentTimeMillis();
+            log.info("倒伏风险评估完成，地块ID: {}, 耗时: {}ms", plotId, endTime - startTime);
+            
+            return response;
+        } catch (Exception e) {
+            log.error("倒伏风险评估异常，地块ID: {}, 错误: {}", plotId, e.getMessage(), e);
+            throw new JeecgBootException("倒伏风险评估失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 构建基础请求数据
+     */
+    private LodgingRiskAssessmentRequestDTO buildBasicRequestData(Integer plotId) {
+        // 创建请求DTO
         LodgingRiskAssessmentRequestDTO requestDTO = new LodgingRiskAssessmentRequestDTO();
         requestDTO.setPlotId(plotId);
+        
         // 查询地块信息
-        LambdaQueryWrapper<YoucaiPlots> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(YoucaiPlots::getId, plotId);
         YoucaiPlots plot = youcaiPlotsMapper.selectById(plotId);
-         if(plot == null){
+        if (plot == null) {
+            log.warn("地块不存在，地块ID: {}", plotId);
             return null;
         }
-
-        //查询基地信息
-        LambdaQueryWrapper<YoucaiBases> baseWrapper = new LambdaQueryWrapper<>();
-        baseWrapper.eq(YoucaiBases::getId, plot.getBaseId());
-        YoucaiBases base = youcaiBasesMapper.selectOne(baseWrapper);
-        if(base == null){
+        
+        // 查询基地信息
+        YoucaiBases base = youcaiBasesMapper.selectById(plot.getBaseId());
+        if (base == null) {
+            log.warn("基地不存在，基地ID: {}", plot.getBaseId());
             return null;
         }
         requestDTO.setSoilType(base.getSoilType());
         
-        //根据地块id查询生长监测表，获取monitoring_date最新的记录
+        // 查询最新的生长监测数据
         LambdaQueryWrapper<YoucaiGrowthMonitoring> monitorWrapper = new LambdaQueryWrapper<>();
         monitorWrapper.eq(YoucaiGrowthMonitoring::getPlotId, plotId)
                       .orderByDesc(YoucaiGrowthMonitoring::getMonitoringDate)
                       .last("LIMIT 1");
         YoucaiGrowthMonitoring monitor = youcaiGrowthMonitoringMapper.selectOne(monitorWrapper);
-        if(monitor == null){
+        
+        if (monitor == null) {
+            log.warn("未找到生长监测数据，地块ID: {}", plotId);
             return null;
         }
+        
+        // 设置生长监测数据
         requestDTO.setGrowthStage(monitor.getGrowthStage());
         requestDTO.setPlantHeight(monitor.getPlantHeight());
         requestDTO.setStemDiameter(monitor.getStemDiameter());
         requestDTO.setDensity(monitor.getDensity());
-
-        //直接set需要的参数
-        requestDTO.setWindSpeed3d(0.0);
-        requestDTO.setRainfall7d(0.0);
-         //从第三方接口获取传感器数据
-         try {
-             // 获取项目列表
-             Mono<ApiResponse> projectListMono = ioTApiUtil.getProjectList();
-             ApiResponse res = projectListMono.block(); // 同步获取结果
-            
-             if (res != null && res.getCode() == 1 && res.getData() != null) {
-                 int projectId = 0;
-
-                 //解析项目列表，获得第一个项目ID
-                 // 使用JSON序列化/反序列化正确处理类型转换
-                 List<ProjectInfo> projectList;
-                 if (res.getData() instanceof List) {
-                     // 即使是List类型，也需要检查元素类型
-                     java.util.List<?> tempList = (java.util.List<?>) res.getData();
-                     if (!tempList.isEmpty() && tempList.get(0) instanceof ProjectInfo) {
-                         // 如果元素已经是ProjectInfo类型，直接使用
-                         projectList = (java.util.List<ProjectInfo>) tempList;
-                     } else {
-                         // 如果元素是LinkedHashMap或其他类型，需要通过JSON序列化/反序列化转换
-                         String jsonData = JSONObject.toJSONString(res.getData());
-                         projectList = JSONObject.parseArray(jsonData, ProjectInfo.class);
-                     }
-                 } else {
-                     // 如果不是List类型，需要通过JSON序列化/反序列化转换
-                     String jsonData = JSONObject.toJSONString(res.getData());
-                     projectList = JSONObject.parseArray(jsonData, ProjectInfo.class);
-                 }
-                
-                 if (!projectList.isEmpty()) {
-                     System.out.print(projectList);
-                     // 获取第一个项目的ID
-                     ProjectInfo firstProject = projectList.get(0);
-                     // 添加空指针检查，防止firstProject.getQ()为null
-                     if (firstProject != null && firstProject.getQ() != null) {
-                         projectId = firstProject.getQ().getId();
-                     } else {
-                         log.warn("项目信息为空，无法获取项目ID");
-                         // 根据业务需求，可以选择使用默认值或抛出异常
-                         // 这里选择使用默认值0
-                         projectId = 0;
-                     }
-                 }
-
-                 // 获取气象传感器列表（传感器类型ID为1表示气象传感器）
-                 SensorListRequest sensorListRequest = new SensorListRequest();
-                 sensorListRequest.setProjectId(projectId);
-                 sensorListRequest.setSensorTypeId(1); // 1=气象传感器
-                
-                 Mono<ApiResponse> sensorListMono = ioTApiUtil.getSensorList(sensorListRequest);
-                 ApiResponse sensorListResult = sensorListMono.block(); // 同步获取结果
-                
-                 if (sensorListResult != null && sensorListResult.getCode() == 1 && sensorListResult.getData() != null) {
-                     // 获取第一个气象传感器的实时数据
-                     // 这里简化处理，实际应用中可能需要根据地块位置选择最近的传感器
-                     java.util.List<SensorInfo> sensorList;
-                     if (sensorListResult.getData() instanceof java.util.List) {
-                         // 如果已经是List类型，直接使用
-                         sensorList = (java.util.List<SensorInfo>) sensorListResult.getData();
-                     } else {
-                         // 如果是LinkedHashMap或其他类型，需要通过JSON序列化/反序列化转换
-                         String jsonData = JSONObject.toJSONString(sensorListResult.getData());
-                         sensorList = JSONObject.parseArray(jsonData, SensorInfo.class);
-                     }
-                    
-                     if (!sensorList.isEmpty()) {
-                         // 获取第一个传感器的信息
-                         Object firstSensor = sensorList.get(0);
-                         if (firstSensor instanceof SensorInfo) {
-                             SensorInfo sensorInfo = (SensorInfo) firstSensor;
-                             String deviceCode = sensorInfo.getQ().getSensorSerial();
-                            
-                             // 获取传感器实时数据
-                             Mono<ApiResponse> sensorDataMono = ioTApiUtil.getSensorRealTimeData(deviceCode);
-                             ApiResponse sensorDataResult = sensorDataMono.block(); // 同步获取结果
-                            
-                             if (sensorDataResult != null && sensorDataResult.getCode() == 1 && sensorDataResult.getData() != null) {
-                                 // 处理传感器数据，提取风速和降雨量
-                                 processSensorData(sensorDataResult.getData(), requestDTO);
-                             }
-                         }
-                     }
-                 }
-             }
-         } catch (Exception e) {
-             log.error("获取传感器数据失败，地块ID：{}，错误信息：{}", plotId, e.getMessage(), e);
-             // 根据业务需求选择以下两种处理方式之一：
-             // 方式1：不中断流程，使用默认值继续执行
-             // requestDTO.setWindSpeed3d(0.0);
-             // requestDTO.setRainfall7d(0.0);
-            
-             // 方式2：抛出JeecgBootException中断流程
-             throw new JeecgBootException("获取传感器数据失败: " + e.getMessage());
-         }
-
-
-        // 调用和风天气API获取未来7天的天气预报
-        try {
-            // 构建经纬度坐标字符串，格式为"经度,纬度"，保留小数点后两位
-            String location = String.format("%.2f,%.2f", base.getLongitude(), base.getLatitude());
-            log.info("开始获取天气预报数据，地块ID: {},  经纬度: {}",
-                    base.getId(),  location);
-            
-            // 获取7天天气预报
-            List<DailyWeatherDTO> weatherList = qWeatherApiUtil.get7DayWeatherForecast(location).block();
-            
-            if (weatherList != null && !weatherList.isEmpty()) {
-                requestDTO.setDailyWeather(weatherList);
-                log.info("成功获取{}天天气预报数据并设置到请求DTO中", weatherList.size());
-                
-                // 打印每一天的转换后数据
-                for (int i = 0; i < weatherList.size(); i++) {
-                    DailyWeatherDTO weather = weatherList.get(i);
-                    log.info("第{}天 - 日期: {}, 风速: {}m/s, 降雨量: {}mm", 
-                            i+1, weather.getDate(), weather.getWindSpeed(), weather.getRainfall());
-                }
-            } else {
-                log.warn("获取天气预报数据为空，使用默认值");
-                // 可以设置默认的天气预报数据
-                requestDTO.setDailyWeather(List.of());
-            }
-        } catch (Exception e) {
-            log.error("获取天气预报失败，位置：{}，错误信息：{}", base.getLongitude() + "," + base.getLatitude(), e.getMessage(), e);
-            // 根据业务需求选择以下两种处理方式之一：
-            // 方式1：不中断流程，使用默认值继续执行
-            // requestDTO.setDailyWeather(List.of());
-            
-            // 方式2：抛出JeecgBootException中断流程
-            throw new JeecgBootException("获取天气预报失败: " + e.getMessage());
-        }
-
-        //调用
-
-        // 调用原有的风险评估方法
-        return new LodgingRiskAssessmentResponseDTO();
+        
+        return requestDTO;
     }
     
     /**
-     * 处理传感器数据，提取风速和降雨量信息
-     * @param sensorDataResult 传感器数据结果
-     * @param requestDTO 请求DTO
+     * 带超时控制的IoT传感器数据获取
      */
-    private void processSensorData(Object sensorDataResult, LodgingRiskAssessmentRequestDTO requestDTO) {
+    private void fetchIoTSensorDataWithTimeout(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
         try {
-            java.util.List<SensorRealTimeData> dataList;
-            if (sensorDataResult instanceof java.util.List) {
-                // 如果已经是List类型，需要检查元素类型
-                java.util.List<?> tempList = (java.util.List<?>) sensorDataResult;
+            log.debug("开始获取IoT传感器数据，地块ID: {}", plotId);
+            
+            // 获取项目列表，添加超时和错误处理
+            Mono<ApiResponse> projectListMono = ioTApiUtil.getProjectList()
+                .timeout(Duration.ofSeconds(IOT_API_TIMEOUT))
+                .doOnError(e -> log.warn("获取IoT项目列表超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
+                .switchIfEmpty(Mono.fromCallable(() -> {
+                    log.warn("获取IoT项目列表返回空响应，地块ID: {}", plotId);
+                    return createEmptyApiResponse();
+                }));
+            
+            ApiResponse projectResponse = projectListMono.block();
+            
+            if (projectResponse == null || projectResponse.getCode() != 1 || projectResponse.getData() == null) {
+                log.warn("获取IoT项目列表失败，地块ID: {}", plotId);
+                return;
+            }
+            
+            // 解析项目列表，获取第一个项目ID
+            List<ProjectInfo> projectList = parseProjectList(projectResponse.getData());
+            if (projectList.isEmpty()) {
+                log.warn("IoT项目列表为空，地块ID: {}", plotId);
+                return;
+            }
+            
+            Integer projectId = projectList.get(0).getQ() != null ? 
+                projectList.get(0).getQ().getId() : 0;
+            
+            if (projectId == 0) {
+                log.warn("项目ID为空，地块ID: {}", plotId);
+                return;
+            }
+            
+            // 获取气象传感器列表，添加超时和错误处理
+            SensorListRequest sensorListRequest = new SensorListRequest();
+            sensorListRequest.setProjectId(projectId);
+            sensorListRequest.setSensorTypeId(1); // 1=气象传感器
+            
+            Mono<ApiResponse> sensorListMono = ioTApiUtil.getSensorList(sensorListRequest)
+                .timeout(Duration.ofSeconds(IOT_API_TIMEOUT))
+                .doOnError(e -> log.warn("获取IoT传感器列表超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
+                .switchIfEmpty(Mono.fromCallable(() -> {
+                    log.warn("获取IoT传感器列表返回空响应，地块ID: {}", plotId);
+                    return createEmptyApiResponse();
+                }));
+            
+            ApiResponse sensorListResponse = sensorListMono.block();
+            
+            if (sensorListResponse == null || sensorListResponse.getCode() != 1 || sensorListResponse.getData() == null) {
+                log.warn("获取IoT传感器列表失败，地块ID: {}", plotId);
+                return;
+            }
+            
+            // 解析传感器列表，获取第一个传感器
+            List<SensorInfo> sensorList = parseSensorList(sensorListResponse.getData());
+            if (sensorList.isEmpty()) {
+                log.warn("IoT传感器列表为空，地块ID: {}", plotId);
+                return;
+            }
+            
+            String deviceCode = sensorList.get(0).getQ() != null ? 
+                sensorList.get(0).getQ().getSensorSerial() : null;
+            
+            if (deviceCode == null) {
+                log.warn("传感器设备编码为空，地块ID: {}", plotId);
+                return;
+            }
+            
+            // 获取传感器实时数据，添加超时和错误处理
+            Mono<ApiResponse> sensorDataMono = ioTApiUtil.getSensorRealTimeData(deviceCode)
+                .timeout(Duration.ofSeconds(IOT_API_TIMEOUT))
+                .doOnError(e -> log.warn("获取IoT传感器实时数据超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
+                .switchIfEmpty(Mono.fromCallable(() -> {
+                    log.warn("获取IoT传感器实时数据返回空响应，地块ID: {}", plotId);
+                    return createEmptyApiResponse();
+                }));
+            
+            ApiResponse sensorDataResponse = sensorDataMono.block();
+            
+            if (sensorDataResponse == null || sensorDataResponse.getCode() != 1 || sensorDataResponse.getData() == null) {
+                log.warn("获取IoT传感器实时数据失败，地块ID: {}", plotId);
+                return;
+            }
+            
+            // 解析传感器数据并设置到请求DTO
+            processSensorDataOptimized(sensorDataResponse.getData(), requestDTO);
+            
+            log.debug("IoT传感器数据获取完成，地块ID: {}", plotId);
+            
+        } catch (Exception e) {
+            log.error("获取IoT传感器数据异常，地块ID: {}, 错误: {}", plotId, e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 创建空的API响应对象
+     */
+    private ApiResponse createEmptyApiResponse() {
+        ApiResponse response = new ApiResponse();
+        response.setCode(0);
+        response.setMsg("请求超时或失败");
+        response.setData(null);
+        return response;
+    }
+    
+    /**
+     * 带超时控制的天气预报数据获取
+     */
+    private void fetchWeatherDataWithTimeout(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
+        try {
+            log.debug("开始获取天气预报数据，地块ID: {}", plotId);
+            
+            // 根据地块ID查询所属基地，再获取基地的经纬度
+            YoucaiPlots plot = youcaiPlotsMapper.selectById(plotId);
+            if (plot == null) {
+                log.warn("地块不存在，地块ID: {}", plotId);
+                requestDTO.setDailyWeather(List.of());
+                return;
+            }
+            
+            YoucaiBases base = youcaiBasesMapper.selectById(plot.getBaseId());
+            if (base == null) {
+                log.warn("基地不存在，基地ID: {}", plot.getBaseId());
+                requestDTO.setDailyWeather(List.of());
+                return;
+            }
+            
+            // 检查基地是否有经纬度信息
+            if (base.getLongitude() == null || base.getLatitude() == null) {
+                log.warn("基地经纬度信息不完整，基地ID: {}, 经度: {}, 纬度: {}", 
+                    plot.getBaseId(), base.getLongitude(), base.getLatitude());
+                requestDTO.setDailyWeather(List.of());
+                return;
+            }
+            
+            // 构建位置坐标字符串（经度,纬度）
+            String location = base.getLongitude().toString() + "," + base.getLatitude().toString();
+            log.debug("使用基地坐标获取天气: {}", location);
+            
+            // 获取7天天气预报，添加超时和错误处理
+            List<DailyWeatherDTO> weatherList = qWeatherApiUtil.get7DayWeatherForecast(location)
+                .timeout(Duration.ofSeconds(WEATHER_API_TIMEOUT))
+                .doOnError(e -> log.warn("获取天气预报数据超时，地块ID: {}, 错误: {}", plotId, e.getMessage()))
+                .onErrorReturn(List.of())
+                .block();
+            
+            if (weatherList != null && !weatherList.isEmpty()) {
+                requestDTO.setDailyWeather(weatherList);
+                log.debug("成功获取{}天天气预报数据，地块ID: {}, 基地ID: {}", 
+                    weatherList.size(), plotId, plot.getBaseId());
+            } else {
+                log.warn("获取天气预报数据为空，地块ID: {}, 基地ID: {}", plotId, plot.getBaseId());
+                requestDTO.setDailyWeather(List.of());
+            }
+            
+        } catch (Exception e) {
+            log.error("获取天气预报数据异常，地块ID: {}, 错误: {}", plotId, e.getMessage(), e);
+            // 设置空列表，避免后续调用出现空指针
+            requestDTO.setDailyWeather(List.of());
+        }
+    }
+    
+    /**
+     * 带超时控制的Python服务调用
+     */
+    private LodgingRiskAssessmentResponseDTO callPythonServiceWithTimeout(LodgingRiskAssessmentRequestDTO requestDTO) {
+        try {
+            log.debug("开始调用Python服务进行风险评估");
+            
+            // 调用Python服务，添加超时和错误处理
+            LodgingRiskAssessmentResponseDTO response = pythonApiUtil.assessLodgingRisk(requestDTO)
+                .timeout(Duration.ofSeconds(PYTHON_API_TIMEOUT))
+                .doOnError(e -> log.warn("Python风险评估服务超时，错误: {}", e.getMessage()))
+                .onErrorReturn(createEmptyLodgingRiskResponse())
+                .block();
+            
+            if (response != null) {
+                log.info("Python服务调用成功，返回倒伏风险评估结果");
+                return response;
+            } else {
+                log.warn("Python服务返回结果为空，使用默认响应");
+                return createEmptyLodgingRiskResponse();
+            }
+            
+        } catch (Exception e) {
+            log.error("调用Python服务异常，错误: {}", e.getMessage(), e);
+            return createEmptyLodgingRiskResponse();
+        }
+    }
+    
+    /**
+     * 创建空的倒伏风险评估响应对象
+     */
+    private LodgingRiskAssessmentResponseDTO createEmptyLodgingRiskResponse() {
+        LodgingRiskAssessmentResponseDTO response = new LodgingRiskAssessmentResponseDTO();
+        return response;
+    }
+    
+    /**
+     * 优化的项目列表解析方法
+     */
+    private List<ProjectInfo> parseProjectList(Object data) {
+        if (data == null) {
+            return List.of();
+        }
+        
+        try {
+            if (data instanceof List) {
+                List<?> tempList = (List<?>) data;
+                if (!tempList.isEmpty() && tempList.get(0) instanceof ProjectInfo) {
+                    return (List<ProjectInfo>) tempList;
+                }
+            }
+            
+            // 使用JSON序列化/反序列化转换
+            String jsonData = JSONObject.toJSONString(data);
+            return JSONObject.parseArray(jsonData, ProjectInfo.class);
+        } catch (Exception e) {
+            log.error("解析项目列表失败: {}", e.getMessage(), e);
+            return List.of();
+        }
+    }
+    
+    /**
+     * 优化的传感器列表解析方法
+     */
+    private List<SensorInfo> parseSensorList(Object data) {
+        if (data == null) {
+            return List.of();
+        }
+        
+        try {
+            if (data instanceof List) {
+                List<?> tempList = (List<?>) data;
+                if (!tempList.isEmpty() && tempList.get(0) instanceof SensorInfo) {
+                    return (List<SensorInfo>) tempList;
+                }
+            }
+            
+            // 使用JSON序列化/反序列化转换
+            String jsonData = JSONObject.toJSONString(data);
+            return JSONObject.parseArray(jsonData, SensorInfo.class);
+        } catch (Exception e) {
+            log.error("解析传感器列表失败: {}", e.getMessage(), e);
+            return List.of();
+        }
+    }
+    
+    /**
+     * 优化的传感器数据处理方法
+     */
+    private void processSensorDataOptimized(Object sensorDataResult, LodgingRiskAssessmentRequestDTO requestDTO) {
+        if (sensorDataResult == null) {
+            return;
+        }
+        
+        try {
+            List<SensorRealTimeData> dataList;
+            
+            if (sensorDataResult instanceof List) {
+                List<?> tempList = (List<?>) sensorDataResult;
                 if (!tempList.isEmpty() && tempList.get(0) instanceof SensorRealTimeData) {
-                    dataList = (java.util.List<SensorRealTimeData>) tempList;
+                    dataList = (List<SensorRealTimeData>) tempList;
                 } else {
-                    // 如果元素类型不是SensorRealTimeData，需要通过JSON序列化/反序列化转换
                     String jsonData = JSONObject.toJSONString(sensorDataResult);
                     dataList = JSONObject.parseArray(jsonData, SensorRealTimeData.class);
                 }
             } else {
-                // 如果不是List类型，需要通过JSON序列化/反序列化转换
                 String jsonData = JSONObject.toJSONString(sensorDataResult);
                 dataList = JSONObject.parseArray(jsonData, SensorRealTimeData.class);
             }
             
             // 遍历传感器数据，查找风速和降雨量
             for (SensorRealTimeData sensorData : dataList) {
+                if (sensorData == null || sensorData.getName() == null || sensorData.getQ() == null) {
+                    continue;
+                }
+                
                 String name = sensorData.getName();
+                Double value = sensorData.getQ().getSensorNum();
+                
+                if (value == null) {
+                    continue;
+                }
                 
                 // 根据传感器数据名称判断数据类型
-                if (name != null && sensorData.getQ() != null) {
-                    Double value = sensorData.getQ().getSensorNum();
-                    
-                    if (value != null) {
-                        // 风速数据（单位：m/s）
-                        if (name.contains("风速") || name.toLowerCase().contains("wind")) {
-                            requestDTO.setWindSpeed3d(value);
-                            log.info("获取到风速数据：{} m/s", value);
-                        }
-                        // 降雨量数据（单位：mm）
-                        else if (name.contains("降雨") || name.contains("雨量") || name.toLowerCase().contains("rain")) {
-                            requestDTO.setRainfall7d(value);
-                            log.info("获取到降雨量数据：{} mm", value);
-                        }
-                    }
+                if (name.contains("风速")) {
+                    requestDTO.setWindSpeed3d(value);
+                    log.debug("获取到风速数据：{} m/s", value);
+                } else if (name.contains("降雨量")) {
+                    requestDTO.setRainfall7d(value);
+                    log.debug("获取到降雨量数据：{} mm", value);
                 }
             }
         } catch (Exception e) {
-            log.error("处理传感器数据失败，错误信息：{}", e.getMessage(), e);
-            // 根据业务需求选择以下两种处理方式之一：
-            // 方式1：不中断流程，使用默认值继续执行
-            // (无需处理，因为requestDTO已经初始化了默认值)
-            
-            // 方式2：抛出JeecgBootException中断流程
-            throw new JeecgBootException("处理传感器数据失败: " + e.getMessage());
+            log.error("处理传感器数据失败: {}", e.getMessage(), e);
+            // 不抛出异常，允许流程继续
         }
     }
 }

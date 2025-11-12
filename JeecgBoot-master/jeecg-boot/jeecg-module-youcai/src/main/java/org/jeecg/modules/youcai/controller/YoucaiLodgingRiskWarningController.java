@@ -45,6 +45,7 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
     @GetMapping(value = "/riskData/{plotId}")
 	public Result<LodgingRiskAssessmentResponseDTO> riskAssessment(@PathVariable Integer plotId) {
         LodgingRiskAssessmentResponseDTO riskData = youcaiLodgingRiskWarningService.riskAssessmentById(plotId);
+        log.info("riskData={}", riskData);
 		return Result.OK(riskData);
 	}
 

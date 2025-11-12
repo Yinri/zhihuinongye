@@ -1,16 +1,26 @@
 <template>
   <div class="lodging-risk-page">
-    
     <!-- 风险等级总览卡片 -->
-    <a-card :bordered="false" class="risk-overview-card" :style="{ backgroundColor: getRiskColor(currentRiskLevel) + '20', borderLeft: `5px solid ${getRiskColor(currentRiskLevel)}` }">
+    <a-card 
+      :bordered="false" 
+      class="risk-overview-card" 
+      :style="{ 
+        backgroundColor: getRiskColor(currentRiskLevel) + '20', 
+        borderLeft: `5px solid ${getRiskColor(currentRiskLevel)}` 
+      }"
+    >
       <div class="risk-overview-content">
         <!-- 左侧风险等级标识 -->
         <div class="risk-level-indicator">
           <div class="risk-level-icon" :style="{ color: getRiskColor(currentRiskLevel) }">
             <Icon :icon="getRiskIcon(currentRiskLevel)" />
           </div>
-          <div class="risk-level-text" :style="{ color: getRiskColor(currentRiskLevel) }">{{ getRiskLevelText(currentRiskLevel) }}</div>
-          <div class="risk-probability-range">倒伏概率：{{ getRiskProbabilityRange(currentRiskLevel) }}</div>
+          <div class="risk-level-text" :style="{ color: getRiskColor(currentRiskLevel) }">
+            {{ getRiskLevelText(currentRiskLevel) }}
+          </div>
+          <div class="risk-probability-range">
+            倒伏概率：{{ getRiskProbabilityRange(currentRiskLevel) }}
+          </div>
           <div class="last-update">上次更新：{{ lastUpdateTime }}</div>
         </div>
         
@@ -57,16 +67,23 @@
           v-for="(day, index) in riskForecastData" 
           :key="index"
           class="risk-day-card"
-          :style="{ backgroundColor: day.riskColor + '15', borderLeft: `3px solid ${day.riskColor}` }"
+          :style="{ 
+            backgroundColor: day.riskColor + '15', 
+            borderLeft: `3px solid ${day.riskColor}` 
+          }"
         >
           <div class="day-header">
             <div class="day-date">{{ day.date }}</div>
             <div class="day-weekday">{{ day.weekday }}</div>
           </div>
-          <div class="risk-level-badge" :style="{ backgroundColor: day.riskColor, color: 'white' }">{{ day.riskLevel }}</div>
+          <div class="risk-level-badge" :style="{ backgroundColor: day.riskColor, color: 'white' }">
+            {{ day.riskLevel }}
+          </div>
           <div class="risk-details">
             <div class="risk-probability">
-              <span class="probability-value" :style="{ color: day.riskColor }">{{ day.probability }}</span>
+              <span class="probability-value" :style="{ color: day.riskColor }">
+                {{ day.probability }}
+              </span>
               <span class="probability-label">概率</span>
             </div>
             <div class="risk-factors">
@@ -99,9 +116,16 @@
       </template>
       
       <a-collapse v-model:activeKey="activeKey" :bordered="false">
-        <a-collapse-panel v-for="(suggestion, index) in suggestionsData" :key="String(index + 1)" :header="suggestion.title" class="suggestions-panel">
+        <a-collapse-panel 
+          v-for="(suggestion, index) in suggestionsData" 
+          :key="String(index + 1)" 
+          :header="suggestion.title" 
+          class="suggestions-panel"
+        >
           <template #extra>
-            <a-tag :color="index === 0 ? 'red' : 'orange'">{{ index === 0 ? '立即实施' : '中长期策略' }}</a-tag>
+            <a-tag :color="index === 0 ? 'red' : 'orange'">
+              {{ index === 0 ? '立即实施' : '中长期策略' }}
+            </a-tag>
           </template>
           <div class="suggestions-content">
             <div v-for="(item, itemIndex) in suggestion.items" :key="itemIndex" class="suggestion-item">
@@ -135,9 +159,12 @@
               <div class="history-desc">{{ item.desc }}</div>
             </div>
             <div class="history-actions">
-              <a-button v-for="(action, index) in item.actions" :key="index" 
+              <a-button 
+                v-for="(action, index) in item.actions" 
+                :key="index" 
                 :type="item.type === 'warning' ? 'primary' : 'default'" 
-                size="small">
+                size="small"
+              >
                 {{ action }}
               </a-button>
             </div>
@@ -150,13 +177,10 @@
       </div>
     </a-card>
 
-
     <!-- 加载状态提示 -->
     <a-card :bordered="false" v-if="loading" class="loading-card">
       <a-skeleton active :paragraph="{ rows: 5 }" />
     </a-card>
-
-    
   </div>
 </template>
 
@@ -165,35 +189,31 @@ import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
 import { useECharts } from '/@/hooks/web/useECharts';
+import { useSelectStore } from '/@/store/selectStore';
+import { getLodgingRiskDataById } from './lodgingRisk.api';
 
+// ==================== 状态管理 ====================
 const { createMessage } = useMessage();
-
-// 加载状态
+const selectStore = useSelectStore();
 const loading = ref(false);
-
-// 视图模式：card-卡片视图，chart-趋势图视图
-const viewMode = ref('card');
-
-// 趋势图引用
+const viewMode = ref<'card' | 'chart'>('card');
 const trendChartRef = ref<HTMLDivElement | null>(null);
-
-// 倒伏风险数据
 const lodgingRiskData = ref<any>(null);
+const activeKey = ref(['1']);
+
+// ==================== 计算属性 ====================
 
 // 当前风险等级
 const currentRiskLevel = computed(() => {
   if (!lodgingRiskData.value?.current_risk) return '不存在';
-  
-  const riskLevel = lodgingRiskData.value.current_risk.risk_level;
-  // 直接返回英文风险等级，模拟数据已经是英文格式
-  return riskLevel || 'medium';
+  return lodgingRiskData.value.current_risk.riskLevel || '中等风险';
 });
 
 // 上次更新时间
 const lastUpdateTime = computed(() => {
-  if (!lodgingRiskData.value?.calculation_time) return '';
+  if (!lodgingRiskData.value?.calculationTime) return '';
   
-  const date = new Date(lodgingRiskData.value.calculation_time);
+  const date = new Date(lodgingRiskData.value.calculationTime);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -205,30 +225,33 @@ const lastUpdateTime = computed(() => {
 
 // 风险因子数据
 const riskFactors = computed(() => {
-  if (!lodgingRiskData.value?.current_risk?.original_factors) return [];
+  if (!lodgingRiskData.value?.current_risk?.originalFactors) return [];
   
-  const factors = lodgingRiskData.value.current_risk.original_factors;
-  const normalizedFactors = lodgingRiskData.value.current_risk.normalized_factors || {};
+  const factors = lodgingRiskData.value.current_risk.originalFactors;
+  const normalizedFactors = lodgingRiskData.value.current_risk.normalizedFactors || {};
+  
+  // 因子图标映射
   const factorIcons: Record<string, string> = {
-    'plant_height': 'ant-design:rise-outlined',
-    'stem_diameter': 'ant-design:column-width-outlined',
-    'slenderness_ratio': 'ant-design:column-height-outlined',
-    'wind_speed_3d': 'ant-design:thunderbolt-outlined',
-    'rainfall_7d': 'ant-design:cloud-rain-outlined',
-    'growth_stage': 'ant-design:field-time-outlined',
+    'plantHeight': 'ant-design:rise-outlined',
+    'stemDiameter': 'ant-design:column-width-outlined',
+    'slendernessRatio': 'ant-design:column-height-outlined',
+    'windSpeed3d': 'ant-design:thunderbolt-outlined',
+    'rainfall7d': 'ant-design:cloud-rain-outlined',
+    'growthStage': 'ant-design:field-time-outlined',
     'density': 'ant-design:border-outlined',
-    'soil_type': 'ant-design:environment-outlined'
+    'soilType': 'ant-design:environment-outlined'
   };
   
+  // 因子名称映射
   const factorNames: Record<string, string> = {
-    'plant_height': '株高',
-    'stem_diameter': '茎粗',
-    'slenderness_ratio': '细长比',
-    'wind_speed_3d': '近3天最大风速',
-    'rainfall_7d': '近7天累积降雨',
-    'growth_stage': '生育期',
+    'plantHeight': '株高',
+    'stemDiameter': '茎粗',
+    'slendernessRatio': '细长比',
+    'windSpeed3d': '近3天最大风速',
+    'rainfall7d': '近7天累积降雨',
+    'growthStage': '生育期',
     'density': '种植密度',
-    'soil_type': '土壤类型'
+    'soilType': '土壤类型'
   };
   
   return Object.keys(factors).map(key => {
@@ -238,64 +261,43 @@ const riskFactors = computed(() => {
     
     // 根据因子类型设置显示值
     switch(key) {
-      case 'plant_height':
+      case 'plantHeight':
         displayValue = `${value}cm`;
         break;
-      case 'stem_diameter':
+      case 'stemDiameter':
         displayValue = `${value}mm`;
         break;
-      case 'slenderness_ratio':
+      case 'slendernessRatio':
         displayValue = value.toString();
         break;
-      case 'wind_speed_3d':
+      case 'windSpeed3d':
         displayValue = `${value}m/s`;
         break;
-      case 'rainfall_7d':
+      case 'rainfall7d':
         displayValue = `${value}mm`;
         break;
-      case 'growth_stage':
+      case 'growthStage':
         displayValue = value; // 直接显示原始值，如"花期"
         break;
       case 'density':
         displayValue = `${value}株/m²`;
         break;
-      case 'soil_type':
+      case 'soilType':
         displayValue = value; // 直接显示原始值，如"砂壤土"
         break;
       default:
         displayValue = value.toString();
     }
     
-    // 根据标准化值获取颜色
-    const getFactorColor = (normalizedValue) => {
-      // 根据标准化值范围确定颜色
-      if (normalizedValue >= 0.0 && normalizedValue < 0.30) {
-        return "#4CAF50"; // 低风险 - 绿色
-      } else if (normalizedValue >= 0.30 && normalizedValue < 0.50) {
-        return "#FFEB3B"; // 中低风险 - 黄色
-      } else if (normalizedValue >= 0.50 && normalizedValue < 0.65) {
-        return "#FF9800"; // 中等风险 - 橙色
-      } else if (normalizedValue >= 0.65 && normalizedValue < 0.80) {
-        return "#F44336"; // 高风险 - 红色
-      } else if (normalizedValue >= 0.80 && normalizedValue <= 1.0) {
-        return "#D32F2F"; // 极高风险 - 深红色
-      }
-      
-      return "#FF9800"; // 默认橙色
-    };
-    
     return {
       name: factorNames[key] || key,
       value: displayValue,
       icon: factorIcons[key] || 'ant-design:info-circle-outlined',
       percentage: Math.round(normalizedValue * 100),
-      color: getFactorColor(normalizedValue) // 使用标准化值计算颜色
+      color: getFactorColor(normalizedValue)
     };
   });
 });
-
-// 防控建议折叠面板激活状态
-const activeKey = ref(['1']);
 
 // 防控建议数据
 const suggestionsData = computed(() => {
@@ -317,7 +319,7 @@ const suggestionsData = computed(() => {
       title: '短期措施（1-3天）',
       icon: 'ControlOutlined',
       color: '#1890ff',
-      items: suggestions.short_term?.map((item: string) => ({
+      items: suggestions.shortTerm?.map((item: string) => ({
         title: '',
         desc: item
       })) || []
@@ -326,7 +328,7 @@ const suggestionsData = computed(() => {
       title: '中期措施（4-7天）',
       icon: 'ControlOutlined',
       color: '#1890ff',
-      items: suggestions.medium_term?.map((item: string) => ({
+      items: suggestions.mediumTerm?.map((item: string) => ({
         title: '',
         desc: item
       })) || []
@@ -335,7 +337,7 @@ const suggestionsData = computed(() => {
       title: '长期优化（下季改进）',
       icon: 'ControlOutlined',
       color: '#1890ff',
-      items: suggestions.long_term?.map((item: string) => ({
+      items: suggestions.longTerm?.map((item: string) => ({
         title: '',
         desc: item
       })) || []
@@ -345,10 +347,8 @@ const suggestionsData = computed(() => {
 
 // 历史记录数据
 const historyData = computed(() => {
-  // 如果没有历史记录数据，返回空数组
   if (!lodgingRiskData.value?.historical_records) return [];
   
-  // 从实际数据中获取历史记录
   return lodgingRiskData.value.historical_records.map((record: any) => ({
     id: record.id || Date.now(),
     date: record.date || new Date().toISOString().split('T')[0],
@@ -361,63 +361,118 @@ const historyData = computed(() => {
 
 // 风险预警数据
 const riskForecastData = computed(() => {
-  // 适配模拟数据格式
-  if (!lodgingRiskData.value?.forecast_7days?.daily_risks) return [];
+  if (!lodgingRiskData.value?.forecast_7days?.dailyRisks) return [];
   
-  const dailyRisks = lodgingRiskData.value.forecast_7days.daily_risks;
+  const dailyRisks = lodgingRiskData.value.forecast_7days.dailyRisks;
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  
-  // 根据风险评分获取颜色
-  const getRiskColorByScore = (score) => {
-    // 根据风险评分范围确定颜色
-    if (score >= 0.0 && score < 0.30) {
-      return "#4CAF50"; // 低风险 - 绿色
-    } else if (score >= 0.30 && score < 0.50) {
-      return "#FFEB3B"; // 中低风险 - 黄色
-    } else if (score >= 0.50 && score < 0.65) {
-      return "#FF9800"; // 中等风险 - 橙色
-    } else if (score >= 0.65 && score < 0.80) {
-      return "#F44336"; // 高风险 - 红色
-    } else if (score >= 0.80 && score <= 1.0) {
-      return "#D32F2F"; // 极高风险 - 深红色
-    }
-    
-    return "#FF9800"; // 默认橙色
-  };
   
   return dailyRisks.map((day: any) => {
     const date = new Date(day.date);
     const weekday = weekdays[date.getDay()];
     
-    // 根据风速和降雨量计算风险等级
-    let riskLevel = day.risk_level || 'low';
-    
-    
-    // 根据风险等级计算概率
-    let probability = day.lodging_probability || '10-30%';
-    
-
-    
     return {
       date: `${date.getMonth() + 1}月${date.getDate()}日`,
       weekday,
-      riskLevel,
-      riskColor: getRiskColorByScore(day.risk_score || 0), // 使用风险评分计算颜色
-      probability,
-      windSpeed: day.weather?.wind_speed || 0, // 使用原始风速数据
-      rainfall: day.weather?.rainfall || 0, // 使用原始降雨量数据
-      riskScore: day.risk_score || 0, // 添加风险评分
-      fullDate: day.date // 保存完整日期用于比较
+      riskLevel: day.riskLevel || 'low',
+      riskColor: getRiskColorByScore(day.riskScore || 0),
+      probability: day.lodgingProbability || '10-30%',
+      windSpeed: day.weather?.windSpeed || 0,
+      rainfall: day.weather?.rainfall || 0,
+      riskScore: day.riskScore || 0,
+      fullDate: day.date
     };
   });
 });
 
+// ==================== 工具函数 ====================
+
+// 根据标准化值获取因子颜色
+function getFactorColor(normalizedValue: number): string {
+  if (normalizedValue >= 0.0 && normalizedValue < 0.30) {
+    return "#4CAF50"; // 低风险 - 绿色
+  } else if (normalizedValue >= 0.30 && normalizedValue < 0.50) {
+    return "#FFEB3B"; // 中低风险 - 黄色
+  } else if (normalizedValue >= 0.50 && normalizedValue < 0.65) {
+    return "#FF9800"; // 中等风险 - 橙色
+  } else if (normalizedValue >= 0.65 && normalizedValue < 0.80) {
+    return "#F44336"; // 高风险 - 红色
+  } else if (normalizedValue >= 0.80 && normalizedValue <= 1.0) {
+    return "#D32F2F"; // 极高风险 - 深红色
+  }
+  
+  return "#FF9800"; // 默认橙色
+}
+
+// 根据风险评分获取颜色
+function getRiskColorByScore(score: number): string {
+  if (score >= 0.0 && score < 0.30) {
+    return "#4CAF50"; // 低风险 - 绿色
+  } else if (score >= 0.30 && score < 0.50) {
+    return "#FFEB3B"; // 中低风险 - 黄色
+  } else if (score >= 0.50 && score < 0.65) {
+    return "#FF9800"; // 中等风险 - 橙色
+  } else if (score >= 0.65 && score < 0.80) {
+    return "#F44336"; // 高风险 - 红色
+  } else if (score >= 0.80 && score <= 1.0) {
+    return "#D32F2F"; // 极高风险 - 深红色
+  }
+  
+  return "#FF9800"; // 默认橙色
+}
+
+// 获取风险等级文本
+function getRiskLevelText(level: string): string {
+  if (!lodgingRiskData.value?.current_risk?.riskLevel) return '未知风险';
+  return lodgingRiskData.value.current_risk.riskLevel;
+}
+
+// 获取风险等级颜色
+function getRiskColor(level: string): string {
+  // 直接根据中文风险等级返回对应颜色
+  const colorMap = {
+    '低风险': '#52c41a',        // 绿色
+    '中低风险': '#afcb2b',      // 黄绿色
+    '中等风险': '#faad14',      // 橙色
+    '高风险': '#ff4d4f',        // 红色
+    '极高风险': '#d32f2f'       // 深红色
+  };
+  
+  // 如果有匹配的中文风险等级，直接返回对应颜色
+  if (colorMap[level]) {
+    return colorMap[level];
+  }
+  
+  // 否则根据风险评分动态计算颜色
+  const riskScore = lodgingRiskData.value?.current_risk?.riskScore || 0.5;
+  return getRiskColorByScore(riskScore);
+}
+
+// 获取风险图标
+function getRiskIcon(level: string): string {
+  const iconMap = {
+    '低风险': 'ant-design:check-circle-outlined',
+    '中低风险': 'ant-design:info-circle-outlined',
+    '中等风险': 'ant-design:exclamation-circle-outlined',
+    '高风险': 'ant-design:warning-outlined',
+    '极高风险': 'ant-design:close-circle-outlined'
+  };
+  return iconMap[level] || 'ant-design:question-circle-outlined';
+}
+
+// 获取风险概率范围
+function getRiskProbabilityRange(level: string): string {
+  if (!lodgingRiskData.value?.current_risk?.lodgingProbability) return '未知';
+  return lodgingRiskData.value.current_risk.lodgingProbability;
+}
+
+// ==================== 图表初始化 ====================
+
 // 初始化趋势图
 const initTrendChart = () => {
-  if (!trendChartRef.value || !lodgingRiskData.value?.forecast_7days?.daily_risks) return;
+  if (!trendChartRef.value || !lodgingRiskData.value?.forecast_7days?.dailyRisks) return;
   
   const { setOptions } = useECharts(trendChartRef.value);
-  const dailyRisks = lodgingRiskData.value.forecast_7days.daily_risks;
+  const dailyRisks = lodgingRiskData.value.forecast_7days.dailyRisks;
   const maxRiskDate = lodgingRiskData.value.forecast_7days.max_risk_date;
   
   // 准备图表数据
@@ -426,8 +481,8 @@ const initTrendChart = () => {
     return `${date.getMonth() + 1}月${date.getDate()}日`;
   });
   
-  const riskScores = dailyRisks.map(day => (day.risk_score * 100).toFixed(1)); // 转换为百分比
-  const windSpeeds = dailyRisks.map(day => day.weather?.wind_speed || 0);
+  const riskScores = dailyRisks.map(day => (day.riskScore * 100).toFixed(1)); // 转换为百分比
+  const windSpeeds = dailyRisks.map(day => day.weather?.windSpeed || 0);
   const rainfalls = dailyRisks.map(day => day.weather?.rainfall || 0);
   
   // 找出最高风险日的索引
@@ -544,6 +599,44 @@ const initTrendChart = () => {
   setOptions(option);
 };
 
+// ==================== 数据加载 ====================
+
+// 加载倒伏风险数据
+const loadLodgingRiskData = async () => {
+  try {
+    loading.value = true;
+    console.log('开始加载倒伏风险数据...');
+    
+    // 检查是否有选中的地块
+    if (!selectStore.selectedPlot || !selectStore.selectedPlot.plotId) {
+      console.log('没有选中的地块，不加载倒伏风险数据');
+      return;
+    }
+    
+    const plotId = selectStore.selectedPlot.plotId;
+    console.log('加载地块ID:', plotId, '的倒伏风险数据');
+    
+    // 调用API获取数据
+    const res = await getLodgingRiskDataById(plotId);
+    console.log('API返回数据:', res);
+    
+    if (res) {
+      console.log('倒伏风险数据加载成功:', res);
+      lodgingRiskData.value = res;
+    } else {
+      console.warn('倒伏风险数据为空');
+      createMessage.warning('未获取到倒伏风险数据');
+    }
+  } catch (error) {
+    console.error('加载倒伏风险数据失败:', error);
+    createMessage.error('加载倒伏风险数据失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// ==================== 监听器 ====================
+
 // 监听视图模式变化
 watch(
   () => viewMode.value,
@@ -569,269 +662,34 @@ watch(
   { deep: true }
 );
 
+// 监听地块选择变化
+watch(
+  () => selectStore.selectedPlot?.plotId,
+  (newPlotId) => {
+    console.log('监听到地块ID变化:', newPlotId);
+    if (newPlotId) {
+      loadLodgingRiskData();
+    } else {
+      console.log('地块ID为空，不加载倒伏风险数据');
+    }
+  },
+  { immediate: true }
+);
 
-
-/**
- * 加载倒伏风险数据
- */
-async function loadLodgingRiskData() {
-  try {
-    loading.value = true;
-    
-    // 使用模拟数据替代API调用
-    const mockData = {
-    // 1. 当前风险
-    "current_risk": {
-      "risk_score": 0.56,
-      "risk_level": "中等风险",
-      "lodging_probability": "15-40%",
-      // 标准化后的因子值（0-1）
-      "normalized_factors": {
-        "plant_height": 0.61,          // 株高标准化值
-        "stem_diameter": 0.52,         // 茎粗标准化值
-        "slenderness_ratio": 0.45,     // 细长比
-        "wind_speed_3d": 0.67,         // 近3天最大风速
-        "rainfall_7d": 0.34,           // 近7天累积降雨
-        "growth_stage": 0.95,          // 生育期（0.95=花期）
-        "density": 0.42,               // 种植密度
-        "soil_type": 0.60              // 土壤类型
-      },
-      "original_factors": {
-        "plant_height": 145.0,
-        "stem_diameter": 7.0,
-        "wind_speed_3d": 7.0,
-        "rainfall_7d": 15.0,
-        "growth_stage": "花期",
-        "density": 25.0,
-        "soil_type": "砂壤土"
-      },
-
-      "factor_contributions": {
-          "plant_height": 0.098,         // 株高贡献了9.8%的风险
-          "wind_speed_3d": 0.134,        // 风速贡献了13.4%的风险
-      // ... 其他因子
-       },
-      // 高风险因子列表（标准化值>0.7的因子）
-      "high_risk_factors": [
-      {
-        "key": "growth_stage",
-        "name": "生育期",
-        "normalized_value": 0.95,
-        "status": "critical"         // critical(>0.8) 或 warning(0.7-0.8)
-      },
-      {
-        "key": "wind_speed_3d",
-        "name": "近3天最大风速",
-        "normalized_value": 0.73,
-        "status": "warning"
-      }
-      ],
-    },
-
-    // 2. 未来7天预测
-    "forecast_7days": {
-      "field_id": "field_001",
-      "daily_risks": [
-        {
-          "date": "2025-11-06",
-          "risk_score": 0.52,
-          "risk_level": "中等风险",
-          "lodging_probability": "15-40%",
-          "weather": {"wind_speed": 7.0, "rainfall": 15.0}
-        },
-        {
-          "date": "2025-11-07",
-          "risk_score": 0.78,
-          "risk_level": "高风险",
-          "lodging_probability": "40-70%",
-          "weather": {"wind_speed": 14.0, "rainfall": 40.0}
-        },
-        // ... 其他5天数据
-	      {
-          "date": "2025-11-08",
-          "risk_score": 0.52,
-          "risk_level": "中等风险",
-          "lodging_probability": "15-40%",
-          "weather": {"wind_speed": 7.0, "rainfall": 15.0}
-        },
-        {
-          "date": "2025-11-09",
-          "risk_score": 0.52,
-          "risk_level": "中等风险",
-          "lodging_probability": "15-40%",
-          "weather": {"wind_speed": 7.0, "rainfall": 15.0}
-        },
-        {
-          "date": "2025-11-10",
-          "risk_score": 0.52,
-          "risk_level": "中等风险",
-          "lodging_probability": "15-40%",
-          "weather": {"wind_speed": 7.0, "rainfall": 15.0}
-        },
-        {
-          "date": "2025-11-11",
-          "risk_score": 0.52,
-          "risk_level": "中等风险",
-          "lodging_probability": "15-40%",
-          "weather": {"wind_speed": 7.0, "rainfall": 15.0}
-        },
-        {
-          "date": "2025-11-12",
-          "risk_score": 0.52,
-          "risk_level": "中等风险",
-          "lodging_probability": "15-40%",
-          "weather": {"wind_speed": 7.0, "rainfall": 15.0}
-        },
-
-      ],
-      "max_risk_date": "2025-11-07",
-      "max_risk_score": 0.78
-    },
-
-    // 3. 综合防护建议（核心）
-    "comprehensive_suggestions": {
-      "risk_alert": [
-        "⚡ 当前风险等级：中等风险，建议加强防护准备",
-        "🔴 未来高风险日期：2025-11-07, 2025-11-08，请提前做好防护",
-        "📍 2025-11-07 风险最高（评分: 0.78），建议当日重点关注",
-        "📈 风险呈上升趋势，建议逐步加强防护措施"
-      ],
-      "immediate": [
-        "今日加强田间巡查，密切关注植株状态",
-        "检查并清理排水系统，确保排水畅通",
-        "⚠️ 明日风险升高，今日需准备好防护材料"
-      ],
-      "short_term": [
-        "未来3天内有2天高风险，需制定分阶段防护方案",
-        "1-2天内喷施抗倒伏剂（胺鲜酯30mg/L或多效唑50mg/L）",
-        "2025-11-07 风速达14m/s，提前加固支撑",
-        "每日巡查田间，及时扶正轻度倾斜植株"
-      ],
-      "medium_term": [
-        "4-7天后风险期：2025-11-10，需提前规划物资",
-        "提前采购或预定支撑材料、抗倒伏剂等物资",
-        "制定一周防护计划，合理安排人力物力"
-      ],
-      "long_term": [
-        "下季选择抗倒伏品种（茎秆粗壮型、矮秆型）",
-        "优化施肥策略：基肥为主，追肥适量，增施钾肥提高抗性",
-        "建立倒伏风险档案，总结经验用于下季改进"
-      ]
-    },
-
-    // 4. 历史记录与对比
-    "historical_records": [
-      {
-        "id": 1,
-        "date": "2025-10-28",
-        "title": "倒伏事件",
-        "desc": "东南区域发生中度倒伏，影响面积约2亩",
-        "type": "warning",
-        "actions": ["已处理", "已记录"]
-      },
-      {
-        "id": 2,
-        "date": "2025-10-25",
-        "title": "与周边地块对比",
-        "desc": "本地块抗倒伏能力低于周边平均水平15%",
-        "type": "info",
-        "actions": ["查看详情", "生成报告"]
-      },
-      {
-        "id": 3,
-        "date": "2025-10-20",
-        "title": "防护措施效果",
-        "desc": "前期喷施抗倒伏剂后，倒伏风险降低20%",
-        "type": "success",
-        "actions": ["查看详情"]
-      }
-    ],
-
-    "calculation_time": "2025-11-05T14:30:00Z"
-  };
-    
-    // 设置模拟数据
-    lodgingRiskData.value = mockData;
-    
-    // 原来的API调用代码（注释掉）
-    // const response = await getLodgingRiskData();
-    // if (response && response.data) {
-    //   lodgingRiskData.value = response.data;
-    // }
-  } catch (error) {
-    console.error('加载倒伏风险数据失败:', error);
-    createMessage.error('加载倒伏风险数据失败，请稍后重试');
-  } finally {
-    loading.value = false;
-  }
-}
-
-
+// ==================== 生命周期钩子 ====================
 
 // 组件挂载时初始化数据
 onMounted(() => {
-  // 初始化加载数据
-  loadLodgingRiskData();
+  console.log('组件挂载，检查是否有选中的地块');
+  
+  // 如果已经有选中的地块，则加载数据
+  if (selectStore.selectedPlot?.plotId) {
+    console.log('已有选中的地块，加载数据');
+    loadLodgingRiskData();
+  } else {
+    console.log('没有选中的地块，不加载数据');
+  }
 });
-
-// 获取风险等级文本
-function getRiskLevelText(level) {
-  if (!lodgingRiskData.value?.current_risk?.risk_level) return '未知风险';
-  return lodgingRiskData.value.current_risk.risk_level;
-}
-
-// 获取风险等级颜色
-function getRiskColor(level) {
-  // 直接根据中文风险等级返回对应颜色
-  const colorMap = {
-    '低风险': '#52c41a',        // 绿色
-    '中低风险': '#afcb2b',      // 黄绿色
-    '中等风险': '#faad14',      // 橙色
-    '高风险': '#ff4d4f',        // 红色
-    '极高风险': '#d32f2f'       // 深红色
-  };
-  
-  // 如果有匹配的中文风险等级，直接返回对应颜色
-  if (colorMap[level]) {
-    return colorMap[level];
-  }
-  
-  // 否则根据风险评分动态计算颜色
-  const riskScore = lodgingRiskData.value?.current_risk?.risk_score || 0.5;
-  
-  // 根据风险评分范围确定颜色
-  if (riskScore >= 0.0 && riskScore < 0.30) {
-    return "#4CAF50"; // 低风险 - 绿色
-  } else if (riskScore >= 0.30 && riskScore < 0.50) {
-    return "#FFEB3B"; // 中低风险 - 黄色
-  } else if (riskScore >= 0.50 && riskScore < 0.65) {
-    return "#FF9800"; // 中等风险 - 橙色
-  } else if (riskScore >= 0.65 && riskScore < 0.80) {
-    return "#F44336"; // 高风险 - 红色
-  } else if (riskScore >= 0.80 && riskScore <= 1.0) {
-    return "#D32F2F"; // 极高风险 - 深红色
-  }
-  
-  return "#FF9800"; // 默认橙色
-}
-
-// 获取风险图标
-function getRiskIcon(level) {
-  const iconMap = {
-    '低风险': 'ant-design:check-circle-outlined',
-    '中低风险': 'ant-design:info-circle-outlined',
-    '中等风险': 'ant-design:exclamation-circle-outlined',
-    '高风险': 'ant-design:warning-outlined',
-    '极高风险': 'ant-design:close-circle-outlined'
-  };
-  return iconMap[level] || 'ant-design:question-circle-outlined';
-}
-
-// 获取风险概率范围
-function getRiskProbabilityRange(level) {
-  if (!lodgingRiskData.value?.current_risk?.lodging_probability) return '未知';
-  return lodgingRiskData.value.current_risk.lodging_probability;
-}
 </script>
 
 <style lang="less" scoped>
@@ -841,44 +699,10 @@ function getRiskProbabilityRange(level) {
   min-height: calc(100vh - 64px);
 }
 
-// 风险等级总览卡片样式
+// ==================== 风险等级总览卡片样式 ====================
 .risk-overview-card {
   margin-bottom: 16px;
   transition: all 0.3s;
-  
-  // 风险等级背景色
-  &.risk-low-bg {
-    background-color: #E8F5E9;
-    border-left: 5px solid #52c41a;
-  }
-  
-  &.risk-medium-low-bg {
-    background-color: #FFF9C4;
-    border-left: 5px solid #afcb2b;
-  }
-  
-  &.risk-medium-bg {
-    background-color: #FFE0B2;
-    border-left: 5px solid #faad14;
-  }
-  
-  &.risk-high-bg {
-    background-color: #FFCDD2;
-    border-left: 5px solid #ff4d4f;
-  }
-  
-  &.risk-very-high-bg {
-    background-color: #EF5350;
-    border-left: 5px solid #d32f2f;
-    color: white;
-    
-    .risk-level-text,
-    .risk-probability-range,
-    .last-update,
-    .factor-name {
-      color: white;
-    }
-  }
   
   .risk-overview-content {
     display: flex;
@@ -897,52 +721,12 @@ function getRiskProbabilityRange(level) {
       .risk-level-icon {
         font-size: 64px;
         margin-bottom: 16px;
-        
-        &.low {
-          color: #52c41a;
-        }
-        
-        &.medium-low {
-          color: #afcb2b;
-        }
-        
-        &.medium {
-          color: #faad14;
-        }
-        
-        &.high {
-          color: #ff4d4f;
-        }
-        
-        &.very-high {
-          color: white;
-        }
       }
       
       .risk-level-text {
         font-size: 40px;
         font-weight: bold;
         margin-bottom: 12px;
-        
-        &.low {
-          color: #52c41a;
-        }
-        
-        &.medium-low {
-          color: #afcb2b;
-        }
-        
-        &.medium {
-          color: #faad14;
-        }
-        
-        &.high {
-          color: #ff4d4f;
-        }
-        
-        &.very-high {
-          color: white;
-        }
       }
       
       .risk-probability-range {
@@ -1005,26 +789,7 @@ function getRiskProbabilityRange(level) {
   }
 }
 
-.page-header {
-  margin-bottom: 24px;
-  
-  .page-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 20px;
-    font-weight: 600;
-    color: #262626;
-    margin-bottom: 8px;
-  }
-  
-  .page-description {
-    color: #8c8c8c;
-    font-size: 14px;
-  }
-}
-
-// 核心预警区域样式
+// ==================== 核心预警区域样式 ====================
 .risk-forecast-card {
   margin-bottom: 16px;
   
@@ -1083,21 +848,6 @@ function getRiskProbabilityRange(level) {
       padding: 6px 0;
       font-size: 12px;
       font-weight: 500;
-      
-      &.high {
-        background-color: #ff4d4f;
-        color: white;
-      }
-      
-      &.medium {
-        background-color: #faad14;
-        color: white;
-      }
-      
-      &.low {
-        background-color: #52c41a;
-        color: white;
-      }
     }
     
     .risk-details {
@@ -1122,13 +872,6 @@ function getRiskProbabilityRange(level) {
         }
       }
       
-      .risk-time {
-        font-size: 12px;
-        color: #595959;
-        margin-bottom: 8px;
-        text-align: center;
-      }
-      
       .risk-factors {
         display: flex;
         flex-direction: column;
@@ -1142,42 +885,13 @@ function getRiskProbabilityRange(level) {
           gap: 4px;
           font-size: 11px;
           color: #595959;
-          
-          .high-icon {
-            color: #ff4d4f;
-          }
-          
-          .medium-icon {
-            color: #faad14;
-          }
-          
-          .info-icon {
-            color: #1890ff;
-          }
-          
-          .low-icon {
-            color: #52c41a;
-          }
         }
       }
-    }
-    
-    // 根据风险等级设置左侧边框
-    &.risk-high {
-      border-left: 3px solid #ff4d4f;
-    }
-    
-    &.risk-medium {
-      border-left: 3px solid #faad14;
-    }
-    
-    &.risk-low {
-      border-left: 3px solid #52c41a;
     }
   }
 }
 
-// 防控建议区样式
+// ==================== 防控建议区样式 ====================
 .suggestions-card {
   margin-bottom: 16px;
   
@@ -1263,7 +977,7 @@ function getRiskProbabilityRange(level) {
   }
 }
 
-// 历史记录区样式
+// ==================== 历史记录区样式 ====================
 .history-card {
   margin-bottom: 16px;
   
@@ -1321,7 +1035,7 @@ function getRiskProbabilityRange(level) {
   }
 }
 
-// 趋势图样式
+// ==================== 趋势图样式 ====================
 .risk-trend-chart {
   width: 100%;
   height: 400px;
@@ -1333,6 +1047,7 @@ function getRiskProbabilityRange(level) {
   }
 }
 
+// ==================== 响应式样式 ====================
 @media (max-width: 768px) {
   .lodging-risk-page {
     padding: 16px;
@@ -1376,27 +1091,10 @@ function getRiskProbabilityRange(level) {
             height: 32px;
             margin-right: 12px;
           }
-          
-          .factor-details {
-            .factor-name {
-              font-size: 14px;
-            }
-            
-            .factor-value {
-              font-size: 12px;
-            }
-          }
-          
-          .factor-indicator {
-            width: 80px;
-            height: 6px;
-          }
         }
       }
     }
   }
-  
-  
   
   .risk-forecast-card {
     .risk-forecast-container {
@@ -1425,7 +1123,7 @@ function getRiskProbabilityRange(level) {
         .risk-details {
           padding: 6px 8px;
           
-          .risk-probability, .risk-time {
+          .risk-probability {
             font-size: 11px;
           }
           

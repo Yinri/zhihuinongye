@@ -2,6 +2,7 @@ package org.jeecg.modules.youcai.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -24,29 +25,31 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
     /**
      * 当前风险
      */
+    @JsonProperty("current_risk")
     private CurrentRiskDTO currentRisk;
 
     /**
      * 未来7天预测
      */
+    @JsonProperty("forecast_7days")
     private Forecast7DaysDTO forecast7Days;
 
     /**
      * 综合防护建议
      */
+    @JsonProperty("comprehensive_suggestions")
     private ComprehensiveSuggestionsDTO comprehensiveSuggestions;
 
     /**
      * 计算时间
      */
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "GMT")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", timezone = "GMT")
     private Date calculationTime;
 
     /**
      * 当前风险DTO
      */
     @Data
-
     public static class CurrentRiskDTO implements Serializable {
 
         private static final long serialVersionUID = 1L;
@@ -54,50 +57,48 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
         /**
          * 风险评分
          */
-
         private Double riskScore;
 
         /**
          * 风险等级
          */
-
         private String riskLevel;
 
         /**
          * 倒伏概率
          */
-
         private String lodgingProbability;
 
         /**
          * 归一化因子
          */
-
         private NormalizedFactorsDTO normalizedFactors;
 
         /**
          * 原始因子
          */
-
         private OriginalFactorsDTO originalFactors;
 
         /**
          * 因子贡献度
          */
-
         private Map<String, Object> factorContributions;
 
         /**
          * 高风险因子
          */
-
         private List<HighRiskFactorDTO> highRiskFactors;
 
         /**
          * 建议
          */
-
-        private Map<String, Object> suggestions;
+        private SuggestionsDTO suggestions;
+        
+        /**
+         * 计算时间
+         */
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", timezone = "GMT")
+        private Date calculationTime;
     }
 
     /**
@@ -181,6 +182,12 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
         private String maxRiskDate;
 
         private Double maxRiskScore;
+        
+        /**
+         * 计算时间
+         */
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", timezone = "GMT")
+        private Date calculationTime;
     }
 
     /**
@@ -200,7 +207,7 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
 
         private String lodgingProbability;
 
-        private WeatherDTO weather;
+        private WeatherInfoDTO weather;
     }
 
     /**
@@ -232,5 +239,33 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
 
         private List<String> mediumTerm;
         private List<String> longTerm;
+    }
+    
+    /**
+     * 建议DTO
+     */
+    @Data
+    public static class SuggestionsDTO implements Serializable {
+        
+        private static final long serialVersionUID = 1L;
+        
+        private List<String> urgent;
+        
+        private List<String> mediumTerm;
+        
+        private List<String> longTerm;
+    }
+    
+    /**
+     * 天气信息DTO
+     */
+    @Data
+    public static class WeatherInfoDTO implements Serializable {
+        
+        private static final long serialVersionUID = 1L;
+        
+        private Double windSpeed;
+        
+        private Double rainfall;
     }
 }
