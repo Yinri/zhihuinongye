@@ -147,9 +147,30 @@ public class IoTApiUtil {
         // 1. Token未初始化或已过期，先刷新Token
         if (token == null || System.currentTimeMillis() > tokenExpireTime) {
             log.info("Token未初始化或已过期，自动刷新Token");
-            return login().flatMap(t -> requestSupplier.get());
+            return login().flatMap(t -> requestSupplier.get())
+                    .timeout(Duration.ofSeconds(30)) // 添加总体超时时间
+                    .onErrorResume(e -> {
+                        log.error("请求失败，返回空响应: {}", e.getMessage());
+                        return Mono.empty(); // 返回空Mono而不是类型不匹配的对象
+                    });
         }
         // 2. Token有效，直接执行请求
-        return requestSupplier.get();
+        return requestSupplier.get()
+                .timeout(Duration.ofSeconds(30)) // 添加总体超时时间
+                .onErrorResume(e -> {
+                    log.error("请求失败，返回空响应: {}", e.getMessage());
+                    return Mono.empty(); // 返回空Mono而不是类型不匹配的对象
+                });
+    }
+
+    /**
+     * 创建回退响应
+     */
+    private ApiResponse createFallbackResponse() {
+        ApiResponse response = new ApiResponse();
+        response.setCode(0);
+        response.setMsg("服务暂时不可用，使用回退响应");
+        response.setData(null);
+        return response;
     }
 }

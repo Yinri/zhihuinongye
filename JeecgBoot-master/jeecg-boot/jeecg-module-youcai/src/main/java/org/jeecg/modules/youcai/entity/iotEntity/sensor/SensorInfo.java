@@ -12,6 +12,8 @@ public class SensorInfo {
     private Sensor q; // 传感器设备信息
     private String traName; // 协议名称
     private Integer id; // 协议ID
+    private String trrz;
+    private String socketInfo;
 
     /**
      * 传感器设备信息
