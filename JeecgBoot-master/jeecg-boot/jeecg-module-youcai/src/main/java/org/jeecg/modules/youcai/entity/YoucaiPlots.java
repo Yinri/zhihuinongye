@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableField;
 import org.jeecg.common.constant.ProvinceCityArea;
 import org.jeecg.common.util.SpringContextUtils;
 import lombok.Data;
@@ -18,6 +19,7 @@ import org.jeecg.common.aspect.annotation.Dict;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 
 /**
  * @Description: 地块信息表
@@ -26,7 +28,7 @@ import lombok.experimental.Accessors;
  * @Version: V1.0
  */
 @Data
-@TableName("youcai_plots")
+@TableName(value = "youcai_plots", autoResultMap = true)
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="地块信息表")
@@ -61,6 +63,10 @@ public class YoucaiPlots implements Serializable {
 	@Excel(name = "经度", width = 15)
     @Schema(description = "经度")
     private java.math.BigDecimal longitude;
+	/**多边形坐标点(JSON格式)*/
+	@TableField(typeHandler = JacksonTypeHandler.class)
+    @Schema(description = "多边形坐标点(JSON格式)")
+    private String polygonCoords;
 	/**创建人*/
     @Schema(description = "创建人")
     private java.lang.String createBy;
