@@ -4,18 +4,18 @@
       <a-row class="main-content-row">
         <!-- 实时虫情图像 -->
         <a-col :span="8">
-        <a-card title="实时虫情图像" :bordered="false" class="inner-card">
-          <div class="image-container">
-            <img
-              class="insect-image"
-              :src="currentImageUrl"
-              alt="实时虫情图像"
-              v-if="currentImageUrl"
-            />
-            <div v-else class="no-image">暂无图像</div>
-          </div>
-          <div class="update-time">更新于：{{ lastUpdateTime }}</div>
-        </a-card>
+          <a-card title="实时虫情图像" :bordered="false" class="inner-card">
+            <div class="image-container">
+              <img
+                class="insect-image"
+                :src="currentImageUrl"
+                alt="实时虫情图像"
+                v-if="currentImageUrl"
+              />
+              <div v-else class="no-image">暂无图像</div>
+            </div>
+            <div class="update-time">更新于：{{ lastUpdateTime }}</div>
+          </a-card>
         </a-col>
 
         <!-- 实时虫情报告 -->
@@ -171,13 +171,17 @@ import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './insectControl.data';
 // import { getInsectControlList, deleteInsectControl, exportInsectControl, importInsectControl } from './insectControl.api';
 import InsectControlModal from './InsectControlModal.vue';
-import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
-import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
-import GrowthTimeline from '@/views/rapeseed/production-plan/plot-production-plan/components/GrowthTimeline.vue';
+import BaseSelect from '../production-plan/components/BaseSelect.vue';
+import PlotSelect from '../production-plan/components/PlotSelect.vue';
+import GrowthTimeline from '../production-plan/components/GrowthTimeline.vue';
 import * as echarts from 'echarts'
 import { message } from 'ant-design-vue'
 import axios from 'axios'
+import { useSelectStore } from '/@/store/selectStore';
 import { message as createMessage } from 'ant-design-vue'
+// 获取Pinia存储实例
+
+
 
 const { createMessage } = useMessage();
 // 加载状态
@@ -218,7 +222,7 @@ const fetchLatestImageAndData = async () => {
   const { start_date, end_date } = getDateRange()
   try {
     const response = await axios.get(
-      `http://localhost:8001/api/v1/pest/device_images?start_date=${start_date}&end_date=${end_date}&count_type=1`
+      `http://localhost:8002/api/v1/pest/device_images?start_date=${start_date}&end_date=${end_date}&count_type=1`
     )
     const images = response.data.data
     rawInsects.value=images
@@ -308,7 +312,7 @@ const handleLLMAnalysis = async () => {
       })),
     }
     // 调用后端大模型分析接口
-    const response = await axios.post('http://localhost:8001/api/v1/pest/ai-analysis', requestData)
+    const response = await axios.post('http://localhost:8002/api/v1/pest/ai-analysis', requestData)
     // 解析返回结果
     const result = response.data
     // 启动流式输出效果
@@ -341,30 +345,38 @@ const pesticideForm = ref({
   defaultDosage: '',
   defaultMethod: ''
 })
-const savingRecord = ref(false)
+
 //获取农药列表
-import { getPesticideList } from './insectControl.api'
+import { getPesticideList,addPestControlRecord } from './insectControl.api'
+
 // 获取农药列表
 const fetchPesticideOptions = async () => {
   try {
-     const response = await getPesticideList()
-     console.log(response)
-     pesticideOptions.value = response.result || []
-
-     } catch (error) {
-      console.error('获取农药列表失败:', error)
-      message.error('获取农药列表失败')
-    }
+    const response = await getPesticideList()
+    const formattedPesticides = response.map((name, index) => ({
+      id: `pesticide_${index + 1}`,
+      name: name
+    }))
+    pesticideOptions.value = formattedPesticides || []
+  } catch (error) {
+    console.error('获取农药列表失败:', error)
+    message.error('获取农药列表失败')
+  }
 }
 
 // 农药选择变化处理
+
 const handlePesticideChange = (value) => {
   // 清空剂量和方法字段，让用户自己填写
   pesticideForm.value.dosage = '';
   pesticideForm.value.method = '';
 }
-
+const savingRecord = ref(false)
 // 保存农药使用记录
+
+const selectStore = useSelectStore();
+
+const { start_date, end_date } = getDateRange()
 const savePesticideRecord = async () => {
   if (!pesticideForm.value.selectedPesticide) {
     message.warning('请选择农药')
@@ -373,26 +385,18 @@ const savePesticideRecord = async () => {
   savingRecord.value = true
   try {
     const requestData = {
-      analysis_period: '最近十天',
-      pest_data: rawInsects.value,
-      pesticide_id: pesticideForm.value.selectedPesticide,
-      pesticide_name: pesticideOptions.value.find(item => item.id === pesticideForm.value.selectedPesticide)?.name,
-      dosage: pesticideForm.value.dosage,
-      method: pesticideForm.value.method,
-      operator: '当前用户' // 实际应从用户状态获取
+      plotId:selectStore.selectedPlot.plotId,
+      controlDate: end_date,
+      pesticideName: pesticideOptions.value.find(item => item.id === pesticideForm.value.selectedPesticide)?.name,
+      pesticideDosage: pesticideForm.value.dosage,
+      applicationMethod: pesticideForm.value.method,
     }
-
-    await axios.post('http://localhost:8001/api/v1/pest/control-record', requestData)
-    message.success('使用记录保存成功')
-
+    await addPestControlRecord(requestData);
+    message.success('使用记录保存成');
     // 重置表单
-    pesticideForm.value = {
-      selectedPesticide: null,
-      dosage: '',
-      method: '',
-      defaultDosage: '',
-      defaultMethod: ''
-    }
+    pesticideForm.value.selectedPesticide = null;
+    pesticideForm.value.dosage = '';
+    pesticideForm.value.method = '';
   } catch (error) {
     console.error('保存使用记录失败:', error)
     message.error('保存使用记录失败')
