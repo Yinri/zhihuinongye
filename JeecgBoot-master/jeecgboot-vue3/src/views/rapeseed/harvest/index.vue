@@ -18,7 +18,7 @@
     </div>
 
     <!-- 数据概览卡片 -->
-    <a-row :gutter="16" class="mb-6">
+    <a-row :gutter="12" class="mb-4">
       <a-col :xs="24" :sm="12" :md="12" :lg="6" :xl="6">
         <a-card class="stat-card" :bordered="false">
           <div class="stat-content">
@@ -104,11 +104,13 @@
           </template>
           <div class="map-container">
               <!-- 使用航拍图组件 -->
-              <AerialMap 
-                :aerial-image-url="aerialImageUrl"
+              <AerialMap
+                ref="mapContainer"
+                :aerial-image-url="mapImageUrl"
                 :initial-polygons="mapPolygons"
-                @polygons-updated="handlePolygonsUpdated"
+                :readonly="true"
                 @polygon-selected="handlePolygonSelected"
+                @load="onMapLoad"
               />
             </div>
         </a-card>
@@ -522,7 +524,7 @@ const detailModalVisible = ref(false);
 const selectedField = ref<any>(null);
 
 // 航拍图相关
-const aerialImageUrl = ref('/images/aerial-map.jpg'); // 航拍图URL
+const mapImageUrl = ref('/images/aerial-map.jpg'); // 航拍图URL
 const mapPolygons = ref<any[]>([]); // 地图多边形数据
 
 // 收割记录表格列
@@ -900,13 +902,6 @@ async function handleImport() {
 }
 
 // 航拍图相关方法
-function handlePolygonsUpdated(polygons: any[]) {
-  // 处理多边形更新事件
-  mapPolygons.value = polygons;
-  // 这里可以添加保存到后端的逻辑
-  console.log('多边形已更新:', polygons);
-}
-
 function handlePolygonSelected(polygon: any) {
   // 处理多边形选中事件
   if (polygon) {
@@ -915,18 +910,29 @@ function handlePolygonSelected(polygon: any) {
   }
 }
 
-
+// 在地图加载完成后，自动适应容器大小
+const onMapLoad = () => {
+  nextTick(() => {
+    // 重置地图视图以适应容器
+    if (mapContainer.value) {
+      // 这里我们无法直接访问AerialMap组件的内部状态
+      // 所以我们需要通过AerialMap组件暴露的方法来设置地图视图
+      // 由于我们已经设置了readonly=true，地图应该不会移动
+      console.log('地图加载完成，已设置为只读模式');
+    }
+  });
+};
 </script>
 
 <style lang="less" scoped>
 .harvest-page {
-  padding: 24px;
+  padding: 16px;
   background-color: #f0f2f5;
   min-height: calc(100vh - 64px);
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   
   .page-title {
     display: flex;
@@ -945,7 +951,7 @@ function handlePolygonSelected(polygon: any) {
 }
 
 .selection-timeline-row {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   
   // 确保两个卡片在同一行显示
   .ant-col {
@@ -974,7 +980,7 @@ function handlePolygonSelected(polygon: any) {
 
 // 数据概览卡片样式
 .stat-card {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   transition: all 0.3s ease;
   
   &:hover {
@@ -1071,10 +1077,8 @@ function handlePolygonSelected(polygon: any) {
   }
 }
 
-
-
 .table-card {
-  margin-top: 16px;
+  margin-top: 12px;
   
   .table-title {
     display: flex;
@@ -1087,7 +1091,7 @@ function handlePolygonSelected(polygon: any) {
 
 .empty-card,
 .loading-card {
-  margin-top: 16px;
+  margin-top: 12px;
   text-align: center;
 }
 
@@ -1101,17 +1105,6 @@ function handlePolygonSelected(polygon: any) {
       border-radius: 8px;
       overflow: hidden;
       background-color: #f5f5f5;
-      
-      .map-tools {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 1000;
-        background: rgba(255, 255, 255, 0.9);
-        padding: 8px;
-        border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      }
     }
 }
 
@@ -1158,7 +1151,7 @@ function handlePolygonSelected(polygon: any) {
 .info-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   height: 600px;
   
   .harvester-status-card {

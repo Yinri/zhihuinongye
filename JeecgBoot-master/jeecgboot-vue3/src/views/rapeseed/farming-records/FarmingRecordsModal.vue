@@ -16,10 +16,14 @@
   import { BasicForm, useForm } from '/@/components/Form';
   import { formSchema } from './farmingRecords.data';
   import { saveFarmingRecords, editFarmingRecords } from './farmingRecords.api';
+  import { useSelectStore } from '/@/store/selectStore';
 
   const emit = defineEmits(['success', 'register']);
   const isUpdate = ref(true);
   const rowId = ref('');
+  
+  // 获取基地选择的store
+  const selectStore = useSelectStore();
 
   const [registerForm, { setFieldsValue, resetFields, validate }] = useForm({
     labelWidth: 100,
@@ -49,6 +53,12 @@
     try {
       const values = await validate();
       setModalProps({ confirmLoading: true });
+      
+      // 添加基地ID到提交的数据中
+      const baseId = selectStore.selectedBase.baseId;
+      if (baseId) {
+        values.baseId = baseId;
+      }
 
       if (unref(isUpdate)) {
         await editFarmingRecords({ ...values, id: rowId.value });

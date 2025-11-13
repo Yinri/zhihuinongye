@@ -1,52 +1,14 @@
 <template>
   <div class="variety-info-page">
-    <!-- 基地与地块选择区域 -->
-    <a-row :gutter="16">
-      <a-col :span="12">
-        <a-card :bordered="false" class="base-select-card">
-          <BaseSelect 
-            v-model:value="selectedBaseId" 
-            @change="handleBaseChange" 
-            :defaultBaseId="defaultBaseId"
-            ref="baseSelectRef"
-          />
-        </a-card>
-      </a-col>
-      <a-col :span="12">
-        <a-card :bordered="false" class="plot-select-card">
-          <PlotSelect 
-            v-model:value="selectedPlotId" 
-            :baseId="selectedBaseId"
-            @change="handlePlotChange"
-            ref="plotSelectRef"
-          />
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 生长周期时间轴区域 -->
-    <a-row :gutter="16" style="margin-top: 16px;">
-      <a-col :span="24">
-        <a-card :bordered="false" class="timeline-card">
-          <GrowthTimeline 
-            :plotId="selectedPlotId"
-            :varietyId="selectedVarietyId"
-            :varietyName="selectedVarietyName"
-            :currentStageId="currentStageId"
-          />
-        </a-card>
-      </a-col>
-    </a-row>
-
     <!-- 品种信息列表区域 -->
-    <a-card :bordered="false" v-if="selectedBaseId" class="table-card">
+    <a-card :bordered="false" class="table-card">
       
       <template #toolbar>
         <a-space>
           <a-button type="primary" preIcon="ant-design:plus-outlined" @click="handleCreate"> 新增</a-button>
           <a-button type="primary" preIcon="ant-design:export-outlined" @click="onExportXls"> 导出</a-button>
           <j-upload-button type="primary" preIcon="ant-design:import-outlined" @click="onImportXls">导入</j-upload-button>
-          <a-dropdown v-if="selectedRowKeys.length > 0">
+          <a-dropdown v-if="selectedRowKeys && selectedRowKeys.length > 0">
             <template #overlay>
               <a-menu>
                 <a-menu-item key="1" @click="batchHandleDelete">
@@ -82,10 +44,10 @@
     </a-card>
 
     <!-- 无数据提示 -->
-    <a-card :bordered="false" v-if="selectedBaseId && selectedPlotId && !loading && dataSource.length === 0" class="empty-card">
+    <a-card :bordered="false" v-if="!loading && dataSource && dataSource.length === 0" class="empty-card">
       <a-result
         status="404"
-        title="该地块暂无品种信息数据"
+        title="暂无品种信息数据"
         sub-title="您可以点击下方按钮创建新的品种信息"
       >
         <template #icon>
@@ -97,26 +59,13 @@
       </a-result>
     </a-card>
 
-    <!-- 未选择基地提示 -->
-    <a-card :bordered="false" v-if="!selectedBaseId" class="empty-card">
-      <a-result
-        status="info"
-        title="请先选择基地和地块"
-        sub-title="选择基地和地块后即可查看和管理该地块的品种信息"
-      >
-        <template #icon>
-          <Icon icon="ant-design:home-outlined" style="font-size: 64px; color: #1890ff;" />
-        </template>
-      </a-result>
-    </a-card>
-
     <!-- 加载状态提示 -->
-    <a-card :bordered="false" v-if="loading && selectedBaseId" class="loading-card">
+    <a-card :bordered="false" v-if="loading" class="loading-card">
       <a-skeleton active :paragraph="{ rows: 5 }" />
     </a-card>
 
     <!-- 表单弹窗 -->
-    <VarietyInfoModal @register="registerModal" @success="handleSuccess" :baseId="selectedBaseId" :plotId="selectedPlotId" />
+    <VarietyInfoModal @register="registerModal" @success="handleSuccess" />
   </div>
 </template>
 
@@ -130,32 +79,11 @@ import { Icon } from '/@/components/Icon';
 import VarietyInfoModal from './VarietyInfoModal.vue';
 import { columns, searchFormSchema } from './varietyInfo.data';
 import { getVarietyInfoList, deleteVarietyInfo, batchDeleteVarietyInfo, getImportUrl, getExportUrl } from './varietyInfo.api';
-import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
-import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
-import GrowthTimeline from '@/views/rapeseed/production-plan/plot-production-plan/components/GrowthTimeline.vue';
 
 const { createMessage } = useMessage();
 
-// 基地选择相关
-const selectedBaseId = ref<string | number | undefined>(undefined);
-const selectedBaseName = ref<string>('');
-const baseSelectRef = ref();
-
-// 地块选择相关
-const selectedPlotId = ref<string | number | undefined>(undefined);
-const selectedPlotName = ref<string>('');
-const plotSelectRef = ref();
-
-// 品种信息
-const selectedVarietyId = ref<string | number | undefined>(undefined);
-const selectedVarietyName = ref<string>('');
-const currentStageId = ref<string | number | undefined>(undefined);
-
 // 加载状态
 const loading = ref(false);
-
-// 默认基地ID（可以从URL参数或用户设置中获取）
-const defaultBaseId = ref<string | number | undefined>(undefined);
 
 //注册model
 const [registerModal, { openModal }] = useModal();
@@ -165,13 +93,7 @@ const { prefixCls, tableContext, onExportXls, onImportXls } = useListPage({
   designScope: 'variety-info-list',
   tableProps: {
     title: '品种信息管理',
-    api: selectedPlotId.value ? (params) => {
-      // 如果有选中的地块ID，添加到查询参数
-      if (selectedPlotId.value) {
-        params.plotId = selectedPlotId.value;
-      }
-      return getVarietyInfoList(params);
-    } : getVarietyInfoList,
+    api: getVarietyInfoList,
     columns: columns,
     size: 'small',
     formConfig: {
@@ -181,13 +103,6 @@ const { prefixCls, tableContext, onExportXls, onImportXls } = useListPage({
       width: 120,
     },
     beforeFetch: (params) => {
-      // 如果有选中的基地ID或地块ID，添加到查询参数
-      if (selectedBaseId.value) {
-        params.baseId = selectedBaseId.value;
-      }
-      if (selectedPlotId.value) {
-        params.plotId = selectedPlotId.value;
-      }
       return Object.assign({ column: 'createTime', order: 'desc' }, params);
     },
   },
@@ -204,87 +119,11 @@ const { prefixCls, tableContext, onExportXls, onImportXls } = useListPage({
 const [registerTable, { reload, updateTableDataRecord, dataSource }, { rowSelection, selectedRows, selectedRowKeys }] = tableContext;
 
 /**
- * 基地选择变化处理
- */
-function handleBaseChange(baseId) {
-  selectedBaseId.value = baseId;
-  
-  // 获取基地名称
-  if (baseSelectRef.value && baseSelectRef.value.baseOptions) {
-    const base = baseSelectRef.value.baseOptions.find(item => item.id === baseId);
-    selectedBaseName.value = base ? base.baseName : '';
-  }
-  
-  // 清空地块选择
-  selectedPlotId.value = undefined;
-  selectedPlotName.value = '';
-  
-  // 清空品种信息
-  selectedVarietyId.value = undefined;
-  selectedVarietyName.value = '';
-  currentStageId.value = undefined;
-  
-  // 重新加载数据
-  loadVarietyInfoData();
-}
-
-/**
- * 地块选择变化处理
- */
-function handlePlotChange(plotId) {
-  selectedPlotId.value = plotId;
-  
-  // 获取地块名称
-  if (plotSelectRef.value && plotSelectRef.value.plotOptions) {
-    const plot = plotSelectRef.value.plotOptions.find(item => item.id === plotId);
-    selectedPlotName.value = plot ? plot.plotName : '';
-    
-    // 获取品种信息（这里假设地块信息中包含品种信息）
-    if (plot) {
-      selectedVarietyId.value = plot.varietyId;
-      selectedVarietyName.value = plot.varietyName || '';
-      // 这里可以根据实际情况设置当前阶段ID
-      // currentStageId.value = plot.currentStageId;
-    }
-  }
-  
-  // 重新加载数据
-  loadVarietyInfoData();
-}
-
-/**
- * 加载品种信息数据
- */
-async function loadVarietyInfoData() {
-  if (!selectedBaseId.value) {
-    return;
-  }
-  
-  try {
-    loading.value = true;
-    // 重新加载数据
-    await reload();
-  } catch (error) {
-    console.error('加载品种信息数据失败:', error);
-    createMessage.error('加载品种信息数据失败，请稍后重试');
-  } finally {
-    loading.value = false;
-  }
-}
-
-/**
  * 新增事件
  */
 function handleCreate() {
-  if (!selectedBaseId.value || !selectedPlotId.value) {
-    createMessage.warning('请先选择基地和地块');
-    return;
-  }
-  
   openModal(true, {
     isUpdate: false,
-    baseId: selectedBaseId.value,
-    plotId: selectedPlotId.value,
   });
 }
 
@@ -364,17 +203,10 @@ function getDropDownAction(record): ActionItem[] {
   ];
 }
 
-// 组件挂载时，可以设置默认基地ID
+// 组件挂载时
 onMounted(() => {
-  // 这里可以从用户信息或系统设置中获取默认基地ID
-  // const defaultBaseId = getDefaultBaseId();
-  // if (defaultBaseId) {
-  //   selectedBaseId.value = defaultBaseId;
-  //   loadVarietyInfoData();
-  // }
-  
-  // 模拟设置默认基地ID，实际项目中应该从API或配置中获取
-  // defaultBaseId.value = '1';
+  // 初始化加载数据
+  reload();
 });
 </script>
 
@@ -383,30 +215,6 @@ onMounted(() => {
   padding: 24px;
   background-color: #f0f2f5;
   min-height: calc(100vh - 64px);
-}
-
-.page-header {
-  margin-bottom: 24px;
-  
-  .page-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 20px;
-    font-weight: 600;
-    color: #262626;
-    margin-bottom: 8px;
-  }
-  
-  .page-description {
-    color: #8c8c8c;
-    font-size: 14px;
-  }
-}
-
-.base-select-card,
-.plot-select-card {
-  height: 100%;
 }
 
 .table-card {
