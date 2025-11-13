@@ -3,6 +3,9 @@ import { ref, onMounted, watch } from 'vue';
 import { useSelectStore } from '/@/store/selectStore'; // 全局状态
 // 导入基地/地块查询接口（根据实际API路径调整）
 import { getBaseById, getPlotById } from '/src/views/rapeseed/production-plan/plot-production-plan/base.api';
+// 导入天地图组件
+import TiandituMap from '/@/components/TiandituMap/index.vue';
+
 // 弹窗显示控制
 const showBaseInfoModal = ref(false);
 const showPlotInfoModal = ref(false);
@@ -35,6 +38,7 @@ const newPlot = ref({
   opacity: 50,
   area: 0
 });
+
 // 监听全局状态变化，同步更新数据（可选：切换基地/地块时自动刷新）
 watch(
   () => [selectStore.selectedBase.baseId, selectStore.selectedPlot.plotId],
@@ -95,6 +99,7 @@ const fetchPlotInfo = async (plotId: string | number) => {
     };
   }
 };
+
 // 点击基地信息按钮
 const handleOpenBaseModal = () => {
   const currentBaseId = selectStore.selectedBase.baseId;
@@ -125,10 +130,10 @@ const handleOpenPlotModal = () => {
 </script>
 
 <template>
-  <!-- 新增：图片与悬浮按钮的父容器 -->
-  <div class="image-with-buttons">
-    <div class="image-container">
-    <!-- 悬浮按钮容器（原按钮组件，新增定位样式） -->
+  <!-- 新增：天地图与悬浮按钮的父容器 -->
+  <div class="map-with-buttons">
+    <div class="map-container">
+      <!-- 悬浮按钮容器（原按钮组件，新增定位样式） -->
       <div class="horizontal-button-component">
         <button @click="handleOpenBaseModal" class="horizontal-btn">
             <i class="icon-base"></i> 基地信息
@@ -138,12 +143,13 @@ const handleOpenPlotModal = () => {
           </button>
         </div>
 
-        <!-- 新增：图片元素 -->
-        <img
-          src="../icons/image2.jpg"
-        alt="基地/地块示意图"
-        class="content-image"
-        >
+        <!-- 替换为天地图组件 -->
+        <TiandituMap 
+          :enableManagement="false" 
+          :mapWidth="'100%'" 
+          :mapHeight="'100%'" 
+          :showSensors="true"
+        />
     </div>
   </div>
   <!-- 弹窗部分 -->
@@ -224,16 +230,17 @@ const handleOpenPlotModal = () => {
 
 </template>
 
-<style scoped lang="less">/* 新增：的父容器图片与按钮样式 */
-.image-with-buttons {
+<style scoped lang="less">
+/* 新增：天地图与按钮的父容器样式 */
+.map-with-buttons {
   position: relative;
   width: 100%;
-  height:100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: hidden; /* 防止图片超出容器时溢出 */
-  background-color: #fff7e6;
+  overflow: hidden; /* 防止地图超出容器时溢出 */
+  background-color: #f0f0f0;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   margin-top: 5px;
   border: 1px solid #d9d9d9;
@@ -241,55 +248,55 @@ const handleOpenPlotModal = () => {
   padding: 2px 2px;
 }
 
-/* 图片容器：用于保持图片比例 */
-.image-container {
+/* 地图容器：用于保持地图比例 */
+.map-container {
   position: relative; /* 作为按钮绝对定位的参考 */
-  height:100%;
-  max-width: 100%;
-  max-height: 100%;
-}
-
-/* 新增：图片样式 */
-.content-image {
   height: 100%;
-  object-fit: contain; /* 确保图片完整显示，不拉伸，保持比例 */
-  border-radius: 8px;
-  display: block;
-
+  width: 100%;
+  min-height: 400px; /* 设置最小高度，确保地图有足够空间显示 */
 }
 
-/* 横向按钮组件：修改为绝对定位，基于 image-container 定位 */
+/* 横向按钮组件：修改为绝对定位，基于 map-container 定位 */
 .horizontal-button-component {
   position: absolute;
   top: 20px; /* 距离顶部的距离，可调整 */
-  left: 11%;
-  transform: translateX(-50%);
+  right: 20px; /* 改为右侧定位，更符合常见UI模式 */
+  transform: none; /* 移除transform，因为我们现在使用right定位 */
   display: flex;
-  gap: 5px;
-  padding: 5px 5px;
-  background-color: rgba(249, 249, 249, 0.85);
+  gap: 8px; /* 增加按钮间距 */
+  padding: 8px 12px; /* 增加内边距，使按钮组更大更明显 */
+  background-color: rgba(255, 255, 255, 0.95); /* 增加不透明度，提高可见度 */
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 增强阴影效果 */
+  z-index: 1000; /* 提高z-index，确保在地图控件之上 */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* 添加边框，提高可见度 */
 }
 
-/* 横向按钮样式（未修改核心样式） */
+/* 横向按钮样式（增强可见度和交互效果） */
 .horizontal-btn {
-  padding: 10px 15px;
+  padding: 12px 18px; /* 增加内边距，使按钮更大 */
   border: none;
   border-radius: 6px;
   background-color: #fff;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500; /* 增加字体粗细 */
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 增强阴影 */
+  transition: all 0.2s ease; /* 添加平滑过渡 */
+  border: 1px solid rgba(0, 0, 0, 0.06); /* 添加细微边框 */
 
   &:hover {
     background-color: #f0f7ff;
     color: #1890ff;
     transform: translateY(-2px);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* 增强悬停阴影 */
+    border-color: #1890ff; /* 悬停时改变边框颜色 */
+  }
+
+  &:active {
+    transform: translateY(0); /* 点击时恢复位置 */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* 点击时减小阴影 */
   }
 
   i {

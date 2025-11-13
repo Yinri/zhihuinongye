@@ -143,12 +143,12 @@ public class YoucaiPlotsController extends JeecgController<YoucaiPlots, IYoucaiP
 	  * @param baseId
 	  * @return
 	  */
-	 @Operation(summary = "地块信息表-通过baseid查询")
+	 @Operation(summary = "地块信息表-通过baseId查询")
 	 @GetMapping(value = "/queryByBaseId")
-	 public Result<List<YoucaiPlots>> queryByBaseId(@RequestParam(name = "baseid", required = true) String baseid) {
+	 public Result<List<YoucaiPlots>> queryByBaseId(@RequestParam(name = "baseId", required = true) String baseId) {
 		 QueryWrapper<YoucaiPlots> queryWrapper = new QueryWrapper<>();
 		 // 注意这里使用数据库实际字段名 base_id，而不是代码中的属性名
-		 queryWrapper.eq("base_id", baseid);
+		 queryWrapper.eq("base_id", baseId);
 		 List<YoucaiPlots> youcaiPlotsList = youcaiPlotsService.list(queryWrapper);
 		 return Result.OK(youcaiPlotsList);
 	 }

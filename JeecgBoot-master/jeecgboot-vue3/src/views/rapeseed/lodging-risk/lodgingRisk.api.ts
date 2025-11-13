@@ -4,21 +4,21 @@ import { AxiosRequestConfig } from 'axios';
 // 枚举API地址
 enum Api {
   // 列表
-  List = '/rapeseed/lodgingRisk/list',
+  List = '/youcai/lodgingRisk/list',
   // 保存
-  Save = '/rapeseed/lodgingRisk/save',
+  Save = '/youcai/lodgingRisk/save',
   // 编辑
-  Edit = '/rapeseed/lodgingRisk/edit',
+  Edit = '/youcai/lodgingRisk/edit',
   // 删除
-  Delete = '/rapeseed/lodgingRisk/delete',
+  Delete = '/youcai/lodgingRisk/delete',
   // 批量删除
-  BatchDelete = '/rapeseed/lodgingRisk/batchDelete',
+  BatchDelete = '/youcai/lodgingRisk/batchDelete',
   // 导出
-  Export = '/rapeseed/lodgingRisk/export',
+  Export = '/youcai/lodgingRisk/export',
   // 导入
-  Import = '/rapeseed/lodgingRisk/importExcel',
+  Import = '/youcai/lodgingRisk/importExcel',
   // 获取倒伏风险预警数据
-  RiskData = '/rapeseed/lodgingRisk/riskData',
+  RiskData = '/youcai/lodgingRisk/riskData',
 }
 
 // 获取倒伏风险预警列表

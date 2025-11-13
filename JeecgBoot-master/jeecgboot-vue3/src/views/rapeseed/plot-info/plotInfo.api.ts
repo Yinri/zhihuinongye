@@ -4,21 +4,21 @@ import { AxiosRequestConfig } from 'axios';
 // 地块信息管理API接口
 enum Api {
   // 获取地块信息列表
-  PlotInfoList = '/rapeseed/plotInfo/list',
+  PlotInfoList = '/youcai/youcaiPlots/list',
   // 保存地块信息
-  PlotInfoSave = '/rapeseed/plotInfo/add',
+  PlotInfoSave = '/youcai/youcaiPlots/add',
   // 编辑地块信息
-  PlotInfoEdit = '/rapeseed/plotInfo/edit',
+  PlotInfoEdit = '/youcai/youcaiPlots/edit',
   // 删除地块信息
-  PlotInfoDelete = '/rapeseed/plotInfo/delete',
+  PlotInfoDelete = '/youcai/youcaiPlots/delete',
   // 批量删除地块信息
-  PlotInfoDeleteBatch = '/rapeseed/plotInfo/deleteBatch',
+  PlotInfoDeleteBatch = '/youcai/youcaiPlots/deleteBatch', 
   // 根据ID获取地块信息详情
-  PlotInfoGetById = '/rapeseed/plotInfo/queryById',
+  PlotInfoGetById = '/youcai/youcaiPlots/queryById',  
   // 导出地块信息
-  PlotInfoExportXls = '/rapeseed/plotInfo/exportXls',
+  PlotInfoExportXls = '/youcai/youcaiPlots/exportXls',
   // 导入地块信息
-  PlotInfoImportExcel = '/rapeseed/plotInfo/importExcel',
+  PlotInfoImportExcel = '/youcai/youcaiPlots/importExcel',
 }
 
 // 获取地块信息列表
