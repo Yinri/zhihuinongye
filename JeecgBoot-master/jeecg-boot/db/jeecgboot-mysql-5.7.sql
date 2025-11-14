@@ -20,9 +20,56 @@ USE `jeecg-boot`;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+//灌溉表1-设备
+CREATE TABLE `youcai_iot_devices` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `device_code` varchar(64) NOT NULL COMMENT '设备编号(DeviceCode)',
+  `device_name` varchar(100) DEFAULT NULL COMMENT '设备名称',
+  `sensor_type_id` int DEFAULT NULL COMMENT '类型：1气象 2土壤 4水质',
+  `plot_id` int DEFAULT NULL COMMENT '绑定地块ID（可选）',
+  `lat` decimal(10,6) DEFAULT NULL COMMENT '纬度',
+  `lng` decimal(10,6) DEFAULT NULL COMMENT '经度',
+  `altitude_m` decimal(8,2) DEFAULT NULL COMMENT '海拔(m)，用于估算气压与Ra',
+  `wind_height_m` decimal(4,2) DEFAULT NULL COMMENT '风速测量高度(m)，用于换算至2m风速',
+  `status` tinyint DEFAULT '1' COMMENT '状态：1在线 0离线',
+  `create_by` varchar(64) DEFAULT NULL,
+  `create_time` datetime DEFAULT NULL,
+  `update_by` varchar(64) DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  `sys_org_code` varchar(64) DEFAULT NULL,
+  `del_flag` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_device_code` (`device_code`),
+  KEY `idx_plot_id` (`plot_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='油菜-物联网设备台账（Penman地理参数）';
+//灌溉表2-penman算法
+CREATE TABLE `youcai_sensor_hourly` (
+  `id` bigint NOT NULL,
+  `device_code` varchar(64) NOT NULL,
+  `plot_id` int DEFAULT NULL,
+  `hour_ts` datetime NOT NULL,
+  `air_temp_c` decimal(5,2) DEFAULT NULL,
+  `rel_humidity_pct` decimal(5,2) DEFAULT NULL,
+  `wind_speed_ms` decimal(5,2) DEFAULT NULL,
+  `air_pressure_kpa` decimal(6,2) DEFAULT NULL,
+  `solar_radiation_wm2` decimal(8,2) DEFAULT NULL,
+  `precip_mm` decimal(6,2) DEFAULT NULL,
+  `soil_moisture_pct` decimal(5,2) DEFAULT NULL,
+  `dew_temp_c` decimal(5,2) DEFAULT NULL,
+  `vpd_kpa` decimal(5,3) DEFAULT NULL,
+  `create_by` varchar(64) DEFAULT NULL,
+  `create_time` datetime DEFAULT NULL,
+  `update_by` varchar(64) DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  `sys_org_code` varchar(64) DEFAULT NULL,
+  `del_flag` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_device_hour` (`device_code`,`hour_ts`),
+  KEY `idx_plot_hour` (`plot_id`,`hour_ts`),
+  KEY `idx_device_hour` (`device_code`,`hour_ts`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 -- ----------------------------
 -- Table structure for airag_app
--- ----------------------------
 DROP TABLE IF EXISTS `airag_app`;
 CREATE TABLE `airag_app`  (
   `id` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,

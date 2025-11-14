@@ -1,8 +1,8 @@
 /**
  * 基地管理API
  */
-import { defHttp } from '/src/utils/http/axios';
-import { getUrl } from '/src/utils';
+import { defHttp } from '/@/utils/http/axios';
+import { getUrl } from '/@/utils';
 
 enum Api {
   // 获取基地列表
