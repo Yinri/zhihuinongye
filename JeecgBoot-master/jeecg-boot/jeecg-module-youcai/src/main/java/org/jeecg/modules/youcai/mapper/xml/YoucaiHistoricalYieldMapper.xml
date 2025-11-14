@@ -2,11 +2,4 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.jeecg.modules.youcai.mapper.YoucaiHistoricalYieldMapper">
 
-    <!-- 通过品种ID查询历年产量数据 -->
-    <select id="selectByVarietyId" resultType="org.jeecg.modules.youcai.entity.YoucaiHistoricalYield">
-        SELECT * FROM youcai_historical_yield
-        WHERE variety_id = #{varietyId}
-        ORDER BY year ASC
-    </select>
-
 </mapper>
