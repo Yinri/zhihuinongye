@@ -7,83 +7,125 @@
         <span class="header-title">农事预警信息</span>
         <span class="warning-count">{{ warningList.length }} 条预警</span>
       </div>
-      <button class="refresh-btn" @click="handleRefresh">
-        <span class="refresh-icon">↻</span>
-        <span class="refresh-text">刷新</span>
+      <button class="refresh-btn" @click="handleRefresh" :disabled="isLoading">
+        <span class="refresh-icon" :class="{ 'refreshing': isLoading }">↻</span>
+        <span class="refresh-text">{{ isLoading ? '刷新中...' : '刷新' }}</span>
       </button>
     </div>
 
-    <!-- 预警内容区（带滚动条） -->
+    <!-- 预警内容区（增加类型标识） -->
     <div class="warning-content">
       <div
         class="warning-item"
         :class="{ 'high-risk': item.level === 'high' }"
-        v-for="(item, index) in warningList"
-        :key="index"
+        v-for="item in warningList"
+        :key="item.id"
       >
-        <!-- 风险等级标识 -->
-        <div class="risk-level" :class="item.level">
-          {{ item.level === 'high' ? '高危' : '中危' }}
-        </div>
-
-        <!-- 预警信息 -->
-        <div class="warning-info">
-          <div class="info-title">{{ item.title }}</div>
-          <div class="info-desc">{{ item.desc }}</div>
-          <div class="info-time">{{ item.time }}</div>
-        </div>
-
-        <!-- 操作按钮 -->
-        <button class="handle-btn">处理</button>
+      <!-- 风险等级标识（保持不变） -->
+      <div class="risk-level" :class="item.level">
+        {{ item.level === 'high' ? '高危' : '中危' }}
       </div>
+
+      <!-- 预警信息（增加类型标识） -->
+      <div class="warning-info">
+        <div class="info-title">
+          <!-- 类型图标：病害=🦠，虫害=🐛 -->
+          <span class="type-icon">{{ item.type === 'disease' ? '🦠' : '🐛' }}</span>
+          {{ item.plot }}-{{ item.title }}
+        </div>
+        <div class="info-desc">{{ item.desc }}</div>
+        <div class="info-time">{{ item.time }}</div>
+      </div>
+
+      <!-- 处理按钮（可增加处理逻辑） -->
+      <button class="handle-btn" @click="handleWarning(item)">处理</button>
     </div>
+
+    <!-- 空状态提示 -->
+    <div v-if="warningList.length === 0 && !isLoading" class="empty-state">
+      暂无预警信息
+    </div>
+
+    <!-- 加载中提示 -->
+    <div v-if="isLoading" class="loading-state">
+      加载中...
+    </div>
+  </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import {onMounted, ref} from 'vue';
 
 // 预警数据结构定义
 interface WarningItem {
-  level: 'high' | 'medium'; // 风险等级：高危/中危
-  title: string; // 预警标题
-  desc: string; // 预警详情
-  time: string; // 发生时间
+  id: number;
+  type: 'disease' | 'pest';
+  level: 'high' | 'medium';
+  title: string;
+  desc: string;
+  time: string;
+  plot: string; // 地块名称
 }
 
 // 模拟预警数据
 const warningList = ref<WarningItem[]>([
-  {
-    level: 'high',
-    title: '地块A需水量缺口',
-    desc: '蕾薹期需水量缺口20%，当前土壤湿度18%，低于阈值25%',
-    time: '2025-10-28 08:30:45'
-  },
-  {
-    level: 'medium',
-    title: '地块B病害风险',
-    desc: '苗期霜霉病风险中等，近3日平均湿度85%，需加强通风',
-    time: '2025-10-28 07:15:22'
-  },
-  {
-    level: 'high',
-    title: '地块C施肥预警',
-    desc: '氮元素含量超标30%，可能导致作物徒长，建议暂停氮肥施用',
-    time: '2025-10-27 16:42:10'
-  },
-  {
-    level: 'medium',
-    title: '气象灾害提示',
-    desc: '未来24小时有小雨，需检查排水系统，防止地块积水',
-    time: '2025-10-27 14:20:05'
-  }
+  // {
+  //   level: 'high',
+  //   title: '地块A需水量缺口',
+  //   desc: '蕾薹期需水量缺口20%，当前土壤湿度18%，低于阈值25%',
+  //   time: '2025-10-28 08:30:45'
+  // },
+  // {
+  //   level: 'medium',
+  //   title: '地块B病害风险',
+  //   desc: '苗期霜霉病风险中等，近3日平均湿度85%，需加强通风',
+  //   time: '2025-10-28 07:15:22'
+  // },
+  // {
+  //   level: 'high',
+  //   title: '地块C施肥预警',
+  //   desc: '氮元素含量超标30%，可能导致作物徒长，建议暂停氮肥施用',
+  //   time: '2025-10-27 16:42:10'
+  // },
+  // {
+  //   level: 'medium',
+  //   title: '气象灾害提示',
+  //   desc: '未来24小时有小雨，需检查排水系统，防止地块积水',
+  //   time: '2025-10-27 14:20:05'
+  // }
 ]);
 
+const isLoading = ref(false); // 加载状态
 // 刷新预警数据
+// 从数据库获取预警数据（整合病害和虫害表）
+const fetchWarningData = async () => {
+  isLoading.value = true;
+  try {
+    // 假设后端提供了整合接口，返回病害和虫害的联合数据
+    const response = await axios.get('/api/warnings', {
+      params: {
+        type: 'all' // 可传参数：all/disease/pest，控制返回类型
+      }
+    });
+    // 假设后端返回格式：{ code: 200, data: WarningItem[] }
+    if (response.data.code === 200) {
+      warningList.value = response.data.data;
+    }
+  } catch (error) {
+    console.error('获取预警数据失败：', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 const handleRefresh = () => {
   // 实际项目中可调用接口刷新数据
-  console.log('刷新预警信息');
+  fetchWarningData();
 };
+onMounted(() => {
+  fetchWarningData();
+});
 </script>
 
 <style scoped>
@@ -277,5 +319,36 @@ const handleRefresh = () => {
 .high-risk {
   border-left: 3px solid #ff4d4f;
   margin-left: 3px;
+}
+/* 类型图标样式 */
+.type-icon {
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  padding: 20px;
+  color: #c9a56a;
+  font-size: 13px;
+}
+
+/* 加载状态样式 */
+.loading-state {
+  text-align: center;
+  padding: 20px;
+  color: #e67700;
+  font-size: 13px;
+}
+
+/* 刷新中动画 */
+.refreshing {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
