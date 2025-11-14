@@ -1,5 +1,6 @@
-import { FormSchema } from '/@/components/Form';
-import { BasicColumn } from '/@/components/Table';
+import { BasicColumn, FormSchema } from '/@/components/Table';
+import { h } from 'vue';
+import { Tag } from 'ant-design-vue';
 
 export const columns: BasicColumn[] = [
   {
@@ -28,13 +29,13 @@ export const columns: BasicColumn[] = [
         '7': { text: '其他', color: 'default' },
       };
       const config = typeMap[type] || { text: '未知', color: 'default' };
-      return `<a-tag color="${config.color}">${config.text}</a-tag>`;
+      return h(Tag, { color: config.color }, () => config.text);
     },
   },
   {
     title: '农事日期',
     dataIndex: 'farmingDate',
-    width: 120,
+    width: 180,
   },
   {
     title: '作业人员',
@@ -74,13 +75,18 @@ export const columns: BasicColumn[] = [
         '4': { text: '已取消', color: 'error' },
       };
       const config = statusMap[status] || { text: '未知', color: 'default' };
-      return `<a-tag color="${config.color}">${config.text}</a-tag>`;
+      return h(Tag, { color: config.color }, () => config.text);
     },
   },
   {
     title: '备注',
     dataIndex: 'remark',
-    width: 120,
+    width: 200,
+    ellipsis: true,
+    customRender: ({ text }) => {
+      if (!text) return '-';
+      return text;
+    },
   },
 ];
 

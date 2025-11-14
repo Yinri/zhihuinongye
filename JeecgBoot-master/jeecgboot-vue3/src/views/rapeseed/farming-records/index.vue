@@ -89,17 +89,7 @@ const selectStore = useSelectStore();
 // 加载状态
 const loading = ref(false);
 
-// 监听基地ID变化，重新加载数据
-watch(
-  () => selectStore.selectedBase.baseId,
-  (newBaseId) => {
-    if (newBaseId) {
-      reload();
-    }
-  },
-  { immediate: true }
-);
-
+// 初始化表格
 const [registerTable, { reload, getForm }] = useTable({
   title:'',
   api: getFarmingRecordsList,
@@ -133,6 +123,17 @@ const [registerTable, { reload, getForm }] = useTable({
     return baseId ? { baseId } : {};
   }),
 });
+
+// 监听基地ID变化，重新加载数据
+watch(
+  () => selectStore.selectedBase.baseId,
+  (newBaseId) => {
+    if (newBaseId) {
+      reload();
+    }
+  },
+  { immediate: true }
+);
 
 function handleCreate() {
   openModal(true, {
