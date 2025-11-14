@@ -21,7 +21,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { getBaseList } from '../base.api';
 import { message } from 'ant-design-vue';
-import { useMessage } from '/src/hooks/web/useMessage';
+import { useMessage } from '/@/hooks/web/useMessage';
 
 const props = defineProps({
   modelValue: {
@@ -75,65 +75,23 @@ const loadBaseList = async () => {
     
     // 从服务器获取数据
     const res = await getBaseList({});
-    if (res.success) {
-      baseOptions.value = res.result.records || res.result || [];
-      
-      // 如果没有数据，提供默认数据
-      if (baseOptions.value.length === 0) {
-        baseOptions.value = [
-          { id: '1', baseName: '示范基地', address: '北京市海淀区', area: 100, status: '1' },
-          { id: '2', baseName: '试验基地', address: '河北省廊坊市', area: 80, status: '1' },
-          { id: '3', baseName: '研发基地', address: '天津市滨海新区', area: 120, status: '1' }
-        ];
-      }
-      
-      // 如果有默认基地ID，自动选中
-      if (props.defaultBaseId) {
-        selectedBaseId.value = props.defaultBaseId;
-        emit('update:modelValue', props.defaultBaseId);
-        emit('change', props.defaultBaseId);
-      }
-      // 如果没有默认基地但有基地数据，选中第一个
-      else if (baseOptions.value.length > 0 && !selectedBaseId.value) {
-        selectedBaseId.value = baseOptions.value[0].id;
-        emit('update:modelValue', baseOptions.value[0].id);
-        emit('change', baseOptions.value[0].id);
-      }
-      
-      emit('loaded', baseOptions.value);
-    } else {
-      // 如果API失败，提供默认数据
-      baseOptions.value = [
-        { id: '1', baseName: '示范基地', address: '北京市海淀区', area: 100, status: '1' },
-        { id: '2', baseName: '试验基地', address: '河北省廊坊市', area: 80, status: '1' },
-        { id: '3', baseName: '研发基地', address: '天津市滨海新区', area: 120, status: '1' }
-      ];
-      
-      // 选中第一个基地
-      if (!selectedBaseId.value) {
-        selectedBaseId.value = baseOptions.value[0].id;
-        emit('update:modelValue', baseOptions.value[0].id);
-        emit('change', baseOptions.value[0].id);
-      }
-      
-      emit('loaded', baseOptions.value);
-    }
-  } catch (err) {
-    console.error('加载基地列表异常:', err);
-    // 如果出现异常，提供默认数据
-    baseOptions.value = [
-      { id: '1', baseName: '示范基地', address: '北京市海淀区', area: 100, status: '1' },
-      { id: '2', baseName: '试验基地', address: '河北省廊坊市', area: 80, status: '1' },
-      { id: '3', baseName: '研发基地', address: '天津市滨海新区', area: 120, status: '1' }
-    ];
+    const rows = (res && Array.isArray(res.records)) ? res.records : (Array.isArray(res) ? res : (res?.result || []));
+    baseOptions.value = rows || [];
     
-    // 选中第一个基地
-    if (!selectedBaseId.value) {
+    if (props.defaultBaseId) {
+      selectedBaseId.value = props.defaultBaseId;
+      emit('update:modelValue', props.defaultBaseId);
+      emit('change', props.defaultBaseId);
+    } else if (baseOptions.value.length > 0 && !selectedBaseId.value) {
       selectedBaseId.value = baseOptions.value[0].id;
       emit('update:modelValue', baseOptions.value[0].id);
       emit('change', baseOptions.value[0].id);
     }
     
+    emit('loaded', baseOptions.value);
+  } catch (err) {
+    console.error('加载基地列表异常:', err);
+    baseOptions.value = [];
     emit('loaded', baseOptions.value);
   } finally {
     loading.value = false;

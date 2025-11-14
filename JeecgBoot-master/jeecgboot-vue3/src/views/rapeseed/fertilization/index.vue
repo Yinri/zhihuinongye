@@ -2,20 +2,8 @@
   <div class="fertilization-page">
     <!-- 选择与概览区域 -->
     <a-row :gutter="16" class="top-row">
-      <a-col :xs="24" :md="8">
-        <a-card :bordered="false">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:environment-outlined" /> 地块选择
-            </div>
-          </template>
-          <a-space direction="vertical" style="width: 100%">
-            <BaseSelect v-model="selectedBaseId" @change="onBaseChange" />
-            <PlotSelect ref="plotSelectRef" v-model="selectedPlotId" :base-id="selectedBaseId" @change="onPlotChange" />
-          </a-space>
-        </a-card>
-      </a-col>
-      <a-col :xs="24" :md="8">
+      
+      <a-col :xs="24" :md="12">
         <a-card :bordered="false" class="rich-card">
           <template #title>
             <div class="table-title">
@@ -57,7 +45,7 @@
           </div>
         </a-card>
       </a-col>
-      <a-col :xs="24" :md="8">
+      <a-col :xs="24" :md="12">
         <a-card :bordered="false" class="rich-card">
           <template #title>
             <div class="table-title">

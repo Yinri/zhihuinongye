@@ -5,12 +5,9 @@ import { defHttp } from '/@/utils/http/axios';
 import { getUrl } from '/@/utils';
 
 enum Api {
-  // 获取地块列表
-  getPlotList = '/rapeseed/plotInfo/list',
-  // 根据基地ID获取地块列表
-  getPlotListByBaseId = '/rapeseed/plotInfo/listByBaseId',
-  // 获取地块详情
-  getPlotById = '/rapeseed/plotInfo/queryById',
+  getPlotList = '/youcai/youcaiPlots/list',
+  getPlotListByBaseId = '/youcai/youcaiPlots/queryByBaseId',
+  getPlotById = '/youcai/youcaiPlots/queryById',
 }
 
 /**
