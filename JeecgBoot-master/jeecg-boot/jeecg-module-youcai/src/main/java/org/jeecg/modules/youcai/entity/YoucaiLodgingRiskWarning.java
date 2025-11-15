@@ -33,8 +33,7 @@ import lombok.experimental.Accessors;
 public class YoucaiLodgingRiskWarning implements Serializable {
     private static final long serialVersionUID = 1L;
 
-	/**预警记录ID*/
-	@TableId(type = IdType.ASSIGN_ID)
+	@TableId(type = IdType.AUTO)
     @Schema(description = "预警记录ID")
     private java.lang.Integer id;
 	/**地块ID，外键关联youcai_plots表*/

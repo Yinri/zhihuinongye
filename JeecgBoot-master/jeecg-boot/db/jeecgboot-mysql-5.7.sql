@@ -27,6 +27,7 @@ CREATE TABLE `youcai_iot_devices` (
   `device_name` varchar(100) DEFAULT NULL COMMENT '设备名称',
   `sensor_type_id` int DEFAULT NULL COMMENT '类型：1气象 2土壤 4水质',
   `plot_id` int DEFAULT NULL COMMENT '绑定地块ID（可选）',
+  `base_id` int DEFAULT NULL COMMENT '基地ID（关联youcai_bases表id）',
   `lat` decimal(10,6) DEFAULT NULL COMMENT '纬度',
   `lng` decimal(10,6) DEFAULT NULL COMMENT '经度',
   `altitude_m` decimal(8,2) DEFAULT NULL COMMENT '海拔(m)，用于估算气压与Ra',
@@ -40,13 +41,17 @@ CREATE TABLE `youcai_iot_devices` (
   `del_flag` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_device_code` (`device_code`),
-  KEY `idx_plot_id` (`plot_id`)
+  KEY `idx_plot_id` (`plot_id`),
+  KEY `idx_base_plot_device` (`base_id`,`plot_id`,`device_code`) COMMENT '基地-地块-设备编号联合索引',
+  KEY `idx_device_base` (`base_id`) COMMENT '基地ID单独索引',
+  CONSTRAINT `fk_device_base` FOREIGN KEY (`base_id`) REFERENCES `youcai_bases` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='油菜-物联网设备台账（Penman地理参数）';
 //灌溉表2-penman算法
 CREATE TABLE `youcai_sensor_hourly` (
-  `id` bigint NOT NULL,
+  `id` varchar(64) NOT NULL COMMENT 'ID',
   `device_code` varchar(64) NOT NULL,
   `plot_id` int DEFAULT NULL,
+  `base_id` int DEFAULT NULL COMMENT '基地ID（关联youcai_bases表id）',
   `hour_ts` datetime NOT NULL,
   `air_temp_c` decimal(5,2) DEFAULT NULL,
   `rel_humidity_pct` decimal(5,2) DEFAULT NULL,
@@ -66,8 +71,78 @@ CREATE TABLE `youcai_sensor_hourly` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_device_hour` (`device_code`,`hour_ts`),
   KEY `idx_plot_hour` (`plot_id`,`hour_ts`),
-  KEY `idx_device_hour` (`device_code`,`hour_ts`)
+  KEY `idx_device_hour` (`device_code`,`hour_ts`),
+  KEY `idx_base_plot_hour` (`base_id`,`plot_id`,`hour_ts`) COMMENT '基地-地块-时间联合索引',
+  CONSTRAINT `fk_sensor_base` FOREIGN KEY (`base_id`) REFERENCES `youcai_bases` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+//施肥表1
+CREATE TABLE `youcai_fertilization` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `base_id` int NOT NULL,
+  `plot_id` int NOT NULL,
+  `plot_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `variety_id` int DEFAULT NULL,
+  `variety_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `record_type` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'record',
+  `fertilization_no` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fertilization_type` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fertilizer_name` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fertilizer_amount_kg_per_mu` decimal(10,2) DEFAULT NULL,
+  `fertilization_area_mu` decimal(10,2) DEFAULT NULL,
+  `fertilization_date` datetime DEFAULT NULL,
+  `fertilization_method` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `responsible_person` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `remark` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `n_percent` int DEFAULT NULL,
+  `p_percent` int DEFAULT NULL,
+  `k_percent` int DEFAULT NULL,
+  `target_yield_kg_per_mu` decimal(10,2) DEFAULT NULL,
+  `n_recommend_kg_per_mu` decimal(10,2) DEFAULT NULL,
+  `p2o5_recommend_kg_per_mu` decimal(10,2) DEFAULT NULL,
+  `k2o_recommend_kg_per_mu` decimal(10,2) DEFAULT NULL,
+  `recommended_time` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `method_recommend` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reason` text COLLATE utf8mb4_unicode_ci,
+  `forecast_json` text COLLATE utf8mb4_unicode_ci,
+  `create_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `sys_org_code` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `del_flag` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_plot_date` (`plot_id`,`fertilization_date`),
+  KEY `idx_plot_type` (`plot_id`,`record_type`),
+  KEY `idx_create_time` (`create_time`),
+  KEY `fk_fert_base` (`base_id`),
+  CONSTRAINT `fk_fert_base` FOREIGN KEY (`base_id`) REFERENCES `youcai_bases` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_fert_plot` FOREIGN KEY (`plot_id`) REFERENCES `youcai_plots` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+//施肥表2
+CREATE TABLE `youcai_soil_fertility` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `plot_id` int NOT NULL,
+  `base_id` int NOT NULL,
+  `test_date` date NOT NULL,
+  `ph_value` decimal(4,2) DEFAULT NULL,
+  `organic_matter` decimal(10,2) DEFAULT NULL,
+  `nitrogen` decimal(10,2) DEFAULT NULL,
+  `phosphorus` decimal(10,2) DEFAULT NULL,
+  `potassium` decimal(10,2) DEFAULT NULL,
+  `fertility_level` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `create_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `create_time` date DEFAULT NULL,
+  `update_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `update_time` date DEFAULT NULL,
+  `sys_org_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `del_flag` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_plot_id` (`plot_id`),
+  KEY `idx_test_date` (`test_date`),
+  KEY `idx_base_id` (`base_id`),
+  CONSTRAINT `fk_soil_base` FOREIGN KEY (`base_id`) REFERENCES `youcai_bases` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_soil_plot` FOREIGN KEY (`plot_id`) REFERENCES `youcai_plots` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- ----------------------------
 -- Table structure for airag_app
 DROP TABLE IF EXISTS `airag_app`;
