@@ -33,10 +33,9 @@ import lombok.experimental.Accessors;
 public class YoucaiGrowthMonitoring implements Serializable {
     private static final long serialVersionUID = 1L;
 
-	/**生长记录ID*/
-	@TableId(type = IdType.ASSIGN_ID)
+	@TableId(type = IdType.AUTO)
     @Schema(description = "生长记录ID")
-    private java.lang.Integer id;
+    private java.lang.Long id;
 	/**地块ID*/
 	@Excel(name = "地块ID", width = 15)
     @Schema(description = "地块ID")

@@ -33,10 +33,9 @@ import lombok.experimental.Accessors;
 public class YoucaiRapeVarieties implements Serializable {
     private static final long serialVersionUID = 1L;
 
-	/**品种ID*/
-	@TableId(type = IdType.ASSIGN_ID)
-    @Schema(description = "品种ID")
-    private java.lang.Integer id;
+	@TableId(type = IdType.AUTO)
+	@Schema(description = "品种ID")
+	private java.lang.Integer id;
 	/**品种名称*/
 	@Excel(name = "品种名称", width = 15)
     @Schema(description = "品种名称")

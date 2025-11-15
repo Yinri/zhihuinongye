@@ -27,10 +27,9 @@ import lombok.experimental.Accessors;
 public class YoucaiHistoricalYield implements Serializable {
     private static final long serialVersionUID = 1L;
 
-	/**主键ID*/
-	@TableId(type = IdType.ASSIGN_ID)
+	@TableId(type = IdType.AUTO)
     @Schema(description = "主键ID")
-    private java.lang.Integer id;
+    private java.lang.Long id;
 	/**年份（如2022）*/
 	@Excel(name = "年份（如2022）", width = 15)
     @Schema(description = "年份（如2022）")
