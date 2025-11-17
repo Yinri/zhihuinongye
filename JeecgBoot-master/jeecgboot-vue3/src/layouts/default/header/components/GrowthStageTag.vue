@@ -33,7 +33,7 @@
                 class="option-item"
                 v-for="item in plotList"
                 :key="item.plotId"
-                @click.stop="selectItem('plot', item)"
+                @click.stop="selectItem('plot', item.plotName)"
               >
                 {{ item.plotName }}
               </div>
@@ -444,6 +444,7 @@ const handleCreate = async () => {
 const fetchPlotGrowthStage = async (plotId: string | number) => {
   try {
     const res = await getPlotById(plotId); // 后端接口：按plotId查地块详情
+    console.log(plotId);
     currentGrowthStage.value = res.growthStage || ''; // 假设接口返回result.growthStage
   } catch (error) {
     console.error('获取地块生长阶段失败：', error);

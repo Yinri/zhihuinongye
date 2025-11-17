@@ -3,6 +3,8 @@ package org.jeecg.modules.youcai.controller;
 import java.util.Arrays;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
@@ -136,7 +138,32 @@ public class YoucaiGrowthMonitoringController extends JeecgController<YoucaiGrow
 		}
 		return Result.OK(youcaiGrowthMonitoring);
 	}
+	 /**
+	  * 通过plotId查询单条/多条监控数据（精准查询）
+	  *
+	  * @param plotId 地块ID（必填）
+	  * @return
+	  */
+	 @AutoLog(value = "生长监控表-通过plotId查询")
+	 @Operation(summary = "生长监控表-通过plotId查询（返回最新数据）")
+	 @GetMapping(value = "/queryByPlotId")
+//	 @RequiresPermissions("youcai:youcai_growth_monitoring:queryByPlotId")
+	 public Result<YoucaiGrowthMonitoring> queryByPlotId(@RequestParam(name = "plotId", required = true) String plotId) {
+		 log.info("查询生长监控数据（最新），plotId：{}", plotId);
+		 // 使用 LambdaQueryWrapper 避免字段硬编码
+		 LambdaQueryWrapper<YoucaiGrowthMonitoring> queryWrapper = new LambdaQueryWrapper<>();
+		 queryWrapper.eq(YoucaiGrowthMonitoring::getPlotId, plotId)
+				 .orderByDesc(YoucaiGrowthMonitoring::getCreateTime) // 按创建时间倒序
+				 .last("LIMIT 1"); // 取最新一条
 
+		 YoucaiGrowthMonitoring latestData = youcaiGrowthMonitoringService.getOne(queryWrapper);
+		 if (latestData == null) {
+			 log.warn("plotId：{} 未查询到生长监控数据", plotId);
+			 return Result.error("该地块暂无生长监控数据");
+		 }
+		 log.info("plotId：{} 成功查询到最新生长监控数据", plotId);
+		 return Result.OK(latestData);
+	 }
     /**
     * 导出excel
     *
