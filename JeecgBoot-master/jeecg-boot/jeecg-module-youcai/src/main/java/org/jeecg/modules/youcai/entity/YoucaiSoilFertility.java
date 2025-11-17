@@ -33,8 +33,7 @@ import lombok.experimental.Accessors;
 public class YoucaiSoilFertility implements Serializable {
     private static final long serialVersionUID = 1L;
 
-	/**肥力ID*/
-	@TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     @Schema(description = "肥力ID")
     private java.lang.Integer id;
 	/**地块ID*/

@@ -33,8 +33,7 @@ import lombok.experimental.Accessors;
 public class YoucaiPestControl implements Serializable {
     private static final long serialVersionUID = 1L;
 
-	/**防控ID*/
-	@TableId(type = IdType.ASSIGN_ID)
+	@TableId(type = IdType.AUTO)
     @Schema(description = "防控ID")
     private java.lang.Integer id;
 	/**地块ID*/

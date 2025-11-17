@@ -21,7 +21,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { getPlotListByBaseId } from '../../plot.api';
 import { message } from 'ant-design-vue';
-import { useMessage } from '/src/hooks/web/useMessage';
+import { useMessage } from '/@/hooks/web/useMessage';
 
 const props = defineProps({
   modelValue: {
@@ -101,107 +101,23 @@ const loadPlotList = async () => {
     
     // 从服务器获取数据
     const res = await getPlotListByBaseId({ baseId: props.baseId });
-    if (res.success) {
-      plotOptions.value = res.result.records || res.result || [];
-      
-      // 如果没有数据，提供默认数据
-      if (plotOptions.value.length === 0) {
-        if (props.baseId === '1') {
-          plotOptions.value = [
-            { id: '1', plotName: '东区1号地块', area: 20, baseId: '1', latitude: 39.9042, longitude: 116.4074 },
-            { id: '2', plotName: '东区2号地块', area: 25, baseId: '1', latitude: 39.9052, longitude: 116.4084 },
-            { id: '3', plotName: '西区1号地块', area: 30, baseId: '1', latitude: 39.9032, longitude: 116.4064 }
-          ];
-        } else if (props.baseId === '2') {
-          plotOptions.value = [
-            { id: '4', plotName: '南区1号地块', area: 15, baseId: '2', latitude: 39.5042, longitude: 116.7074 },
-            { id: '5', plotName: '南区2号地块', area: 20, baseId: '2', latitude: 39.5052, longitude: 116.7084 },
-            { id: '6', plotName: '北区1号地块', area: 25, baseId: '2', latitude: 39.5032, longitude: 116.7064 }
-          ];
-        } else if (props.baseId === '3') {
-          plotOptions.value = [
-            { id: '7', plotName: 'A区地块', area: 35, baseId: '3', latitude: 39.1042, longitude: 117.2074 },
-            { id: '8', plotName: 'B区地块', area: 40, baseId: '3', latitude: 39.1052, longitude: 117.2084 },
-            { id: '9', plotName: 'C区地块', area: 45, baseId: '3', latitude: 39.1032, longitude: 117.2064 }
-          ];
-        }
-      }
-      
-      // 如果有默认地块ID，自动选中
-      if (props.defaultPlotId) {
-        selectedPlotId.value = props.defaultPlotId;
-        emit('update:modelValue', props.defaultPlotId);
-        emit('change', props.defaultPlotId);
-      }
-      // 如果没有默认地块但有地块数据，选中第一个
-      else if (plotOptions.value.length > 0 && !selectedPlotId.value) {
-        selectedPlotId.value = plotOptions.value[0].id;
-        emit('update:modelValue', plotOptions.value[0].id);
-        emit('change', plotOptions.value[0].id);
-      }
-      
-      emit('loaded', plotOptions.value);
-    } else {
-      // 如果API失败，提供默认数据
-      if (props.baseId === '1') {
-        plotOptions.value = [
-          { id: '1', plotName: '东区1号地块', area: 20, baseId: '1', latitude: 39.9042, longitude: 116.4074 },
-          { id: '2', plotName: '东区2号地块', area: 25, baseId: '1', latitude: 39.9052, longitude: 116.4084 },
-          { id: '3', plotName: '西区1号地块', area: 30, baseId: '1', latitude: 39.9032, longitude: 116.4064 }
-        ];
-      } else if (props.baseId === '2') {
-        plotOptions.value = [
-          { id: '4', plotName: '南区1号地块', area: 15, baseId: '2', latitude: 39.5042, longitude: 116.7074 },
-          { id: '5', plotName: '南区2号地块', area: 20, baseId: '2', latitude: 39.5052, longitude: 116.7084 },
-          { id: '6', plotName: '北区1号地块', area: 25, baseId: '2', latitude: 39.5032, longitude: 116.7064 }
-        ];
-      } else if (props.baseId === '3') {
-        plotOptions.value = [
-          { id: '7', plotName: 'A区地块', area: 35, baseId: '3', latitude: 39.1042, longitude: 117.2074 },
-          { id: '8', plotName: 'B区地块', area: 40, baseId: '3', latitude: 39.1052, longitude: 117.2084 },
-          { id: '9', plotName: 'C区地块', area: 45, baseId: '3', latitude: 39.1032, longitude: 117.2064 }
-        ];
-      }
-      
-      // 选中第一个地块
-      if (!selectedPlotId.value && plotOptions.value.length > 0) {
-        selectedPlotId.value = plotOptions.value[0].id;
-        emit('update:modelValue', plotOptions.value[0].id);
-        emit('change', plotOptions.value[0].id);
-      }
-      
-      emit('loaded', plotOptions.value);
-    }
-  } catch (err) {
-    console.error('加载地块列表异常:', err);
-    // 如果出现异常，提供默认数据
-    if (props.baseId === '1') {
-      plotOptions.value = [
-        { id: '1', plotName: '东区1号地块', area: 20, baseId: '1', latitude: 39.9042, longitude: 116.4074 },
-        { id: '2', plotName: '东区2号地块', area: 25, baseId: '1', latitude: 39.9052, longitude: 116.4084 },
-        { id: '3', plotName: '西区1号地块', area: 30, baseId: '1', latitude: 39.9032, longitude: 116.4064 }
-      ];
-    } else if (props.baseId === '2') {
-      plotOptions.value = [
-        { id: '4', plotName: '南区1号地块', area: 15, baseId: '2', latitude: 39.5042, longitude: 116.7074 },
-        { id: '5', plotName: '南区2号地块', area: 20, baseId: '2', latitude: 39.5052, longitude: 116.7084 },
-        { id: '6', plotName: '北区1号地块', area: 25, baseId: '2', latitude: 39.5032, longitude: 116.7064 }
-      ];
-    } else if (props.baseId === '3') {
-      plotOptions.value = [
-        { id: '7', plotName: 'A区地块', area: 35, baseId: '3', latitude: 39.1042, longitude: 117.2074 },
-        { id: '8', plotName: 'B区地块', area: 40, baseId: '3', latitude: 39.1052, longitude: 117.2084 },
-        { id: '9', plotName: 'C区地块', area: 45, baseId: '3', latitude: 39.1032, longitude: 117.2064 }
-      ];
-    }
+    const rows = (res && Array.isArray(res.records)) ? res.records : (Array.isArray(res) ? res : (res?.result || []));
+    plotOptions.value = rows || [];
     
-    // 选中第一个地块
-    if (!selectedPlotId.value && plotOptions.value.length > 0) {
+    if (props.defaultPlotId && plotOptions.value.length > 0) {
+      selectedPlotId.value = props.defaultPlotId;
+      emit('update:modelValue', props.defaultPlotId);
+      emit('change', props.defaultPlotId);
+    } else if (plotOptions.value.length > 0 && !selectedPlotId.value) {
       selectedPlotId.value = plotOptions.value[0].id;
       emit('update:modelValue', plotOptions.value[0].id);
       emit('change', plotOptions.value[0].id);
     }
     
+    emit('loaded', plotOptions.value);
+  } catch (err) {
+    console.error('加载地块列表异常:', err);
+    plotOptions.value = [];
     emit('loaded', plotOptions.value);
   } finally {
     loading.value = false;

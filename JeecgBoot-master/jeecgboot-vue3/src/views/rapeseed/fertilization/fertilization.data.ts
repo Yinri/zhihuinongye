@@ -3,7 +3,7 @@ import { FormSchema } from '/@/components/Table';
 import { h } from 'vue';
 import { Tag } from 'ant-design-vue';
 
-// 表格列配置
+// 表格列配置（修复字段映射：与实体类 YoucaiFertilization 字段完全一致）
 export const columns: BasicColumn[] = [
   {
     title: '施肥编号',
@@ -36,12 +36,12 @@ export const columns: BasicColumn[] = [
   },
   {
     title: '施肥量(kg/亩)',
-    dataIndex: 'fertilizerAmount',
+    dataIndex: 'fertilizerAmountKgPerMu', // ✅ 修复：对应实体类字段 fertilizerAmountKgPerMu
     width: 120,
   },
   {
     title: '施肥面积(亩)',
-    dataIndex: 'fertilizationArea',
+    dataIndex: 'fertilizationAreaMu', // ✅ 修复：对应实体类字段 fertilizationAreaMu
     width: 120,
   },
   {
@@ -64,9 +64,25 @@ export const columns: BasicColumn[] = [
     dataIndex: 'remark',
     width: 150,
   },
+  // 可选：添加算法推荐字段显示（如需要在表格中展示推荐用量）
+  {
+    title: 'N推荐量(kg/亩)',
+    dataIndex: 'nRecommendKgPerMu',
+    width: 130,
+  },
+  {
+    title: 'P₂O₅推荐量(kg/亩)',
+    dataIndex: 'p2o5RecommendKgPerMu',
+    width: 140,
+  },
+  {
+    title: 'K₂O推荐量(kg/亩)',
+    dataIndex: 'k2oRecommendKgPerMu',
+    width: 140,
+  },
 ];
 
-// 查询表单配置
+// 查询表单配置（无字段错误，保持原样）
 export const searchFormSchema: FormSchema[] = [
   {
     field: 'fertilizationNo',
@@ -101,8 +117,20 @@ export const searchFormSchema: FormSchema[] = [
   },
 ];
 
-// 表单配置
+// 表单配置（修复字段映射：与实体类字段完全一致）
 export const formSchema: FormSchema[] = [
+  {
+    field: 'plotId',
+    label: '地块ID',
+    component: 'InputNumber',
+    show: false,
+  },
+  {
+    field: 'baseId',
+    label: '基地ID',
+    component: 'InputNumber',
+    show: false,
+  },
   {
     field: 'fertilizationNo',
     label: '施肥编号',
@@ -146,18 +174,26 @@ export const formSchema: FormSchema[] = [
     colProps: { span: 12 },
   },
   {
-    field: 'fertilizerAmount',
+    field: 'fertilizerAmountKgPerMu', // ✅ 修复：对应实体类字段 fertilizerAmountKgPerMu
     label: '施肥量(kg/亩)',
     component: 'InputNumber',
     required: true,
     colProps: { span: 12 },
+    componentProps: {
+      min: 0,
+      precision: 2, // 保留2位小数，符合数据库字段类型
+    },
   },
   {
-    field: 'fertilizationArea',
+    field: 'fertilizationAreaMu', // ✅ 修复：对应实体类字段 fertilizationAreaMu
     label: '施肥面积(亩)',
     component: 'InputNumber',
     required: true,
     colProps: { span: 12 },
+    componentProps: {
+      min: 0,
+      precision: 2, // 保留2位小数，符合数据库字段类型
+    },
   },
   {
     field: 'fertilizationDate',
@@ -165,6 +201,10 @@ export const formSchema: FormSchema[] = [
     component: 'DatePicker',
     required: true,
     colProps: { span: 12 },
+    componentProps: {
+      format: 'YYYY-MM-DD HH:mm:ss',
+      valueFormat: 'YYYY-MM-DD HH:mm:ss',
+    },
   },
   {
     field: 'fertilizationMethod',
@@ -179,6 +219,19 @@ export const formSchema: FormSchema[] = [
     component: 'Input',
     required: true,
     colProps: { span: 12 },
+  },
+  // 可选：添加目标产量字段（供算法计算推荐值使用）
+  {
+    field: 'targetYieldKgPerMu',
+    label: '目标产量(kg/亩)',
+    component: 'InputNumber',
+    required: true,
+    colProps: { span: 12 },
+    componentProps: {
+      min: 0,
+      precision: 1,
+      defaultValue: 180, // 默认油菜目标产量180kg/亩
+    },
   },
   {
     field: 'remark',
