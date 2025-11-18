@@ -4,10 +4,8 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.math.BigDecimal;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.TableLogic;
+
+import com.baomidou.mybatisplus.annotation.*;
 import org.jeecg.common.constant.ProvinceCityArea;
 import org.jeecg.common.util.SpringContextUtils;
 import lombok.Data;
@@ -80,4 +78,49 @@ public class YoucaiRapeVarieties implements Serializable {
     @Schema(description = "删除标志（0-正常，1-删除）")
     @TableLogic
     private java.lang.Integer delFlag;
+
+
+    // 新增：种子计算核心参数（7个）
+    /**收获系数（0.3-0.5）*/
+    @Excel(name = "收获系数", width = 15)
+    @Schema(description = "收获系数（0.3-0.5）")
+    @TableField("harvest_coefficient")
+    private java.math.BigDecimal harvestCoefficient;
+
+    /**田间保苗率（%，50-100）*/
+    @Excel(name = "田间保苗率(%)", width = 15)
+    @Schema(description = "田间保苗率（%，50-100）")
+    @TableField("seedling_survival_rate")
+    private java.lang.Integer seedlingSurvivalRate;
+
+    /**结实率（%，70-95）*/
+    @Excel(name = "结实率(%)", width = 15)
+    @Schema(description = "结实率（%，70-95）")
+    @TableField("seed_setting_rate")
+    private java.lang.Integer seedSettingRate;
+
+    /**单株有效角果数（个，200-400）*/
+    @Excel(name = "单株有效角果数(个)", width = 15)
+    @Schema(description = "单株有效角果数（个，200-400）")
+    @TableField("single_plant_pods")
+    private java.lang.Integer singlePlantPods;
+
+    /**每角果粒数（粒，15-25）*/
+    @Excel(name = "每角果粒数(粒)", width = 15)
+    @Schema(description = "每角果粒数（粒，15-25）")
+    @TableField("seeds_per_pod")
+    private java.lang.Integer seedsPerPod;
+
+    /**千粒重（g，2.5-4.0）*/
+    @Excel(name = "千粒重(g)", width = 15)
+    @Schema(description = "千粒重（g，2.5-4.0）")
+    @TableField("thousand_grain_weight")
+    private java.math.BigDecimal thousandGrainWeight;
+
+    /**发芽率（%，85-95）*/
+    @Excel(name = "发芽率(%)", width = 15)
+    @Schema(description = "发芽率（%，85-95）")
+    @TableField("germination_rate")
+    private java.lang.Integer germinationRate;
+
 }

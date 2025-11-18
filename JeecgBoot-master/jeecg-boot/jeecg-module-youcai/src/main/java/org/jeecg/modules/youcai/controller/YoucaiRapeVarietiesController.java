@@ -97,7 +97,7 @@ public class YoucaiRapeVarietiesController extends JeecgController<YoucaiRapeVar
 	 */
 	@AutoLog(value = "油菜品种表-编辑")
 	@Operation(summary="油菜品种表-编辑")
-	@RequiresPermissions("youcai:youcai_rape_varieties:edit")
+//	@RequiresPermissions("youcai:youcai_rape_varieties:edit")
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<String> edit(@RequestBody YoucaiRapeVarieties youcaiRapeVarieties) {
 		youcaiRapeVarietiesService.updateById(youcaiRapeVarieties);

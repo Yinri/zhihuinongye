@@ -25,6 +25,12 @@ enum Api {
   addVarietyHistory='/youcai/youcaiHistoricalYield/add',
   //更新品种的历年产量（根据id更新）
   updateVarietyHistory='/youcai/youcaiHistoricalYield/edit',
+  //通过品种id查询该品种的种子参数
+  getSeedParamsByVarietyId='/youcai/youcaiRapeVarieties/queryById',
+  //新增品种的种子参数
+  addSeedParams='/youcai/youcaiRapeVarieties/add',
+  //更新品种的种子参数（根据id更新）
+  updateSeedParams='/youcai/youcaiRapeVarieties/edit'
 }
 
 /**
@@ -140,6 +146,58 @@ export const updateVarietyHistory: Function = (data) => {
   return defHttp.post({
     url: Api.updateVarietyHistory,
     data
+  });
+};
+
+
+/**
+ * 通过品种ID查询该品种的种子参数
+ * @param varietyId 品种ID（对应接口路径参数）
+ * @returns 品种详情（包含种子参数）
+ */
+// 修正API接口实现（确保参数名与后端@RequestParam一致）
+export const getSeedParamsByVarietyId: Function = (varietyId) => {
+  return defHttp.get({
+    url: Api.getSeedParamsByVarietyId,
+    params: { id: varietyId + '' } // 强制转换为字符串，与后端String类型匹配
+  });
+};
+/**
+ * 新增品种的种子参数（同时创建品种基础信息）
+ * @param data 品种完整信息（含基础信息和种子参数）
+ * 数据格式示例：
+ * {
+ *   varietyName: "华油杂62",
+ *   characteristics: "半冬性杂交种...",
+ *   harvestCoefficient: 0.45,
+ *   seedlingSurvivalRate: 88,
+ *   // ... 其他品种字段和种子参数
+ * }
+ * @returns 新增结果（包含生成的品种ID）
+ */
+export const addSeedParams: Function = (data) => {
+  return defHttp.post({
+    url: Api.addSeedParams,
+    data, // 传递完整的品种信息对象
+  });
+};
+
+/**
+ * 更新品种的种子参数（同时支持更新品种基础信息）
+ * @param data 待更新的品种信息（必须包含id）
+ * 数据格式示例：
+ * {
+ *   id: 1, // 品种ID（必填）
+ *   harvestCoefficient: 0.46, // 待更新的种子参数
+ *   seedlingSurvivalRate: 89,
+ *   // ... 其他需要更新的字段
+ * }
+ * @returns 更新结果
+ */
+export const updateSeedParams: Function = (data) => {
+  return defHttp.post({
+    url: Api.updateSeedParams,
+    data, // 传递含id的更新对象
   });
 };
 
