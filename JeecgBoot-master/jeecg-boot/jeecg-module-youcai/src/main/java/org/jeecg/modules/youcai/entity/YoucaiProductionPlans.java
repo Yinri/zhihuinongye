@@ -28,10 +28,9 @@ import lombok.experimental.Accessors;
 public class YoucaiProductionPlans implements Serializable {
     private static final long serialVersionUID = 1L;
 
-	/**计划ID*/
-	@TableId(type = IdType.ASSIGN_ID)
-    @Schema(description = "计划ID")
-    private java.lang.Integer id;
+	@TableId(type = IdType.AUTO)
+	@Schema(description = "计划ID")
+	private java.lang.Integer id;
 	/**地块ID*/
 	@Excel(name = "地块ID", width = 15)
     @Schema(description = "地块ID")

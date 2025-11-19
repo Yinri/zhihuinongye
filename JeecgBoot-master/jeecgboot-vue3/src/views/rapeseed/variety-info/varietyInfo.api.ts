@@ -4,21 +4,21 @@ import { AxiosRequestConfig } from 'axios';
 // 枚举API地址
 enum Api {
   // 列表
-  List = '/rapeseed/varietyInfo/list',
+  List = '/youcai/youcaiRapeVarieties/list',
   // 保存
-  Save = '/rapeseed/varietyInfo/save',
+  Save = '/youcai/youcaiRapeVarieties/add',
   // 编辑
-  Edit = '/rapeseed/varietyInfo/edit',
+  Edit = '/youcai/youcaiRapeVarieties/edit',
   // 删除
-  Delete = '/rapeseed/varietyInfo/delete',
+  Delete = '/youcai/youcaiRapeVarieties/delete',
   // 批量删除
-  BatchDelete = '/rapeseed/varietyInfo/batchDelete',
+  BatchDelete = '/youcai/youcaiRapeVarieties/deleteBatch',
   // 详情
-  Detail = '/rapeseed/varietyInfo/queryById',
+  Detail = '/youcai/youcaiRapeVarieties/queryById',
   // 导出
-  Export = '/rapeseed/varietyInfo/export',
+  Export = '/youcai/youcaiRapeVarieties/exportXls',
   // 导入
-  Import = '/rapeseed/varietyInfo/importExcel',
+  Import = '/youcai/youcaiRapeVarieties/importExcel',
 }
 
 // 获取品种信息列表
@@ -43,7 +43,7 @@ export const deleteVarietyInfo = (id: string, params?: AxiosRequestConfig) => {
 
 // 批量删除品种信息
 export const batchDeleteVarietyInfo = (ids: string[], params?: AxiosRequestConfig) => {
-  return defHttp.delete({ url: Api.BatchDelete, data: { ids } });
+  return defHttp.delete({ url: Api.BatchDelete, params: { ids: ids.join(',') } });
 };
 
 // 获取品种信息详情
@@ -51,14 +51,16 @@ export const getVarietyInfoById = (id: string) => {
   return defHttp.get({ url: `${Api.Detail}/${id}` });
 };
 
+
+
 // 导出品种信息
 export const exportVarietyInfo = (params?: any) => {
-  return defHttp.post({ url: Api.Export, params }, { isTransformResponse: false });
+  return defHttp.get({ url: Api.Export, params }, { isTransformResponse: false });
 };
 
 // 导入品种信息
 export const importVarietyInfo = (params: any) => {
-  return defHttp.uploadFile({ url: Api.Import }, params );
+  return defHttp.uploadFile({ url: Api.Import, params });
 };
 
 // 获取导入URL

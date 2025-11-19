@@ -68,7 +68,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch, computed } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
@@ -76,18 +76,31 @@ import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './farmingRecords.data';
 import { getFarmingRecordsList, deleteFarmingRecords, exportFarmingRecords, importFarmingRecords } from './farmingRecords.api';
 import FarmingRecordsModal from './FarmingRecordsModal.vue';
+import { useSelectStore } from '/@/store/selectStore';
 
 const { createMessage } = useMessage();
 const [registerModal, { openModal }] = useModal();
 const searchInfo = reactive<Recordable>({});
 const fileList = ref<any[]>([]);
 
+// 获取基地选择的store
+const selectStore = useSelectStore();
+
 // 加载状态
 const loading = ref(false);
 
-const [registerTable, { reload }] = useTable({
-  title: '农事记录管理',
+// 初始化表格
+const [registerTable, { reload, getForm }] = useTable({
+  title:'',
   api: getFarmingRecordsList,
+  beforeFetch: (params) => {
+    // 从store中获取基地ID，并添加到查询参数中
+    const baseId = selectStore.selectedBase.baseId;
+    if (baseId) {
+      params.baseId = baseId;
+    }
+    return params;
+  },
   columns,
   formConfig: {
     labelWidth: 120,
@@ -104,7 +117,23 @@ const [registerTable, { reload }] = useTable({
     dataIndex: 'action',
     fixed: 'right',
   },
+  // 添加搜索信息，包含基地ID
+  searchInfo: computed(() => {
+    const baseId = selectStore.selectedBase.baseId;
+    return baseId ? { baseId } : {};
+  }),
 });
+
+// 监听基地ID变化，重新加载数据
+watch(
+  () => selectStore.selectedBase.baseId,
+  (newBaseId) => {
+    if (newBaseId) {
+      reload();
+    }
+  },
+  { immediate: true }
+);
 
 function handleCreate() {
   openModal(true, {

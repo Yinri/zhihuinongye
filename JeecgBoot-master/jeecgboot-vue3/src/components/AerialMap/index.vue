@@ -1,6 +1,6 @@
 <template>
-  <div class="aerial-map-container">
-    <div class="map-tools">
+  <div class="aerial-map-container" :class="{ readonly }">
+    <div class="map-tools" v-if="!readonly">
       <a-space>
         <a-input-search
           v-model:value="searchKeyword"
@@ -80,7 +80,7 @@
         </g>
         
         <!-- 当前正在绘制的多边形 -->
-        <g v-if="currentPolygon.points.length > 0">
+        <g v-if="currentPolygon.points.length > 0 && !readonly">
           <polyline
             :points="getPolylinePoints(currentPolygon.points)"
             :stroke="currentPolygon.strokeColor"
@@ -126,7 +126,7 @@
           <p><strong>油菜品种:</strong> {{ selectedPolygonInfo.variety }}</p>
           <p><strong>种植日期:</strong> {{ selectedPolygonInfo.plantDate }}</p>
         </div>
-        <div class="popup-actions">
+        <div class="popup-actions" v-if="!readonly">
           <a-button size="small" @click="editPolygon">编辑</a-button>
           <a-button 
             size="small" 
@@ -164,6 +164,9 @@
       @cancel="cancelEdit"
     >
       <a-form :model="editingPolygon" layout="vertical">
+        <a-form-item label="地块编号" name="fieldCode" v-if="editingPolygon.fieldCode">
+          <a-input v-model:value="editingPolygon.fieldCode" disabled />
+        </a-form-item>
         <a-form-item label="地块名称" name="name">
           <a-input v-model:value="editingPolygon.name" />
         </a-form-item>
@@ -266,11 +269,15 @@ const props = defineProps({
   initialPolygons: {
     type: Array as () => Polygon[],
     default: () => []
+  },
+  readonly: {
+    type: Boolean,
+    default: false
   }
 });
 
 // 事件定义
-const emit = defineEmits(['polygons-updated', 'polygon-selected']);
+const emit = defineEmits(['polygons-updated', 'polygon-selected', 'load']);
 
 // 响应式数据
 const mapContainer = ref<HTMLDivElement | null>(null);
@@ -359,7 +366,7 @@ const canvasStyle = computed(() => {
     left: 0,
     width: '100%',
     height: '100%',
-    pointerEvents: drawMode.value ? 'auto' : 'none'
+    pointerEvents: drawMode.value && !props.readonly ? 'auto' : 'none'
   };
 });
 
@@ -409,6 +416,7 @@ const resizeCanvas = () => {
 const onImageLoad = () => {
   console.log('航拍图加载完成');
   // 图片加载完成后，可以初始化一些数据
+  emit('load');
 };
 
 const onImageError = () => {
@@ -417,6 +425,22 @@ const onImageError = () => {
 };
 
 const handleMouseDown = (e: MouseEvent) => {
+  // 如果是只读模式，只允许平移地图
+  if (props.readonly) {
+    const rect = mapContainer.value?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // 右键或Shift+左键：平移地图
+    if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
+      isPanning.value = true;
+      lastPanPoint.value = { x, y };
+    }
+    return;
+  }
+  
   const rect = mapContainer.value?.getBoundingClientRect();
   if (!rect) return;
   
@@ -464,6 +488,9 @@ const handleMouseUp = (e: MouseEvent) => {
 };
 
 const handleWheel = (e: WheelEvent) => {
+  // 如果是只读模式，禁用缩放
+  if (props.readonly) return;
+  
   e.preventDefault();
   
   const rect = mapContainer.value?.getBoundingClientRect();
@@ -909,6 +936,11 @@ const handleAssociationConfirm = (data: { polygonId: string, fieldData: any }) =
 
 .map-canvas-container:active {
   cursor: grabbing;
+}
+
+/* 只读模式下的样式 */
+.aerial-map-container.readonly .map-canvas-container {
+  cursor: default;
 }
 
 .aerial-image {

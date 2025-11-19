@@ -2,27 +2,15 @@
   <div class="irrigation-page">
     <!-- 选择与概览区域 -->
     <a-row :gutter="16" class="top-row">
-      <a-col :xs="24" :md="8">
-        <a-card :bordered="false">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:environment-outlined" /> 地块选择
-            </div>
-          </template>
-          <a-space direction="vertical" style="width: 100%">
-            <BaseSelect v-model="selectedBaseId" @change="onBaseChange" />
-            <PlotSelect ref="plotSelectRef" v-model="selectedPlotId" :base-id="selectedBaseId" @change="onPlotChange" @loaded="onPlotLoaded" />
-          </a-space>
-        </a-card>
-      </a-col>
-      <a-col :xs="24" :md="8">
+      
+      <a-col :xs="24" :md="12">
         <a-card :bordered="false" class="rich-card">
           <template #title>
             <div class="table-title">
               <Icon icon="ant-design:dot-chart-outlined" /> 土壤水分概览
             </div>
           </template>
-          <div class="moisture-card">
+          <div class="moisture-card" v-if="hasData">
             <a-progress type="dashboard" :percent="soilMoisturePercent" :status="moistureStatus" />
             <div class="moisture-info">
               <div>当前含水率：{{ soilMoisturePercent }}%</div>
@@ -31,6 +19,7 @@
               </div>
             </div>
           </div>
+          <a-empty v-else description="暂无数据，请选择有效地块或检查后台" />
           <div class="statistic-grid">
             <div class="metric">
               <div class="metric-title">趋势</div>
@@ -44,14 +33,14 @@
           
         </a-card>
       </a-col>
-      <a-col :xs="24" :md="8">
+      <a-col :xs="24" :md="12">
         <a-card :bordered="false" class="rich-card">
           <template #title>
             <div class="table-title">
               <Icon icon="ant-design:solution-outlined" /> 灌溉建议（Penman）
             </div>
           </template>
-          <div class="suggestion-card">
+          <div class="suggestion-card" v-if="hasData">
             <a-descriptions bordered size="small" :column="1">
               <a-descriptions-item label="是否需要灌溉">
                 <Tag :color="penmanSuggestion.needIrrigation ? 'red' : 'green'">{{ penmanSuggestion.needIrrigation ? '需要' : '暂不需要' }}</Tag>
@@ -67,9 +56,11 @@
               <a-button type="primary" size="small" @click="handleCreateWithSuggestion" :disabled="!selectedPlotId">按建议新增灌溉记录</a-button>
               <a-button size="small" @click="copySuggestion" :disabled="!selectedPlotId">复制建议</a-button>
               <a-button size="small" @click="refresh" :disabled="!selectedPlotId">刷新数据</a-button>
+              <a-button size="small" @click="openReportModal('irrigation')" :disabled="!selectedPlotId || !hasData">生成报告</a-button>
             </div>
             
           </div>
+          <a-empty v-else description="暂无建议，等待后端数据" />
         </a-card>
       </a-col>
     </a-row>
@@ -85,7 +76,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 土壤含水率（近7天）
             </div>
           </template>
-          <div ref="moistureTrendRef" class="chart-ref chart-220" />
+          <div v-if="hasData" ref="moistureTrendRef" class="chart-ref chart-220" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -95,7 +86,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 参考蒸散（ET0，近7天）
             </div>
           </template>
-          <div ref="et0ChartRef" style="width: 100%; height: 220px" />
+          <div v-if="hasData" ref="et0ChartRef" style="width: 100%; height: 220px" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -105,7 +96,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 降雨量（近7天）
             </div>
           </template>
-          <div ref="rainChartRef" style="width: 100%; height: 220px" />
+          <div v-if="hasData" ref="rainChartRef" style="width: 100%; height: 220px" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -115,7 +106,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 平均温度（近7天）
             </div>
           </template>
-          <div ref="tempChartRef" style="width: 100%; height: 220px" />
+          <div v-if="hasData" ref="tempChartRef" style="width: 100%; height: 220px" />
         </a-card>
       </a-col>
     </a-row>
@@ -129,7 +120,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> Penman 算法输入数据（近7天）
             </div>
           </template>
-          <div ref="penmanInputsChartRef" style="width: 100%; height: 320px" />
+          <div v-if="hasData" ref="penmanInputsChartRef" style="width: 100%; height: 320px" />
         </a-card>
       </a-col>
     </a-row>
@@ -143,7 +134,7 @@
               <Icon icon="ant-design:area-chart-outlined" /> 干预灌溉 vs 不干预对比
             </div>
           </template>
-          <div ref="comparisonChartRef" class="chart-ref chart-320" />
+          <div v-if="hasData" ref="comparisonChartRef" class="chart-ref chart-320" />
         </a-card>
       </a-col>
     </a-row>
@@ -189,9 +180,10 @@
               <li v-for="(tip, idx) in riskTips" :key="idx">{{ tip }}</li>
             </ul>
             <div class="actions">
-              <a-button type="primary" size="small" @click="handleCreateWithSuggestion" :disabled="!selectedPlotId">按建议新增灌溉记录</a-button>
-              <a-button size="small" @click="copySuggestion" :disabled="!selectedPlotId">复制建议</a-button>
+              <a-button type="primary" size="small" @click="handleCreateWithSuggestion" :disabled="!selectedPlotId || !hasData">按建议新增灌溉记录</a-button>
+              <a-button size="small" @click="copySuggestion" :disabled="!selectedPlotId || !hasData">复制建议</a-button>
               <a-button size="small" @click="refresh" :disabled="!selectedPlotId">刷新数据</a-button>
+              <a-button size="small" @click="openReportModal('risk')" :disabled="!selectedPlotId || !hasData">导出报告</a-button>
             </div>
           </a-space>
         </a-card>
@@ -227,7 +219,7 @@
                 <a-col :xs="24" :sm="12" :md="5">
                   <div class="form-item">
                     <div class="label">选择地块</div>
-                    <PlotSelect ref="plotSelectRef" v-model="selectedPlotId" :base-id="selectedBaseId" @change="onPlotChange" />
+                    <PlotSelect ref="plotSelectRef" v-model="selectedPlotId" :base-id="selectedBaseId" @change="onPlotChange" @loaded="onPlotLoaded" />
                   </div>
                 </a-col>
                 <a-col :xs="24" :sm="12" :md="4">
@@ -267,7 +259,7 @@
               </a-row>
 
               <a-divider dashed style="margin: 8px 0;" />
-              <div class="calc-result">
+              <div v-if="hasData" class="calc-result">
                 <span v-if="quickUseAlgorithm">按建议：{{ recommendedVolumeMm }} mm ≈ {{ algoWaterPerMuM3 }} m³/亩</span>
                 <span v-else>人工设定：每亩 {{ manualWaterPerMu }} m³</span>
                 <span>分次灌溉：{{ quickTimes }} 次，每次约 {{ perTimeWaterM3 }} m³</span>
@@ -276,7 +268,7 @@
 
               <div class="quick-actions">
                 <a-space :size="12" align="center">
-                  <a-button type="primary" @click="calcQuickIrrigation" :disabled="!selectedPlotId">计算用水量</a-button>
+                  <a-button type="primary" @click="calcQuickIrrigation" :disabled="!selectedPlotId || !hasData">计算用水量</a-button>
                   <a-button @click="generateRecordQuick" :disabled="!selectedPlotId">生成记录</a-button>
                   <a-button @click="executeAutomationQuick" :disabled="!selectedPlotId">执行自动化（占位）</a-button>
                 </a-space>
@@ -289,11 +281,51 @@
 
     <!-- 表单弹窗 -->
     <IrrigationModal @register="registerModal" @success="handleSuccess" />
+    <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="800">
+      <div style="padding:16px" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
+        <h3>智慧灌溉报告</h3>
+        <p>地块：{{ selectedPlotName }}</p>
+        <p>含水率：{{ soilMoisturePercent }}%</p>
+        <p>建议：{{ penmanSuggestion.needIrrigation ? '需要灌溉' : '暂不需要' }}</p>
+        <p>时间：{{ penmanSuggestion.recommendedTime || '-' }}</p>
+        <p>方式：{{ penmanSuggestion.method || '-' }}</p>
+        <p>推荐灌水量：{{ recommendedVolumeMm }} mm（约 {{ mmToM3PerMu(recommendedVolumeMm) }} m³/亩）</p>
+        <h4>ET0 近7天</h4>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th v-for="d in chartDates" :key="d" style="border:1px solid #ddd;padding:4px">{{ d }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td v-for="(v,idx) in et0Forecast" :key="idx" style="border:1px solid #ddd;padding:4px">{{ v }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:16px" v-if="reportType==='risk' && hasData" id="riskReport">
+        <h3>灌溉风险与提示报告</h3>
+        <p>地块：{{ selectedPlotName }}</p>
+        <p>当前风险等级：{{ riskLevel }}</p>
+        <h4>提示与建议</h4>
+        <ul class="tips">
+          <li v-for="(tip, idx) in riskTips" :key="idx">{{ tip }}</li>
+        </ul>
+      </div>
+      <template #footer>
+        <a-space>
+          <a-button type="primary" @click="downloadReportAsWord" :disabled="!hasData">下载 Word 文档</a-button>
+          <a-button @click="reportModalVisible=false">关闭</a-button>
+        </a-space>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref, reactive, watch, Ref, computed } from 'vue';
+import { printJS } from '/@/hooks/web/usePrintJS';
 // 已移除表格相关依赖
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
@@ -321,9 +353,11 @@ const selectedVarietyId = ref<string | number | undefined>(undefined);
 const currentStageId = ref<string | number | undefined>(undefined);
 
 // 土壤水分与建议
+const hasData = ref<boolean>(false);
 const soilMoisturePercent = ref<number>(0);
-const soilMoistureTrendText = ref<string>('稳定');
+const soilMoistureTrendText = ref<string>('');
 const penmanSuggestion = reactive({ needIrrigation: false, recommendedTime: '', method: '', reason: '' });
+const recommendedVolumeMm = ref<number>(0);
 
 // 图表
 const comparisonChartRef = ref<HTMLDivElement | null>(null);
@@ -357,9 +391,8 @@ function handleSuccess() {
 
 // 选择与数据加载逻辑
 function onBaseChange() {
-  // 清空地块选择
-  selectedPlotId.value = undefined;
-  selectedPlotName.value = '';
+  // 基地变化时，重新加载地块列表并由子组件自动选择首个地块
+  plotSelectRef.value?.loadPlotList?.();
 }
 
 function onPlotLoaded(options) {
@@ -385,47 +418,34 @@ async function fetchPlotStatusAndSuggest() {
   if (!selectedPlotId.value) return;
   try {
     const status = await getPlotStatus(selectedPlotId.value);
-    soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 42);
-    soilMoistureTrendText.value = status?.soilMoistureTrend ?? '下降';
-    currentStageId.value = status?.currentStageId ?? '2';
-    lastUpdatedText.value = new Date().toLocaleString();
+    soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0);
+    soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
+    currentStageId.value = status?.currentStageId ?? '';
+    lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
 
     const suggest = await getPenmanPredict(selectedPlotId.value);
-    penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? soilMoisturePercent.value < 45);
-    penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '明日清晨 06:00-08:00';
-    penmanSuggestion.method = suggest?.method ?? '滴灌';
-    penmanSuggestion.reason = suggest?.reason ?? '土壤含水率偏低，蒸散需求较高';
+    penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? false);
+    penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '';
+    penmanSuggestion.method = suggest?.method ?? '';
+    penmanSuggestion.reason = suggest?.reason ?? '';
+    recommendedVolumeMm.value = Number(suggest?.recommendedVolumeMm ?? 0);
+    flowRateM3PerHour.value = Number(suggest?.flowRateM3PerHour ?? 0);
 
     // 渲染折线图：含水率/ET0/Penman输入
-    chartDates.value = ['D1','D2','D3','D4','D5','D6','D7'];
-    moistureTrendData.value = generateMoistureTrendSeries(soilMoisturePercent.value, soilMoistureTrendText.value);
-    renderMoistureTrendChart(chartDates.value, moistureTrendData.value);
-    et0Forecast.value = [4.2, 4.0, 3.7, 4.3, 3.9, 4.1, 3.8];
-    renderEt0Chart(chartDates.value, et0Forecast.value);
-    penmanInputs.value = mockPenmanInputs(chartDates.value);
-    renderPenmanInputsChart(penmanInputs.value);
-    renderRainChart(chartDates.value, penmanInputs.value.precip);
-    renderTempChart(chartDates.value, penmanInputs.value.temp);
+    chartDates.value = suggest?.chartDates ?? [];
+    et0Forecast.value = suggest?.et0Forecast ?? [];
+    penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
+    moistureTrendData.value = suggest?.soilMoistureSeriesPct ?? [];
+    if (chartDates.value.length) {
+      renderMoistureTrendChart(chartDates.value, moistureTrendData.value as any);
+      renderEt0Chart(chartDates.value, et0Forecast.value);
+      renderPenmanInputsChart(penmanInputs.value);
+      renderRainChart(chartDates.value, penmanInputs.value.precip);
+      renderTempChart(chartDates.value, penmanInputs.value.temp);
+    }
+    hasData.value = true;
   } catch (e) {
-    // 兜底模拟
-    soilMoisturePercent.value = 38;
-    soilMoistureTrendText.value = '下降';
-    currentStageId.value = '2';
-    penmanSuggestion.needIrrigation = true;
-    penmanSuggestion.recommendedTime = '明日清晨 06:00-08:00';
-    penmanSuggestion.method = '滴灌';
-    penmanSuggestion.reason = '土壤含水率较低且天气温热，建议适度灌溉';
-    lastUpdatedText.value = new Date().toLocaleString();
-
-    chartDates.value = ['D1','D2','D3','D4','D5','D6','D7'];
-    moistureTrendData.value = generateMoistureTrendSeries(soilMoisturePercent.value, soilMoistureTrendText.value);
-    renderMoistureTrendChart(chartDates.value, moistureTrendData.value);
-    et0Forecast.value = [4.2, 4.0, 3.7, 4.3, 3.9, 4.1, 3.8];
-    renderEt0Chart(chartDates.value, et0Forecast.value);
-    penmanInputs.value = mockPenmanInputs(chartDates.value);
-    renderPenmanInputsChart(penmanInputs.value);
-    renderRainChart(chartDates.value, penmanInputs.value.precip);
-    renderTempChart(chartDates.value, penmanInputs.value.temp);
+    hasData.value = false;
   }
 }
 
@@ -433,16 +453,12 @@ async function fetchInterventionComparison() {
   if (!selectedPlotId.value) return;
   try {
     const data = await getInterventionComparison(selectedPlotId.value);
-    const dates = data?.dates ?? ['D1','D2','D3','D4','D5','D6','D7'];
-    const withIrr = data?.withIrrigation ?? [55,58,60,62,60,58,56];
-    const withoutIrr = data?.withoutIrrigation ?? [40,38,37,36,35,34,33];
+    const dates = data?.dates ?? [];
+    const withIrr = data?.withIrrigation ?? [];
+    const withoutIrr = data?.withoutIrrigation ?? [];
     renderComparisonChart(dates, withIrr, withoutIrr);
   } catch (e) {
-    renderComparisonChart(
-      ['D1','D2','D3','D4','D5','D6','D7'],
-      [55,58,60,62,60,58,56],
-      [40,38,37,36,35,34,33]
-    );
+    
   }
 }
 
@@ -545,55 +561,16 @@ const moistureStateColor = computed(() => {
   return 'green';
 });
 
-const recommendedVolumeMm = computed<number>(() => {
-  if (!penmanSuggestion.needIrrigation) return 0;
-  const m = soilMoisturePercent.value;
-  if (m < 35) return 30;
-  if (m < 45) return 25;
-  if (m < 55) return 20;
-  if (m < 60) return 15;
-  return 10;
-});
-
 function mmToM3PerMu(mm: number): number {
   return Math.round(mm * 0.6667 * 10) / 10; // 1亩≈666.7m²，1mm≈0.6667m³/亩
 }
 
-const et0Forecast = ref<number[]>([4.2, 4.0, 3.7]);
-const chartDates = ref<string[]>(['D1','D2','D3','D4','D5','D6','D7']);
-const moistureTrendData = ref<number[]>([40, 42, 38, 36, 35, 37, 39]);
-const penmanInputs = ref<any>({
-  dates: chartDates.value,
-  temp: [12, 13, 14, 15, 14, 13, 12],
-  humidity: [70, 68, 65, 64, 66, 67, 69],
-  wind: [1.2, 1.5, 1.8, 2.0, 1.6, 1.4, 1.3],
-  solar: [16, 18, 17, 19, 18, 17, 16],
-  precip: [0, 0, 5, 0, 1, 0, 0],
-});
+const et0Forecast = ref<number[]>([]);
+const chartDates = ref<string[]>([]);
+const moistureTrendData = ref<number[]>([]);
+const penmanInputs = ref<any>({ dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] });
 
-function generateMoistureTrendSeries(current: number, trend: string): number[] {
-  const base = current;
-  const series: number[] = [];
-  for (let i = 0; i < 7; i++) {
-    const delta = trend === '下降' ? -i * 1.2 : trend === '上升' ? i * 1.1 : (Math.sin(i) * 0.8);
-    series.push(Math.max(0, Math.min(100, Math.round(base + delta))));
-  }
-  return series;
-}
-
-function mockPenmanInputs(dates: string[]) {
-  // 简易模拟数据，可与后端天气接口对接
-  const len = dates.length;
-  const arr = (start: number, step: number, jitter = 0.5) => Array.from({ length: len }, (_, i) => Math.round((start + i * step + (Math.random() - 0.5) * jitter) * 10) / 10);
-  return {
-    dates,
-    temp: arr(12, 0.5, 1.2),
-    humidity: arr(72, -0.8, 2.0),
-    wind: arr(1.3, 0.2, 0.6),
-    solar: arr(16, 0.5, 1.5),
-    precip: Array.from({ length: len }, () => Math.random() < 0.2 ? Math.round(Math.random() * 8) : 0),
-  };
-}
+ 
 const riskLevel = computed(() => {
   if (soilMoisturePercent.value < 35) return '较高';
   if (soilMoisturePercent.value < 45) return '中等';
@@ -634,10 +611,10 @@ function refresh() {
 }
 
 // 快速灌溉管理（状态与计算）
-const quickArea = ref<number>(10);
+const quickArea = ref<number>(0);
 const quickMethod = ref<string>('滴灌');
 const quickUseAlgorithm = ref<boolean>(true);
-const manualWaterPerMu = ref<number>(15); // m³/亩（人工设定）
+const manualWaterPerMu = ref<number>(0);
 const quickDate = ref<any>();
 const quickRemark = ref<string>('');
 const quickTimes = ref<number>(1);
@@ -652,8 +629,9 @@ const irrigationMethodOptions = [
 const algoWaterPerMuM3 = computed<number>(() => mmToM3PerMu(recommendedVolumeMm.value));
 const waterPerMuM3 = computed<number>(() => (quickUseAlgorithm.value ? algoWaterPerMuM3.value : manualWaterPerMu.value));
 const totalWaterUsageM3 = computed<number>(() => Math.round(waterPerMuM3.value * quickArea.value * 10) / 10);
+const flowRateM3PerHour = ref<number>(0);
 const durationHours = computed<number>(() => {
-  const rate = flowRateByMethod(quickMethod.value);
+  const rate = flowRateM3PerHour.value;
   if (!rate) return 0;
   return Math.round((totalWaterUsageM3.value / rate) * 10) / 10;
 });
@@ -662,19 +640,28 @@ const perTimeWaterM3 = computed<number>(() => {
   return Math.round((totalWaterUsageM3.value / times) * 10) / 10;
 });
 
-function flowRateByMethod(method: string): number {
-  switch (method) {
-    case '滴灌':
-      return 8; // m³/小时（示例值）
-    case '喷灌':
-      return 12;
-    case '漫灌':
-      return 20;
-    case '微灌':
-      return 5;
-    default:
-      return 10;
-  }
+const reportModalVisible = ref<boolean>(false);
+const reportType = ref<string>('irrigation');
+
+function openReportModal(type?: string) {
+  reportType.value = type || 'irrigation';
+  reportModalVisible.value = true;
+}
+
+function downloadReportAsWord() {
+  const elId = reportType.value === 'risk' ? 'riskReport' : 'irrigationReport';
+  const el = document.getElementById(elId);
+  const html = el ? el.outerHTML : '';
+  const doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>智慧灌溉报告</title></head><body>' + html + '</body></html>';
+  const blob = new Blob(['\ufeff', doc], { type: 'application/msword;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '智慧灌溉报告.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function calcQuickIrrigation() {
@@ -704,6 +691,10 @@ function generateRecordQuick() {
 
 function executeAutomationQuick() {
   createMessage.info('已触发自动化（占位）');
+}
+
+function exportReport() {
+  printJS({ type: 'html', printable: 'irrigationReport' });
 }
 </script>
 

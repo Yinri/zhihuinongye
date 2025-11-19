@@ -21,7 +21,6 @@
         </div>
         <div class="plot-actions" v-if="enableManagement">
           <a-button size="small" @click="editPlot(selectedPlot)">编辑</a-button>
-          <a-button size="small" type="primary" @click="viewPlotDetail(selectedPlot)">详情</a-button>
         </div>
       </a-card>
     </div>
@@ -778,17 +777,8 @@ const editPlot = (plot) => {
   currentPlotData.value = plot;
   openModal(true, {
     isUpdate: true,
-    polygonCoords: plot.polygonCoords,
-    baseId: plot.baseId
-  });
-};
-
-// 查看地块详情
-const viewPlotDetail = (plot) => {
-  currentPlotData.value = plot;
-  openModal(true, {
-    isUpdate: true,
-    showFooter: false,
+    record: plot, // 添加record参数，确保编辑弹框能获取到完整的地块数据
+    showFooter: true, // 确保表单可编辑
     polygonCoords: plot.polygonCoords,
     baseId: plot.baseId
   });

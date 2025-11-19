@@ -2,14 +2,22 @@ import { defHttp } from '/@/utils/http/axios';
 import { AxiosRequestConfig } from 'axios';
 
 enum Api {
-  GetFarmingRecordsList = '/rapeseed/farming-records/list',
-  SaveFarmingRecords = '/rapeseed/farming-records/save',
-  EditFarmingRecords = '/rapeseed/farming-records/edit',
-  DeleteFarmingRecords = '/rapeseed/farming-records/delete',
-  DeleteBatch = '/rapeseed/farming-records/deleteBatch',
-  GetFarmingRecordsById = '/rapeseed/farming-records/queryById',
-  ExportFarmingRecords = '/rapeseed/farming-records/export',
-  ImportFarmingRecords = '/rapeseed/farming-records/import',
+  // 农事记录列表
+  GetFarmingRecordsList = '/youcai/farmingRecords/queryByBaseId',
+  // 保存农事记录
+  SaveFarmingRecords = '/youcai/farmingRecords/add',
+  // 编辑农事记录
+  EditFarmingRecords = '/youcai/farmingRecords/edit',
+  // 删除农事记录
+  DeleteFarmingRecords = '/youcai/farmingRecords/delete',
+  // 批量删除农事记录
+  BatchDeleteFarmingRecords = '/youcai/farmingRecords/deleteBatch',
+  // 根据ID查询农事记录
+  GetFarmingRecordsById = '/youcai/farmingRecords/queryById',
+  // 导出农事记录
+  ExportFarmingRecords = '/youcai/farmingRecords/exportXls',
+  // 导入农事记录
+  ImportFarmingRecords = '/youcai/farmingRecords/importExcel',  
 }
 
 /**
@@ -49,7 +57,7 @@ export const deleteFarmingRecords = (params?: any) => {
  * @param params 参数
  */
 export const deleteBatch = (params?: any) => {
-  return defHttp.delete<any>({ url: Api.DeleteBatch, params }, { joinParamsToUrl: true });
+  return defHttp.delete<any>({ url: Api.BatchDeleteFarmingRecords, params }, { joinParamsToUrl: true });
 };
 
 /**

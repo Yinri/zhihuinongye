@@ -29,11 +29,23 @@
           <p class="card-title">土壤肥力均值</p>
           <p class="card-desc">作为目标产量调整参考</p>
         </div>
+
+        <!-- 种子计算参数卡片 -->
+        <div class="basis-card">
+          <p class="card-title">种子计算参数</p>
+          <button @click="handleSeedParamModal" class="edit-btn">录入/修改参数</button>
+          <div class="param-values">
+            <p class="param-item">收获系数：{{ seedParams.harvestCoefficient || '未设置' }}</p>
+            <p class="param-item">田间保苗率：{{ seedParams.seedlingRate || '未设置' }}%</p>
+            <p class="param-item">结实率：{{ seedParams.settingRate || '未设置' }}%</p>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- 弹窗：录入前三年具体单产 -->
     <div v-if="showYearInput" class="modal-overlay">
+      <!-- 保持不变 -->
       <div class="modal">
         <div class="modal-header">
           <h4>录入前三年单产数据</h4>
@@ -57,11 +69,74 @@
         </div>
       </div>
     </div>
+
+    <!-- 种子参数录入弹窗 -->
+    <div v-if="showSeedParamModal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h4>录入种子计算参数</h4>
+          <button @click="showSeedParamModal = false" class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <!-- 收获系数输入 -->
+          <div class="param-input-item">
+            <label>收获系数：</label>
+            <input
+              type="number"
+              v-model.number="tempSeedParams.harvestCoefficient"
+              class="param-input"
+              step="0.01"
+              min="0.3"
+              max="0.5"
+              placeholder="如：0.45（范围0.3-0.5）"
+            />
+          </div>
+          <!-- 田间保苗率输入 -->
+          <div class="param-input-item">
+            <label>田间保苗率（%）：</label>
+            <input
+              type="number"
+              v-model.number="tempSeedParams.seedlingRate"
+              class="param-input"
+              step="5"
+              min="50"
+              max="100"
+              placeholder="如：85（范围50-100）"
+            />
+          </div>
+          <!-- 结实率输入 -->
+          <div class="param-input-item">
+            <label>结实率（%）：</label>
+            <input
+              type="number"
+              v-model.number="tempSeedParams.settingRate"
+              class="param-input"
+              step="5"
+              min="70"
+              max="95"
+              placeholder="如：85（范围70-95）"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showSeedParamModal = false" class="cancel-btn">取消</button>
+          <button @click="saveSeedParams" class="confirm-btn">确认</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { getVarietyHistoryByVarietyId, addVarietyHistory, updateVarietyHistory } from '../base.api';
+import {
+  getVarietyHistoryByVarietyId,
+  addVarietyHistory,
+  updateVarietyHistory,
+  // 新增：种子参数相关接口
+  getSeedParamsByVarietyId,
+  addSeedParams,
+  updateSeedParams
+} from '../base.api';
 import { useCropVarietyStore } from '@/store/selectStore';
 import { storeToRefs } from 'pinia';
 import { message } from 'ant-design-vue';
@@ -83,7 +158,21 @@ export default {
     return {
       showYearInput: false,
       threeYears: [currentYear - 3, currentYear - 2, currentYear - 1],
-      yearValues: [undefined, undefined, undefined]
+      yearValues: [undefined, undefined, undefined],
+
+      // 种子参数相关
+      showSeedParamModal: false,
+      seedParams: { // 显示用参数
+        harvestCoefficient: null,
+        seedlingRate: null,
+        settingRate: null,
+        id: null // 用于区分新增/修改
+      },
+      tempSeedParams: { // 弹窗临时参数
+        harvestCoefficient: null,
+        seedlingRate: null,
+        settingRate: null
+      }
     };
   },
   computed: {
@@ -110,16 +199,20 @@ export default {
       handler(newId, oldId) {
         if (newId && newId !== oldId) {
           this.fetchAndUpdateAvg();
+          this.fetchSeedParams(); // 新增：获取种子参数
         } else if (newId) {
           this.fetchAndUpdateAvg();
+          this.fetchSeedParams(); // 新增：获取种子参数
         } else {
           this.updateYieldCalcData({ avgThreeYearYield: null, increaseRate: '12' });
           this.yearValues = [undefined, undefined, undefined];
+          this.seedParams = { harvestCoefficient: null, seedlingRate: null, settingRate: null, id: null };
         }
       }
     }
   },
   methods: {
+    // 原有方法保持不变...
     async fetchAndUpdateAvg() {
       try {
         const response = await getVarietyHistoryByVarietyId({
@@ -298,12 +391,108 @@ export default {
       message.error(userMsg);
       console.error(`【${year}年】错误详情：`, error);
     },
+
+    // 新增：种子参数相关方法
+    async handleSeedParamModal() {
+      if (!this.selected?.id) {
+        message.warning('请先选择作物品种');
+        return;
+      }
+      // 打开弹窗前先拉取最新数据
+      await this.fetchSeedParams();
+      // 初始化弹窗表单（用当前参数值填充）
+      this.tempSeedParams = {...this.seedParams};
+      this.showSeedParamModal = true;
+    },
+
+    // 从接口获取种子参数
+    async fetchSeedParams() {
+      console.log('当前选中品种完整信息：', this.selected);
+      const varietyId = this.selected?.id;
+      console.log('传递给后端的id：', varietyId, '类型：', typeof varietyId);
+
+      if (!varietyId) {
+        console.error('品种ID为空，无法查询');
+        this.seedParams = { id: null, harvestCoefficient: null, seedlingRate: null, settingRate: null };
+        return;
+      }
+
+      try {
+        const response = await getSeedParamsByVarietyId(varietyId);
+        console.log('接口返回结果：', response);
+
+        // 修正判断逻辑：直接判断response是否存在（因为后端返回的是数据对象本身）
+        if (response && response.id) { // 只要有id，说明数据有效
+          this.seedParams = {
+            id: response.id, // 直接从response中取字段，无需response.data
+            harvestCoefficient: response.harvestCoefficient,
+            seedlingRate: response.seedlingSurvivalRate, // 与后端实体类字段对应
+            settingRate: response.seedSettingRate
+          };
+          console.log('种子参数加载成功：', this.seedParams);
+        } else {
+          // 确实无数据（response为空或无id）
+          this.seedParams = { id: null, harvestCoefficient: null, seedlingRate: null, settingRate: null };
+          console.log('该品种未设置种子参数');
+        }
+      } catch (error) {
+        console.error('接口调用失败：', error);
+        message.error('获取种子参数失败，请重试');
+        this.seedParams = { id: null, harvestCoefficient: null, seedlingRate: null, settingRate: null };
+      }
+    },
+    // 保存种子参数（支持新增和修改）
+    async saveSeedParams() {
+      const {harvestCoefficient, seedlingRate, settingRate, id} = this.tempSeedParams;
+
+      // 校验输入
+      if (harvestCoefficient === null || harvestCoefficient < 0.3 || harvestCoefficient > 0.5) {
+        message.warning('请输入0.3-0.5之间的收获系数');
+        return;
+      }
+      if (seedlingRate === null || seedlingRate < 50 || seedlingRate > 100) {
+        message.warning('请输入50-100之间的田间保苗率');
+        return;
+      }
+      if (settingRate === null || settingRate < 70 || settingRate > 95) {
+        message.warning('请输入70-95之间的结实率');
+        return;
+      }
+
+      // 构造提交数据
+      const submitData = {
+        varietyId: this.selected.id,
+        harvestCoefficient,
+        seedlingSurvivalRate: seedlingRate, // 与后端字段对应
+        seedSettingRate: settingRate
+      };
+
+      try {
+        if (id) {
+          // 有ID则为修改
+          submitData.id = id;
+          await updateSeedParams(submitData);
+          message.success('种子参数更新成功');
+        } else {
+          // 无ID则为新增
+          await addSeedParams(submitData);
+          message.success('种子参数新增成功');
+        }
+        // 关闭弹窗并刷新数据
+        this.showSeedParamModal = false;
+        this.fetchSeedParams();
+      } catch (error) {
+        console.error('保存种子参数失败：', error);
+        const errorMsg = error?.response?.data?.msg || '保存失败，请重试';
+        message.error(errorMsg);
+      }
+    }
   }
 };
 </script>
 
 <style scoped>
-/* 样式部分无修改，保持原代码 */
+/* 样式保持不变 */
 .yield-calc-basis {
   border: 1px solid #d9d9d9;
   margin-top: 5px;
@@ -318,8 +507,8 @@ export default {
   display: flex;
   justify-content: center;
   width: 100%;
-  min-height: 300px; /* 可根据卡片高度调整，确保有足够空间居中 */
-  align-items: center; /* 垂直居中对齐子元素 */
+  min-height: 300px;
+  align-items: center;
 }
 
 .section-title {
@@ -332,7 +521,7 @@ export default {
 
 .basis-cards {
   display: flex;
-  gap: 40px; /* 原200px过大，改为40px更紧凑协调 */
+  gap: 40px;
   width: 100%;
   justify-content: center;
   flex-wrap: wrap;
@@ -341,7 +530,6 @@ export default {
 
 .basis-card {
   min-width: 200px;
-  /* 渐变背景+圆角优化 */
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: none;
   border-radius: 12px;
@@ -351,21 +539,20 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  /* 增强阴影层次感 */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  /* 过渡动画（hover用） */
   transition: all 0.3s ease;
   min-height: 200px;
 }
-/* hover交互效果 */
+
 .basis-card:hover {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }
+
 .info-card {
-  /* 浅色渐变，与可编辑卡片区分 */
   background: linear-gradient(135deg, #f0f8fb 0%, #e8f4f8 100%);
 }
+
 .card-title {
   font-size: 14px;
   color: #333;
@@ -375,25 +562,26 @@ export default {
 
 .card-value {
   font-size: 22px;
-  color: #2f5496; /* 主色突出数据 */
+  color: #2f5496;
   font-weight: 600;
   margin: 8px 0;
-  /* 增加文字阴影，更醒目 */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+
 .edit-btn {
   padding: 8px 20px;
   background-color: #2f5496;
   color: white;
   border: none;
-  border-radius: 20px; /* 圆角按钮 */
+  border-radius: 20px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   transition: background-color 0.3s ease;
 }
+
 .edit-btn:hover {
-  background-color: #1f3a6b; /* hover加深 */
+  background-color: #1f3a6b;
 }
 
 .increase-rate-container {
@@ -514,5 +702,42 @@ export default {
   border: none;
   background-color: #1890ff;
   color: white;
+}
+
+.param-values {
+  margin-top: 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.param-item {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+  text-align: left;
+  padding-left: 8px;
+}
+
+.param-input-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.param-input-item label {
+  font-size: 14px;
+  width: 120px;
+  text-align: right;
+}
+
+.param-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 13px;
 }
 </style>
