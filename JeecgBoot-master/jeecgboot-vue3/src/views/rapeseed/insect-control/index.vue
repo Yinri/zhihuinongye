@@ -33,18 +33,11 @@
             </a-button>
             <!-- 分析结果展示（来自虫情报告） -->
             <div v-if="llmAnalysis" class="analysis-section">
-              <div
-                class="analysis-result"
-                :class="{ 'collapsed': !isAnalysisExpanded }"        style="white-space: pre-line;"
-              >
-                {{ isStreaming ? streamingText : llmAnalysis }}
+              <div class="analysis-result" :class="{ 'collapsed': !isAnalysisExpanded }" style="white-space: pre-line;">
+                {{ llmAnalysis }}
               </div>
               <div class="analysis-controls">
-                <a-button
-                  type="link"
-                  @click="toggleAnalysis"
-                  class="toggle-button"
-                >
+                <a-button type="link" @click="toggleAnalysis" class="toggle-button">
                   {{ isAnalysisExpanded ? '收起' : '展开' }}
                   <Icon :icon="isAnalysisExpanded ? 'ant-design:up-outlined' : 'ant-design:down-outlined'" />
                 </a-button>
@@ -109,55 +102,92 @@
         </a-col>
       </a-row>
     </a-card>
-
-    <a-card title="历史虫情记录" :bordered="false" class="history-card">
-      <a-row :gutter="16" align="middle">
-        <!-- 时间段选择 -->
-        <a-col :span="8">
-          <a-range-picker
-            v-model:value="selectedHistoryRange"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            show-time
-            style="width: 100%;"
-          />
-        </a-col>
-        <!-- 查询按钮 -->
-        <a-col :span="2">
-          <a-button type="primary" @click="handleQueryHistory">查询</a-button>
-        </a-col>
-      </a-row>
-      <!-- 历史虫情结果展示 -->
-      <div v-if="filteredHistory.length" class="history-grid">
-        <div
-          v-for="(record, idx) in filteredHistory"
-          :key="idx"
-          class="history-card-item"
-        >
-          <div class="history-content">
-            <!-- 左侧图片 -->
-            <div class="image-wrapper">
-              <img :src="record.image_url" alt="虫情图片" class="pest-image" />
-            </div>
-
-            <!-- 右侧虫情信息 -->
-            <div class="record-info">
-              <div class="record-time">获取时间：{{ record.dateCreated }}</div>
-              <div class="record-time">分析时间：{{ record.analysis_time }}</div>
-              <!-- 害虫信息横向排列 -->
-              <div class="pest-list">
-                <div
-                  v-for="([name, count], idx) in Object.entries(record.insects || {})"
-                  :key="idx"
-                  class="pest-entry"
-                >
-                  <div class="pest-name">{{ name }}（{{ count }}只）</div>
+    <a-card :bordered="false" class="history-card">
+      <a-tabs v-model:activeKey="activeTab">
+        <!-- 🐛 历史虫情记录 -->
+        <a-tab-pane key="pest" tab="历史虫情记录">
+          <!-- 时间选择 + 查询 -->
+          <a-row :gutter="16" align="middle">
+            <a-col :span="8">
+              <a-range-picker
+                v-model:value="selectedHistoryRange"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                show-time
+                style="width: 100%;"
+              />
+            </a-col>
+            <a-col :span="2">
+              <a-button type="primary" @click="handleQueryHistory">查询</a-button>
+            </a-col>
+          </a-row>
+          <!-- 展开 / 收起 -->
+          <div style="margin: 10px 0;">
+            <a-button type="link" @click="historyCollapsed  = !historyCollapsed ">
+              {{ historyCollapsed  ? '展开记录' : '收起记录' }}
+            </a-button>
+          </div>
+          <!-- 数据展示 -->
+          <div v-if="!historyCollapsed  && filteredHistory.length" class="history-grid">
+            <div v-for="(record, idx) in filteredHistory" :key="idx" class="history-card-item">
+              <div class="history-content">
+                <div class="image-wrapper">
+                  <img :src="record.image_url" class="pest-image" />
+                </div>
+                <div class="record-info">
+                  <div class="record-time">获取时间：{{ record.dateCreated }}</div>
+                  <div class="record-time">分析时间：{{ record.analysis_time }}</div>
+                  <div class="pest-list">
+                    <div
+                      v-for="([name, count], idx2) in Object.entries(record.insects || {})"
+                      :key="idx2"
+                      class="pest-entry"
+                    >{{ name }}（{{ count }}只）</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </a-tab-pane>
+        <!-- 🛠 历史防控记录 -->
+        <a-tab-pane key="control" tab="历史防控记录">
+          <!-- 时间选择 + 查询 -->
+          <a-row :gutter="16" align="middle">
+            <a-col :span="8">
+              <a-range-picker
+                v-model:value="selectedControlRange"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                show-time
+                style="width: 100%;"
+              />
+            </a-col>
+            <a-col :span="2">
+              <a-button type="primary" @click="handleQueryControl">查询</a-button>
+            </a-col>
+          </a-row>
+          <!-- 展开 / 收起 -->
+          <div style="margin: 10px 0;">
+            <a-button type="link" @click="controlCollapsed = !controlCollapsed">
+              {{ controlCollapsed ? '展开记录' : '收起记录' }}
+            </a-button>
+          </div>
+          <!-- 数据展示 -->
+          <div v-if="!controlCollapsed && controlList.length" class="history-grid">
+            <div v-for="(item, idx) in controlList" :key="idx" class="history-card-item">
+              <div class="history-content">
+                <div class="record-info">
+                  <div class="record-time">防控时间：{{ item.controlDate }}</div>
+                  <div class="record-time">防控方式：{{ item.applicationMethod || '无' }}</div>
+                  <div class="record-time">农药名称：{{ item.pesticideName || '无' }}</div>
+                  <div class="record-time">农药用量：{{ item.pesticideDosage || '无' }}</div>
+                  <div class="record-time">效果评估：{{ item.controlEffectiveness || '无' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-tab-pane>
+      </a-tabs>
     </a-card>
   </div>
 </template>
@@ -193,7 +223,7 @@ const searchInfo = reactive<Recordable>({});
 const fileList = ref<any[]>([]);
 const pesticideOptions = ref([])
 const selectedPesticide = ref(null)
-const llmAnalysis = ref('')
+
 const analysisResult = ref('')
 
 
@@ -216,15 +246,13 @@ const getDateRange = () => {
     end_date: formatDate(today)
   }
 }
+import { getPesticideList,addPestControlRecord,getFirstPest,analyzePestWithAI,getAllPest,getControlHistory } from './insectControl.api'
 // 获取最新虫情图片及分析数据
 const rawInsects = ref({})
 const fetchLatestImageAndData = async () => {
-  const { start_date, end_date } = getDateRange()
+  // const { start_date, end_date } = getDateRange()
   try {
-    const response = await axios.get(
-      `http://localhost:8002/api/v1/pest/device_images?start_date=${start_date}&end_date=${end_date}&count_type=1`
-    )
-    const images = response.data.data
+    const images= await getFirstPest()
     rawInsects.value=images
     if (images && images.length > 0) {
       const latest = images[0]
@@ -291,52 +319,42 @@ onUnmounted(() => {
     chartInstance = null
   }
 })
-const isAnalysisExpanded = ref(true)  // 控制分析结果展开/收起状态
-const isStreaming = ref(false)        // 流式输出状态
-const streamingText = ref('')
+const isAnalysisExpanded = ref(true)   // 控制分析结果展开/收起状态
+const llmAnalysis = ref('')            // 完整分析结果
 const toggleAnalysis = () => {
   isAnalysisExpanded.value = !isAnalysisExpanded.value
-}// 用于流式输出的文本
-// 调用大模型分析最近十天虫情数据
+}
 const handleLLMAnalysis = async () => {
   if (!rawInsects.value || rawInsects.value.length === 0) {
     message.warning('暂无虫情数据可供分析')
     return
   }
   try {
-    // 构造发送给大模型的数据（使用完整的十天数据）
+    // 构造发送给大模型的数据
     const requestData = {
-      pest_data: (rawInsects.value as Array<any>).map(item => ({
+      pest_data: rawInsects.value.map(item => ({
         analysis_time: item.analysis_time,
         insects: item.insects
       })),
     }
     // 调用后端大模型分析接口
-    const response = await axios.post('http://localhost:8002/api/v1/pest/ai-analysis', requestData)
-    // 解析返回结果
-    const result = response.data
-    // 启动流式输出效果
-    isStreaming.value = true
-    streamingText.value = ''
-    isAnalysisExpanded.value = true  // 默认展开
-    const fullText = result || JSON.stringify(result, null, 2)
-    let index = 0
-    const streamInterval = setInterval(() => {
-      if (index < fullText.length) {
-        streamingText.value += fullText.charAt(index)
-        index++
-      } else {
-        clearInterval(streamInterval)
-        isStreaming.value = false
-        llmAnalysis.value = fullText
-        fetchPesticideOptions()
-      }
-    }, 10)
-  }
-  catch (error) {
+    const response = await analyzePestWithAI(requestData)
+    const data = response.data ?? response
+    console.log(response)
+    // 转换为字符串
+    const fullText = typeof data === 'string' ? data : JSON.stringify(data, null, 2)
+    // 直接显示完整结果
+    llmAnalysis.value = fullText
+    isAnalysisExpanded.value = true
+    // 可选：解析农药选项
+    fetchPesticideOptions()
+
+  } catch (error) {
     console.error('AI分析请求失败:', error)
+    message.error('AI分析请求失败，请稍后重试')
   }
 }
+
 // 添加农药选择相关变量
 const pesticideForm = ref({
   selectedPesticide: null,
@@ -347,8 +365,6 @@ const pesticideForm = ref({
 })
 
 //获取农药列表
-import { getPesticideList,addPestControlRecord } from './insectControl.api'
-
 // 获取农药列表
 const fetchPesticideOptions = async () => {
   try {
@@ -405,10 +421,14 @@ const savePesticideRecord = async () => {
   }
 }
 
-
-
+const activeTab = ref("pest");
+const historyCollapsed = ref(false);  // 默认展开历史记录
 const selectedHistoryRange = ref([])
 const filteredHistory = ref([])
+const selectedControlRange = ref([]);    // 防控查询时间段
+
+const controlCollapsed = ref(false);
+// 防控查询结果
 const handleQueryHistory = async () => {
   if (!selectedHistoryRange.value || selectedHistoryRange.value.length !== 2) {
     message.warning('请先选择查询时间段');
@@ -419,11 +439,8 @@ const handleQueryHistory = async () => {
   const start_date = formatDate(selectedHistoryRange.value[0]);
   const end_date = formatDate(selectedHistoryRange.value[1]);
   try {
-    const res = await fetch(
-      `http://localhost:8001/api/v1/pest/device_images?start_date=${start_date}&end_date=${end_date}&count_type=1`
-    );
-    const data = await res.json();
-    filteredHistory.value = data.data || [];
+    const res = await getAllPest({ start_date, end_date })
+    filteredHistory.value = res|| [];
     if (!filteredHistory.value.length) {
       message.info('该时间段内无虫情记录');
     }
@@ -431,7 +448,27 @@ const handleQueryHistory = async () => {
     message.error('获取虫情记录失败');
   }
 };
+
+// 查询防控
+
+const controlList = ref([]);
+
+const handleQueryControl = async () => {
+  const res = await getControlHistory({
+    plotId: selectStore.selectedPlot.plotId,
+    start_date: selectedControlRange.value[0],
+    end_date: selectedControlRange.value[1],
+  });
+
+  controlList.value = res;   // ★ 把返回的数据放进去
+  console.log("防控记录：", controlList.value);
+};
+
+
 </script>
+
+
+
 <style lang="less" scoped>
 .insect-control-page {
   padding: 24px;

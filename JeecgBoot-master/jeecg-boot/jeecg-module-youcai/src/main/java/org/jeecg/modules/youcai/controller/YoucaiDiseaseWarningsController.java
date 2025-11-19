@@ -1,6 +1,8 @@
 package org.jeecg.modules.youcai.controller;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
@@ -21,7 +23,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.jeecg.common.aspect.annotation.AutoLog;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
- /**
+import reactor.core.publisher.Mono;
+
+/**
  * @Description: 病害预警表
  * @Author: jeecg-boot
  * @Date:   2025-10-18
@@ -161,5 +165,14 @@ public class YoucaiDiseaseWarningsController extends JeecgController<YoucaiDisea
     public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
         return super.importExcel(request, response, YoucaiDiseaseWarnings.class);
     }
+
+	@GetMapping("/allImages")
+	public Mono<Result<List<Map<String, Object>>>> getDiseaseImages() {
+		return youcaiDiseaseWarningsService.getDiseaseImages()
+				.map(parsedData -> Result.OK(parsedData))
+				.onErrorReturn(Result.error("Failed to retrieve pest images"));
+	}
+
+
 
 }

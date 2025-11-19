@@ -1,45 +1,5 @@
 <template>
   <div class="insect-control-page">
-    <!-- 基地与地块选择区域和生长周期时间轴区域 -->
-    <a-card :bordered="false" class="combined-selection-timeline-card">
-      <a-row :gutter="16" align="middle">
-        <!-- 基地选择区域 -->
-        <a-col :span="3">
-          <div class="selection-area">
-            <div class="selection-title">基地选择</div>
-            <BaseSelect
-              v-model:value="selectedBaseId"
-              @change="handleBaseChange"
-              :defaultBaseId="defaultBaseId"
-              ref="baseSelectRef"
-            />
-          </div>
-        </a-col>
-        <!-- 地块选择区域 -->
-        <a-col :span="3">
-          <div class="selection-area">
-            <div class="selection-title">地块选择</div>
-            <PlotSelect
-              v-model:value="selectedPlotId"
-              :baseId="selectedBaseId"
-              @change="handlePlotChange"
-              ref="plotSelectRef"
-            />
-          </div>
-        </a-col>
-        <!-- 生长周期时间轴区域 -->
-        <a-col :span="18">
-          <div class="timeline-area">
-            <GrowthTimeline
-              :plotId="selectedPlotId"
-              :varietyId="selectedVarietyId"
-              :varietyName="selectedVarietyName"
-              :currentStageId="currentStageId"
-            />
-          </div>
-        </a-col>
-      </a-row>
-    </a-card>
     <a-card class="disease-card" :bordered="false">
       <a-row class="main-content-row">
         <!-- 实时病害图像 -->
@@ -51,7 +11,6 @@
             <div class="update-time">更新于：{{ lastUpdateTime }}</div>
           </a-card>
         </a-col>
-
         <a-col :span="8">
           <a-card title="苗情检测指标和应对措施" :bordered="false" class="inner-card">
             <!-- 显示两个指标 -->
