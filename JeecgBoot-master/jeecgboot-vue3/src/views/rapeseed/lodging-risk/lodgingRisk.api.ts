@@ -58,6 +58,54 @@ export const importLodgingRisk = (params: any) => {
 };
 
 // 获取倒伏风险预警数据
-export const getLodgingRiskDataById = (plotId: string) => {
+export const getLodgingRiskDataById = (plotId: number) => {
   return defHttp.get({ url:`${Api.RiskData}/${plotId}` });
 };
+
+// 批量获取基地下所有地块倒伏风险数据
+export const getBatchLodgingRiskDataByBaseId = (baseId: string) => {
+  return defHttp.get({ url: `/youcai/lodgingRisk/batchRiskData/${baseId}` });
+};
+
+// 倒伏风险数据接口
+export interface LodgingRiskAssessmentResponse {
+  currentRisk: {
+    riskLevel: string;
+    riskScore: number;
+    lodgingProbability: string;
+  };
+  forecast7Days: {
+    maxRiskDate: string;
+    dailyRisks: Array<{
+      date: string;
+      riskScore: number;
+      weather: {
+        windSpeed: number;
+        rainfall: number;
+      };
+    }>;
+  };
+  comprehensiveSuggestions: Array<{
+    type: string;
+    title: string;
+    description: string;
+  }>;
+  calculationTime: string;
+}
+
+// 批量获取基地下所有地块倒伏风险数据接口
+export interface BatchLodgingRiskAssessmentResponse {
+  baseId: string;
+  baseName: string;
+  plotRisks: LodgingRiskAssessmentResponse[];
+  baseStatistics: {
+    totalPlots: number;
+    lowRiskPlots: number;
+    mediumLowRiskPlots: number;
+    mediumRiskPlots: number;
+    highRiskPlots: number;
+    extremeRiskPlots: number;
+    averageRiskScore: number;
+  };
+  calculationTime: string;
+}

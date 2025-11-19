@@ -19,6 +19,7 @@ import org.jeecg.modules.youcai.mapper.YoucaiGrowthMonitoringMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiLodgingRiskWarningMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
+import org.jeecg.modules.youcai.service.IYoucaiPlotsService;
 import org.jeecg.modules.youcai.service.IYoucaiProjectInfoService;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
@@ -32,6 +33,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -75,6 +77,9 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     
     @Autowired
     private IYoucaiSensorInfoService youcaiSensorInfoService;
+    
+    @Autowired
+    private IYoucaiPlotsService youcaiPlotsService;
     
     @Override
     public LodgingRiskAssessmentResponseDTO riskAssessmentById(Integer plotId) {
@@ -122,7 +127,6 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             
             long endTime = System.currentTimeMillis();
             log.info("倒伏风险评估完成，地块ID: {}, 耗时: {}ms", plotId, endTime - startTime);
-            
             return response;
         } catch (Exception e) {
             log.error("倒伏风险评估异常，地块ID: {}, 错误: {}", plotId, e.getMessage(), e);
@@ -621,6 +625,161 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
         } catch (Exception e) {
             log.error("保存传感器信息到本地数据库异常: {}", e.getMessage(), e);
         }
+    }
+    
+    @Override
+    public LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchRiskAssessmentByBaseId(Integer baseId) {
+        log.info("开始批量评估基地下所有地块的倒伏风险，基地ID: {}", baseId);
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            // 1. 验证基地是否存在
+            YoucaiBases base = youcaiBasesMapper.selectById(baseId);
+            if (base == null) {
+                log.warn("基地不存在，基地ID: {}", baseId);
+                return null;
+            }
+            
+            // 2. 查询基地下所有地块
+            LambdaQueryWrapper<YoucaiPlots> plotQuery = new LambdaQueryWrapper<>();
+            plotQuery.eq(YoucaiPlots::getBaseId, baseId)
+                    .eq(YoucaiPlots::getDelFlag, 0); // 只查询未删除的地块
+            List<YoucaiPlots> plots = youcaiPlotsMapper.selectList(plotQuery);
+            
+            if (plots == null || plots.isEmpty()) {
+                log.warn("基地下没有地块，基地ID: {}", baseId);
+                return null;
+            }
+            
+            // 3. 创建批量响应对象
+            LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchResponse = 
+                new LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO();
+            batchResponse.setBaseId(baseId);
+            batchResponse.setBaseName(base.getBaseName());
+            batchResponse.setCalculationTime(new Date());
+            
+            // 4. 创建地块风险列表
+            List<LodgingRiskAssessmentResponseDTO> plotRisks = new java.util.ArrayList<>();
+            
+            // 5. 使用并行流处理每个地块的风险评估
+         plotRisks = plots.parallelStream()
+             .map(plot -> {
+                 try {
+                     // 调用单个地块风险评估方法
+                     LodgingRiskAssessmentResponseDTO riskData = riskAssessmentById(plot.getId());
+                     riskData.setPlotId(plot.getId());
+                     riskData.setPlotName(plot.getPlotName());
+                     log.info("riskData:{}",riskData);
+                     return riskData;
+                 } catch (Exception e) {
+                     log.error("获取地块{}风险评估失败: {}", plot.getId(), e.getMessage());
+                     // 返回一个空的风险评估对象
+                     return new LodgingRiskAssessmentResponseDTO();
+                 }
+             })
+             .filter(riskData -> riskData != null)
+             .collect(Collectors.toList());
+            
+            // 8. 计算基地风险统计
+            LodgingRiskAssessmentResponseDTO.BaseRiskStatisticsDTO baseStatistics = 
+                calculateBaseRiskStatistics(plotRisks);
+            
+            // 9. 设置响应数据
+            batchResponse.setPlotRisks(plotRisks);
+            batchResponse.setBaseStatistics(baseStatistics);
+            
+            long endTime = System.currentTimeMillis();
+            log.info("批量评估基地下所有地块的倒伏风险完成，基地ID: {}, 地块数量: {}, 耗时: {}ms", 
+                baseId, plotRisks.size(), endTime - startTime);
+            
+            return batchResponse;
+        } catch (Exception e) {
+            log.error("批量评估基地下所有地块的倒伏风险异常，基地ID: {}, 错误: {}", baseId, e.getMessage(), e);
+            throw new JeecgBootException("批量评估倒伏风险失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 计算基地风险统计
+     */
+    private LodgingRiskAssessmentResponseDTO.BaseRiskStatisticsDTO calculateBaseRiskStatistics(
+        List<LodgingRiskAssessmentResponseDTO> plotRisks) {
+        
+        LodgingRiskAssessmentResponseDTO.BaseRiskStatisticsDTO statistics = 
+            new LodgingRiskAssessmentResponseDTO.BaseRiskStatisticsDTO();
+        
+        if (plotRisks == null || plotRisks.isEmpty()) {
+            return statistics;
+        }
+        
+        // 初始化统计变量
+    int totalPlots = plotRisks.size();
+    int highRiskPlots = 0;
+    int mediumRiskPlots = 0;
+    int lowRiskPlots = 0;
+    int extremeRiskPlots = 0;
+    double totalRiskScore = 0.0;
+    double highestRiskScore = 0.0;
+    Integer highestRiskPlotId = null;
+        
+        // 风险分布统计
+        java.util.Map<String, Integer> riskDistribution = new java.util.HashMap<>();
+        
+        // 风险分布统计
+        for (LodgingRiskAssessmentResponseDTO riskData : plotRisks) {
+            if (riskData != null && riskData.getCurrentRisk() != null) {
+                LodgingRiskAssessmentResponseDTO.CurrentRiskDTO currentRisk = riskData.getCurrentRisk();
+                String riskLevel = currentRisk.getRiskLevel();
+                Double riskScore = currentRisk.getRiskScore() != null ? 
+                    currentRisk.getRiskScore() : 0.0;
+                
+                // 累计风险评分
+                totalRiskScore += riskScore;
+                
+                // 记录最高风险评分
+                if (riskScore > highestRiskScore) {
+                    highestRiskScore = riskScore;
+                    // 注意：这里无法直接获取地块ID，因为LodgingRiskAssessmentResponseDTO中没有地块ID字段
+                    // 如果需要记录最高风险地块ID，需要在LodgingRiskAssessmentResponseDTO中添加地块ID字段
+                }
+                
+                // 风险分布统计
+                riskDistribution.put(riskLevel, riskDistribution.getOrDefault(riskLevel, 0) + 1);
+                
+                // 根据风险等级分类
+            switch (riskLevel) {
+                case "极高风险":
+                    extremeRiskPlots++;
+                    break;
+                case "高风险":
+                    highRiskPlots++;
+                    break;
+                case "中风险":
+                    mediumRiskPlots++;
+                    break;
+                case "低风险":
+                    lowRiskPlots++;
+                    break;
+                default:
+                    // 默认归为中风险
+                    mediumRiskPlots++;
+                    break;
+            }
+            }
+        }
+        
+        // 设置统计数据
+    statistics.setTotalPlots(totalPlots);
+    statistics.setHighRiskPlots(highRiskPlots);
+    statistics.setMediumRiskPlots(mediumRiskPlots);
+    statistics.setLowRiskPlots(lowRiskPlots);
+    statistics.setExtremeRiskPlots(extremeRiskPlots);
+    statistics.setAverageRiskScore(totalPlots > 0 ? totalRiskScore / totalPlots : 0.0);
+    statistics.setHighestRiskPlotId(highestRiskPlotId);
+    statistics.setHighestRiskScore(highestRiskScore);
+    statistics.setRiskDistribution(riskDistribution);
+        
+        return statistics;
     }
 }
 

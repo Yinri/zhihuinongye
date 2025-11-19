@@ -147,7 +147,6 @@ public class YoucaiGrowthMonitoringController extends JeecgController<YoucaiGrow
 	 @AutoLog(value = "生长监控表-通过plotId查询")
 	 @Operation(summary = "生长监控表-通过plotId查询（返回最新数据）")
 	 @GetMapping(value = "/queryByPlotId")
-//	 @RequiresPermissions("youcai:youcai_growth_monitoring:queryByPlotId")
 	 public Result<YoucaiGrowthMonitoring> queryByPlotId(@RequestParam(name = "plotId", required = true) String plotId) {
 		 log.info("查询生长监控数据（最新），plotId：{}", plotId);
 		 // 使用 LambdaQueryWrapper 避免字段硬编码

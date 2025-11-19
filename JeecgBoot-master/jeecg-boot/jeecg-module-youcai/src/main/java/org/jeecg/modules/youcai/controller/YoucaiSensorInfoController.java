@@ -11,6 +11,7 @@ import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.common.util.oConvertUtils;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
+import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -187,4 +188,74 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
         // TODO: 实现同步传感器数据的逻辑
         return Result.OK("同步成功!");
     }
+    
+    /**
+     * 获取基地的气象传感器实时数据
+     *
+     * @param baseId 基地ID
+     * @return
+     */
+    @AutoLog(value = "传感器信息表-获取气象传感器数据")
+    @Operation(summary="传感器信息表-获取气象传感器数据", description="传感器信息表-获取气象传感器数据")
+    @GetMapping(value = "/getWeatherSensorData")
+    public Result<WeatherSensorDataDTO> getWeatherSensorData(@Parameter(name="baseId", description="基地ID") @RequestParam(name="baseId") String baseId) {
+        try {
+            log.info("获取基地ID {} 的气象传感器数据", baseId);
+            WeatherSensorDataDTO weatherData = youcaiSensorInfoService.getWeatherSensorData(baseId);
+            if (weatherData != null) {
+                return Result.OK(weatherData);
+            } else {
+                return Result.error("获取气象传感器数据失败");
+            }
+        } catch (Exception e) {
+            log.error("获取气象传感器数据异常", e);
+            return Result.error("获取气象传感器数据异常：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取基地的传感器列表
+     *
+     * @param baseId 基地ID
+     * @return
+     */
+    @AutoLog(value = "传感器信息表-获取基地传感器列表")
+    @Operation(summary="传感器信息表-获取基地传感器列表", description="传感器信息表-获取基地传感器列表")
+    @GetMapping(value = "/getBaseSensorList")
+    public Result<List<YoucaiSensorInfo>> getBaseSensorList(@Parameter(name="baseId", description="基地ID") @RequestParam(name="baseId") String baseId) {
+        try {
+            log.info("获取基地ID {} 的传感器列表", baseId);
+            List<YoucaiSensorInfo> sensorList = youcaiSensorInfoService.getBaseSensorList(baseId);
+            return Result.OK(sensorList);
+        } catch (Exception e) {
+            log.error("获取基地传感器列表异常", e);
+            return Result.error("获取基地传感器列表异常：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取传感器历史数据
+     *
+     * @param sensorId 传感器ID
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return
+     */
+    @AutoLog(value = "传感器信息表-获取传感器历史数据")
+    @Operation(summary="传感器信息表-获取传感器历史数据", description="传感器信息表-获取传感器历史数据")
+    @GetMapping(value = "/getSensorHistoryData")
+    public Result<List<WeatherSensorDataDTO>> getSensorHistoryData(
+            @Parameter(name="sensorId", description="传感器ID") @RequestParam(name="sensorId") String sensorId,
+            @Parameter(name="startDate", description="开始日期") @RequestParam(name="startDate") String startDate,
+            @Parameter(name="endDate", description="结束日期") @RequestParam(name="endDate") String endDate) {
+        try {
+            log.info("获取传感器ID {} 在 {} 至 {} 的历史数据", sensorId, startDate, endDate);
+            List<WeatherSensorDataDTO> historyData = youcaiSensorInfoService.getSensorHistoryData(sensorId, startDate, endDate);
+            return Result.OK(historyData);
+        } catch (Exception e) {
+            log.error("获取传感器历史数据异常", e);
+            return Result.error("获取传感器历史数据异常：" + e.getMessage());
+        }
+    }
+
 }

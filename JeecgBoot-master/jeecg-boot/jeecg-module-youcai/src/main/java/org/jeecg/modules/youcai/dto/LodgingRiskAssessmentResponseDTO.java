@@ -21,6 +21,16 @@ import java.util.Map;
 public class LodgingRiskAssessmentResponseDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
+        
+    /**
+     * 地块ID
+     */
+    private Integer plotId;
+
+     /**
+     * 地块名称
+     */
+    private String plotName;
 
     /**
      * 当前风险
@@ -267,5 +277,97 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
         private Double windSpeed;
         
         private Double rainfall;
+    }
+    
+    /**
+     * 批量倒伏风险评估响应DTO
+     */
+    @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class BatchLodgingRiskAssessmentResponseDTO implements Serializable {
+        
+        private static final long serialVersionUID = 1L;
+        
+        /**
+         * 基地ID
+         */
+        private Integer baseId;
+        
+        /**
+         * 基地名称
+         */
+        private String baseName;
+        
+        /**
+         * 地块风险列表
+         */
+        private List<LodgingRiskAssessmentResponseDTO> plotRisks;
+        
+        /**
+         * 基地整体风险统计
+         */
+        private BaseRiskStatisticsDTO baseStatistics;
+        
+        /**
+         * 计算时间
+         */
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", timezone = "GMT")
+        private Date calculationTime;
+    }
+    
+
+    
+    /**
+     * 基地风险统计DTO
+     */
+    @Data
+    public static class BaseRiskStatisticsDTO implements Serializable {
+        
+        private static final long serialVersionUID = 1L;
+        
+        /**
+         * 地块总数
+         */
+        private Integer totalPlots;
+        
+        /**
+         * 高风险地块数量
+         */
+        private Integer highRiskPlots;
+        
+        /**
+         * 极高风险地块数量
+         */
+        private Integer extremeRiskPlots;
+        
+        /**
+         * 中风险地块数量
+         */
+        private Integer mediumRiskPlots;
+        
+        /**
+         * 低风险地块数量
+         */
+        private Integer lowRiskPlots;
+        
+        /**
+         * 平均风险评分
+         */
+        private Double averageRiskScore;
+        
+        /**
+         * 最高风险地块ID
+         */
+        private Integer highestRiskPlotId;
+        
+        /**
+         * 最高风险评分
+         */
+        private Double highestRiskScore;
+        
+        /**
+         * 风险分布统计
+         */
+        private Map<String, Integer> riskDistribution;
     }
 }
