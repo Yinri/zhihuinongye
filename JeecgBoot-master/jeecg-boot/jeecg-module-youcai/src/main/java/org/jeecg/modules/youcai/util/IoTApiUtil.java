@@ -13,6 +13,8 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 
 /**
@@ -95,6 +97,63 @@ public class IoTApiUtil {
                         .bodyToMono(ApiResponse.class)
         );
     }
+    /**
+     * 获取设备列表（根据项目ID和设备类型）
+     * @param projectId 项目ID
+     * @param eqType 设备类型：1.虫情设备，2.孢子仪，3.杀虫灯
+     * @return 设备列表响应
+     */
+    public Mono<ApiResponse> getDeviceList(Integer projectId, Integer eqType) {
+        return checkTokenAndRequest(() -> {
+            // 构建请求参数
+            java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+            requestBody.put("projectId", projectId);
+            requestBody.put("eqType", eqType);
+
+            return webClient.post()
+                    .uri(BASE_URL + "/SensorData/GetInsertList")
+                    .header("Authorization", "Bearer " + token)
+                    .body(BodyInserters.fromValue(requestBody))
+                    .retrieve()
+                    .bodyToMono(ApiResponse.class);
+        });
+    }
+
+
+   public Mono<ApiResponse> getPestPhotos(String DeviceCode, Integer CountType, String StarDate, String EndDate) {
+    return checkTokenAndRequest(() -> {
+        java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("DeviceCode", DeviceCode);
+        requestBody.put("CountType", CountType);
+        requestBody.put("StarDate", StarDate);
+        requestBody.put("EndDate", EndDate);
+        return webClient.post()
+                .uri(BASE_URL + "/SensorData/GetDevImage")
+                .header("Authorization", "Bearer " + token)
+                .body(BodyInserters.fromValue(requestBody))
+                .retrieve()
+                .bodyToMono(ApiResponse.class);
+    });
+}
+
+    public Mono<ApiResponse> getDiseasePhotos(String DeviceCode, Integer CountType, String StarDate, String EndDate) {
+        return checkTokenAndRequest(() -> {
+            java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+            requestBody.put("DeviceCode", DeviceCode);
+            requestBody.put("CountType", CountType);
+            requestBody.put("StarDate", StarDate);
+            requestBody.put("EndDate", EndDate);
+            return webClient.post()
+                    .uri(BASE_URL + "/SensorData/GetDevImage")
+                    .header("Authorization", "Bearer " + token)
+                    .body(BodyInserters.fromValue(requestBody))
+                    .retrieve()
+                    .bodyToMono(ApiResponse.class);
+        });
+    }
+
+
+
 
     /**
      * 获取传感器列表（按项目ID+传感器类型）
@@ -109,6 +168,9 @@ public class IoTApiUtil {
                         .bodyToMono(ApiResponse.class)
         );
     }
+
+
+
 
     /**
      * 获取传感器实时数据（按设备编号）

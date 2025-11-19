@@ -1,10 +1,16 @@
 package org.jeecg.modules.youcai.controller;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
+import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.system.query.QueryGenerator;
+import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import org.jeecg.modules.youcai.service.IYoucaiPestControlService;
 
@@ -15,13 +21,17 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.jeecg.common.system.base.controller.JeecgController;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.jeecg.common.aspect.annotation.AutoLog;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
- /**
+import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
+import reactor.core.publisher.Mono;
+
+/**
  * @Description: 虫害防控表
  * @Author: jeecg-boot
  * @Date:   2025-10-18
@@ -89,7 +99,6 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 		youcaiPestControlService.updateById(youcaiPestControl);
 		return Result.OK("编辑成功!");
 	}
-	
 	/**
 	 *   通过id删除
 	 *
@@ -104,7 +113,6 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 		youcaiPestControlService.removeById(id);
 		return Result.OK("删除成功!");
 	}
-	
 	/**
 	 *  批量删除
 	 *
@@ -119,7 +127,6 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 		this.youcaiPestControlService.removeByIds(Arrays.asList(ids.split(",")));
 		return Result.OK("批量删除成功!");
 	}
-	
 	/**
 	 * 通过id查询
 	 *
@@ -136,7 +143,6 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 		}
 		return Result.OK(youcaiPestControl);
 	}
-
     /**
     * 导出excel
     *
@@ -161,5 +167,42 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
     public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
         return super.importExcel(request, response, YoucaiPestControl.class);
     }
-
+	@GetMapping("/images")
+	public Mono<Result<List<Map<String, Object>>>> getPestImages() {
+		return youcaiPestControlService.getPestImages()
+				.map(parsedData -> Result.OK(parsedData))
+				.onErrorReturn(Result.error("Failed to retrieve pest images"));
+	}
+	@PostMapping("/aiAnalysis")
+	public Result<?> aiAnalysis(@RequestBody AnalysisRequestDTO req) {
+		try {
+			String aiResult = youcaiPestControlService.aiAnalysis(req);
+			Result r = new Result<>();
+			r.setCode(CommonConstant.SC_OK_200);
+			r.setSuccess(true);
+			r.setMessage("");
+			r.setResult(aiResult);
+			r.setTimestamp(System.currentTimeMillis());
+			return r;
+		} catch (Exception e) {
+			return Result.error("AI 分析失败: " + e.getMessage());
+		}
+	}
+	@GetMapping("/findImages")
+	public Mono<Result<List<Map<String, Object>>>> getPestImages(
+			@RequestParam("start_date") @DateTimeFormat(pattern = "yyyy-MM-dd") String startDate,
+			@RequestParam("end_date") @DateTimeFormat(pattern = "yyyy-MM-dd") String endDate
+	) {
+		return youcaiPestControlService.getAllPestImages(startDate, endDate)
+				.map(Result::OK)
+				.onErrorReturn(Result.error("Failed to retrieve pest images"));
+	}
+	@PostMapping("findControl")
+	public Result<?> findControl(@RequestBody Map<String, Object> params) {
+		Integer plotId = (Integer) params.get("plotId");
+		String start = (String) params.get("start_date");
+		String end = (String) params.get("end_date");
+		List<YoucaiPestControl> list = youcaiPestControlService.findControl(plotId, start, end);
+		return Result.OK(list);
+	}
 }

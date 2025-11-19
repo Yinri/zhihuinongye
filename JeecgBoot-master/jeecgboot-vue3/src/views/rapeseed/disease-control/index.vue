@@ -1,54 +1,20 @@
 <template>
   <div class="insect-control-page">
-    <!-- 基地与地块选择区域和生长周期时间轴区域 -->
-    <a-card :bordered="false" class="combined-selection-timeline-card">
-      <a-row :gutter="16" align="middle">
-        <!-- 基地选择区域 -->
-        <a-col :span="3">
-          <div class="selection-area">
-            <div class="selection-title">基地选择</div>
-            <BaseSelect
-              v-model:value="selectedBaseId"
-              @change="handleBaseChange"
-              :defaultBaseId="defaultBaseId"
-              ref="baseSelectRef"
-            />
-          </div>
-        </a-col>
-        <!-- 地块选择区域 -->
-        <a-col :span="3">
-          <div class="selection-area">
-            <div class="selection-title">地块选择</div>
-            <PlotSelect
-              v-model:value="selectedPlotId"
-              :baseId="selectedBaseId"
-              @change="handlePlotChange"
-              ref="plotSelectRef"
-            />
-          </div>
-        </a-col>
-        <!-- 生长周期时间轴区域 -->
-        <a-col :span="18">
-          <div class="timeline-area">
-            <GrowthTimeline
-              :plotId="selectedPlotId"
-              :varietyId="selectedVarietyId"
-              :varietyName="selectedVarietyName"
-              :currentStageId="currentStageId"
-            />
-          </div>
-        </a-col>
-      </a-row>
-    </a-card>
     <a-card class="disease-card" :bordered="false">
       <a-row class="main-content-row">
         <!-- 实时病害图像 -->
         <a-col :span="8">
-          <a-card title="实时病害图像" :bordered="false" class="inner-card">
+          <a-card title="实时虫情图像" :bordered="false" class="inner-card">
             <div class="image-container">
-              <img class="disease-image" :src="currentImageUrl" alt="实时病害图像" />
+              <img
+                class="disease-image"
+                :src="latestImageUrl"
+                alt="实时虫情图像"
+                v-if="latestImageUrl"
+              />
+              <div v-else class="no-image">暂无图像</div>
             </div>
-            <div class="update-time">更新于：{{ lastUpdateTime }}</div>
+            <div class="update-time">更新于：{{ latestDate }}</div>
           </a-card>
         </a-col>
         <a-col :span="8">
@@ -170,15 +136,8 @@ import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
-// import { columns, searchFormSchema } from './seedingQuality.data';
-// import { getInsectControlList, deleteInsectControl, exportInsectControl, importInsectControl } from './diseasdeControl.api';
-import InsectControlModal from './InsectControlModal.vue';
-import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
-import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
-import GrowthTimeline from '@/views/rapeseed/production-plan/plot-production-plan/components/GrowthTimeline.vue';
-import * as echarts from 'echarts'
-import { message } from 'ant-design-vue'
-import { message as createMessage } from 'ant-design-vue'
+import {getFirstDisease} from "@/views/rapeseed/disease-control/diseaseControl.api";
+
 
 
 const { createMessage } = useMessage();
@@ -207,53 +166,33 @@ const llmAnalysis = ref('')
 const analysisResult = ref('')
 const selectedHistoryRange = ref([])
 const filteredHistory = ref([])
-// const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
-//   title: '虫害防控管理',
-//   api: selectedPlotId.value ? (params) => {
-//     // 如果有选中的地块ID，添加到查询参数
-//     if (selectedPlotId.value) {
-//       params.plotId = selectedPlotId.value;
-//     }
-//     return getInsectControlList(params);
-//   } : getInsectControlList,
-//   columns,
-//   formConfig: {
-//     labelWidth: 120,
-//     schemas: searchFormSchema,
-//     autoSubmitOnEnter: true,
-//   },
-//   useSearchForm: true,
-//   showTableSetting: true,
-//   bordered: true,
-//   showIndexColumn: false,
-//   actionColumn: {
-//     width: 80,
-//     title: '操作',
-//     dataIndex: 'action',
-//     fixed: 'right',
-//   },
-//   beforeFetch: (params) => {
-//     // 如果有选中的基地ID或地块ID，添加到查询参数
-//     if (selectedBaseId.value) {
-//       params.baseId = selectedBaseId.value;
-//     }
-//     if (selectedPlotId.value) {
-//       params.plotId = selectedPlotId.value;
-//     }
-//     return params;
-//   },
-// });
 
-/**
- * 基地选择变化处理
- */
 // --- 实时虫情图像 ---
-const currentImageUrl = ref('https://tse1.mm.bing.net/th/id/OIP.iIA2SGZVYVnSf-165spLkgHaLH?rs=1&pid=ImgDetMain&o=7&rm=3')
-const lastUpdateTime = ref('2025-10-27 10:30')
+const latestImageUrl = ref('');
+const latestDate = ref('');
+const fetchDiseaseData = async () => {
+  try {
+    const result = await getFirstDisease();
+    // 判断数据是否存在
+    if (result && Array.isArray(result) && result.length > 0) {
+      // 后端返回已经按时间排序（最新在前面）
+      const latestDisease = result[0];
+      // 绑定给前端显示
+      latestImageUrl.value = latestDisease.image_url;
+      latestDate.value = latestDisease.dateCreated;
+    } else {
+      console.warn('后端没有返回病害数据');
+    }
+  } catch (err) {
+    console.error('获取病害数据失败:', err);
+  }
+};
+onMounted(() => {
+  fetchDiseaseData();
+});
+
 
 const lastTime = ref('2025-10-27 18:30')
-
-
 const prediction = ref({
   disease: '叶斑病',
   confidence: 0.92
@@ -640,7 +579,9 @@ onMounted(() => {
     }
   }
 }
-
+.no-image {
+  color: #aaa;
+}
 .disease-card {
   padding: 24px;
   background-color: #f0f2f5;
