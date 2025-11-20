@@ -9,32 +9,32 @@
       <div class="unit">公斤 / 亩</div>
     </div>
 
-      <!-- 种子计划投入卡片 -->
-      <div class="input-card">
-        <div class="card-header">种子计划投入</div>
-        <div class="main-value">
-          {{ seedInput || '0.0' }}
-        </div>
-        <div class="unit">kg / 亩</div>
+    <!-- 种子计划投入卡片 -->
+    <div class="input-card">
+      <div class="card-header">种子计划投入</div>
+      <div class="main-value">
+        {{ seedInput || '0.0' }}
       </div>
+      <div class="unit">kg / 亩</div>
+    </div>
 
-      <!-- 肥料计划投入卡片 -->
-      <div class="input-card">
-        <div class="card-header">肥料计划投入</div>
-        <div class="main-value">
-          {{ fertilizerInput || '0.0' }}
-        </div>
-        <div class="unit">kg / 亩</div>
+    <!-- 肥料计划投入卡片 -->
+    <div class="input-card">
+      <div class="card-header">肥料计划投入</div>
+      <div class="main-value">
+        {{ fertilizerInput || '0.0' }}
       </div>
+      <div class="unit">kg / 亩</div>
+    </div>
 
-      <!-- 农药计划投入卡片 -->
-      <div class="input-card">
-        <div class="card-header">农药计划投入</div>
-        <div class="main-value">
-          {{ pesticideInput || '0.0' }}
-        </div>
-        <div class="unit">kg / 亩</div>
+    <!-- 农药计划投入卡片 -->
+    <div class="input-card">
+      <div class="card-header">农药计划投入</div>
+      <div class="main-value">
+        {{ pesticideInput || '0.0' }}
       </div>
+      <div class="unit">kg / 亩</div>
+    </div>
 
   </div>
 </template>

@@ -17,7 +17,16 @@
             </select>
           </div>
         </div>
-
+        <!-- 种子计算参数卡片 -->
+        <div class="basis-card">
+          <p class="card-title">种子计算参数</p>
+          <button @click="handleSeedParamModal" class="edit-btn">录入/修改参数</button>
+          <div class="param-values">
+            <p class="param-item">收获系数：{{ seedParams.harvestCoefficient || '未设置' }}</p>
+            <p class="param-item">田间保苗率：{{ seedParams.seedlingRate || '未设置' }}%</p>
+            <p class="param-item">结实率：{{ seedParams.settingRate || '未设置' }}%</p>
+          </div>
+        </div>
         <!-- 气象预测模块 -->
         <div class="basis-card info-card">
           <p class="card-title">当年气象预测</p>
@@ -30,16 +39,7 @@
           <p class="card-desc">作为目标产量调整参考</p>
         </div>
 
-        <!-- 种子计算参数卡片 -->
-        <div class="basis-card">
-          <p class="card-title">种子计算参数</p>
-          <button @click="handleSeedParamModal" class="edit-btn">录入/修改参数</button>
-          <div class="param-values">
-            <p class="param-item">收获系数：{{ seedParams.harvestCoefficient || '未设置' }}</p>
-            <p class="param-item">田间保苗率：{{ seedParams.seedlingRate || '未设置' }}%</p>
-            <p class="param-item">结实率：{{ seedParams.settingRate || '未设置' }}%</p>
-          </div>
-        </div>
+
       </div>
     </div>
 
@@ -478,6 +478,7 @@ export default {
           await addSeedParams(submitData);
           message.success('种子参数新增成功');
         }
+
         // 关闭弹窗并刷新数据
         this.showSeedParamModal = false;
         this.fetchSeedParams();
@@ -521,7 +522,7 @@ export default {
 
 .basis-cards {
   display: flex;
-  gap: 40px;
+  gap: 10px;
   width: 100%;
   justify-content: center;
   flex-wrap: wrap;
@@ -529,7 +530,7 @@ export default {
 }
 
 .basis-card {
-  min-width: 200px;
+  //min-width: 200px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: none;
   border-radius: 12px;
