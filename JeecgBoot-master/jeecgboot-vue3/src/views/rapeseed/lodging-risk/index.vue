@@ -348,6 +348,32 @@
           </div>
         </div>
       </transition>
+
+      <!-- 生长阶段警告提示区域 -->
+      <transition name="slide-up">
+        <div class="growth-stage-warning-panel" v-if="showGrowthStageWarning && selectedPlotData">
+          <div class="panel-header">
+            <h3><InfoCircleOutlined /> 生长阶段提示</h3>
+            <a-button type="text" @click="closeLodgingRiskPanel">
+              <template #icon><CloseOutlined /></template>
+            </a-button>
+          </div>
+          <div class="panel-content">
+            <a-result
+              status="info"
+              :title="growthStageWarningMessage"
+              sub-title="当前生长阶段不提供倒伏风险预警服务，请在适宜的生长阶段查看风险信息。"
+            >
+              <template #icon>
+                <InfoCircleOutlined style="color: #1890ff; font-size: 48px;" />
+              </template>
+              <template #extra>
+                <a-button type="primary" @click="closeLodgingRiskPanel">确定</a-button>
+              </template>
+            </a-result>
+          </div>
+        </div>
+      </transition>
     </div>
   </div>
 </template>
@@ -511,6 +537,8 @@ const plotDetailsContent = ref('');
 // 倒伏风险弹窗相关
 const selectedPlotData = ref(null);
 const showLodgingRiskPanel = ref(false);
+const showGrowthStageWarning = ref(false);
+const growthStageWarningMessage = ref('');
 
 // 数据状态
 const lodgingRiskData = ref(null);
@@ -971,8 +999,9 @@ const handlePlotClick = async (plotId) => {
   
   // 存储选中的地块数据
   selectedPlotData.value = plot;
-  // 显示倒伏风险面板
-  showLodgingRiskPanel.value = true;
+  // 初始不显示倒伏风险面板，等待获取生长数据后再决定
+  showLodgingRiskPanel.value = false;
+  showGrowthStageWarning.value = false;
   // 关闭地块详情面板
   showPlotDetails.value = false;
   
@@ -995,10 +1024,32 @@ const handlePlotClick = async (plotId) => {
         density: growthData.density || null,
         monitorDate: growthData.monitoringDate ? dayjs(growthData.monitoringDate) : null
       });
+      
+      // 检查生长阶段是否为苗期、蕾薹期、开花期或角果成熟期
+      const validGrowthStages = ['苗期', '蕾薹期', '开花期', '角果成熟期'];
+      const currentGrowthStage = growthData.growthStage;
+      
+      if (currentGrowthStage && validGrowthStages.includes(currentGrowthStage)) {
+        // 如果是有效的生长阶段，显示倒伏风险面板
+        showLodgingRiskPanel.value = true;
+        showGrowthStageWarning.value = false;
+      } else {
+        // 如果不是有效的生长阶段，显示提示信息
+        showLodgingRiskPanel.value = false;
+        showGrowthStageWarning.value = true;
+        growthStageWarningMessage.value = `该地块处于${currentGrowthStage || '未知阶段'}，不提供倒伏风险预警`;
+      }
+    } else {
+      // 如果没有获取到生长数据，默认显示倒伏风险面板
+      showLodgingRiskPanel.value = true;
+      showGrowthStageWarning.value = false;
     }
   } catch (error) {
     console.error('获取生长监测数据失败:', error);
     createMessage.error('获取生长监测数据失败');
+    // 如果获取数据失败，默认显示倒伏风险面板
+    showLodgingRiskPanel.value = true;
+    showGrowthStageWarning.value = false;
   }
   
   console.log('点击地块，显示倒伏风险面板:', plot);
@@ -1043,6 +1094,7 @@ function closePlotDetails() {
 // 关闭倒伏风险面板
 function closeLodgingRiskPanel() {
   showLodgingRiskPanel.value = false;
+  showGrowthStageWarning.value = false;
   selectedPlotData.value = null;
 }
 
@@ -2773,6 +2825,82 @@ onBeforeUnmount(() => {
           }
         }
       }
+    }
+  }
+
+  // 生长阶段警告提示面板样式
+  .growth-stage-warning-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transition: all 0.3s ease;
+    
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #f0f0f0;
+      background: linear-gradient(135deg, rgba(24, 144, 255, 0.9), rgba(64, 169, 255, 0.8));
+      
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .ant-btn {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.2);
+        
+        &:hover {
+          color: #1890ff;
+          border-color: #1890ff;
+          background-color: rgba(24, 144, 255, 0.1);
+        }
+      }
+    }
+    
+    .panel-content {
+      padding: 20px;
+      
+      .ant-result {
+        padding: 24px 0;
+        
+        .ant-result-title {
+          color: #1890ff;
+          font-size: 18px;
+          font-weight: 600;
+        }
+        
+        .ant-result-subtitle {
+          color: #666;
+          font-size: 14px;
+          margin-top: 8px;
+        }
+        
+        .ant-result-extra {
+          margin-top: 16px;
+        }
+      }
+    }
+    
+    // 响应式调整
+    @media (max-width: 768px) {
+      width: 90%;
+      right: 5%;
+      left: 5%;
     }
   }
   
