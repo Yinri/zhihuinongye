@@ -2,14 +2,18 @@ import { defHttp } from '/@/utils/http/axios';
 import { AxiosRequestConfig } from 'axios';
 
 enum Api {
-  GetHarvestList = '/rapeseed/harvest/list',
-  SaveHarvest = '/rapeseed/harvest/save',
-  EditHarvest = '/rapeseed/harvest/edit',
-  DeleteHarvest = '/rapeseed/harvest/delete',
-  DeleteBatch = '/rapeseed/harvest/deleteBatch',
-  GetHarvestById = '/rapeseed/harvest/queryById',
-  ExportHarvest = '/rapeseed/harvest/export',
-  ImportHarvest = '/rapeseed/harvest/import',
+  GetHarvestList = '/youcai/harvest/list',
+  SaveHarvest = '/youcai/harvest/save',
+  EditHarvest = '/youcai/harvest/edit',
+  DeleteHarvest = '/youcai/harvest/delete',
+  DeleteBatch = '/youcai/harvest/deleteBatch',
+  GetHarvestById = '/youcai/harvest/queryById',
+  ExportHarvest = '/youcai/harvest/export',
+  ImportHarvest = '/youcai/harvest/import',
+  GetHarvestStats = '/youcai/harvest/stats',
+  GetHarvesterStatus = '/youcai/harvest/harvesterStatus',
+  GetYieldChart = '/youcai/harvest/yieldChart',
+  GetPlotSummary = '/youcai/harvest/plotSummary',
 }
 
 /**
@@ -86,4 +90,32 @@ export const importHarvest = (params?: any, config?: AxiosRequestConfig) => {
     params,
     config
   );
+};
+
+/**
+ * 收获统计数据（卡片）
+ */
+export const getHarvestStats = (params?: any) => {
+  return defHttp.get<any>({ url: Api.GetHarvestStats, params });
+};
+
+/**
+ * 农机状态列表
+ */
+export const getHarvesterStatus = (params?: any) => {
+  return defHttp.get<any>({ url: Api.GetHarvesterStatus, params });
+};
+
+/**
+ * 今日产量对比图
+ */
+export const getYieldChartData = (params?: any) => {
+  return defHttp.get<any>({ url: Api.GetYieldChart, params });
+};
+
+/**
+ * 地块收割派生视图（用于地图着色）
+ */
+export const getPlotHarvestSummary = (params?: any) => {
+  return defHttp.get<any>({ url: Api.GetPlotSummary, params });
 };

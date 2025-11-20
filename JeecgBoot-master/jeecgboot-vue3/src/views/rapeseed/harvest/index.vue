@@ -13,6 +13,16 @@
             </div>
           </div>
         </a-col>
+        <a-col :span="12" style="text-align: right">
+          <a-space>
+            <a-button @click="goMachine">
+              <Icon icon="ant-design:tool-outlined" /> 管理农机
+            </a-button>
+            <a-button @click="goTask">
+              <Icon icon="ant-design:profile-outlined" /> 管理任务
+            </a-button>
+          </a-space>
+        </a-col>
 
       </a-row>
     </div>
@@ -103,16 +113,16 @@
             </div>
           </template>
           <div class="map-container">
-              <!-- 使用航拍图组件 -->
-              <AerialMap
-                ref="mapContainer"
-                :aerial-image-url="mapImageUrl"
-                :initial-polygons="mapPolygons"
-                :readonly="true"
-                @polygon-selected="handlePolygonSelected"
-                @load="onMapLoad"
-              />
-            </div>
+            <!-- 使用新建的天地图收获组件（轻量化） -->
+            <TiandituHarvestMap
+              :mapWidth="'100%'"
+              :mapHeight="'480px'"
+              :baseId="selectedBase?.baseId"
+              :enableHover="true"
+              :harvestedPlotIds="harvestedPlotIds"
+              :harvestingPlotIds="harvestingPlotIds"
+            />
+          </div>
         </a-card>
       </a-col>
       
@@ -215,118 +225,33 @@
     </a-card>
 
     <HarvestModal @register="registerModal" @success="handleSuccess" />
-    
-    <!-- 地块详情弹窗 -->
-    <a-modal
-      v-model:open="detailModalVisible"
-      title="地块详情"
-      width="800px"
-      :footer="null"
-    >
-      <div v-if="selectedField" class="field-detail">
-        <a-descriptions :column="2" bordered>
-          <a-descriptions-item label="地块编号">{{ selectedField.id }}</a-descriptions-item>
-          <a-descriptions-item label="地块名称">{{ selectedField.title }}</a-descriptions-item>
-          <a-descriptions-item label="面积">{{ selectedField.area }} 亩</a-descriptions-item>
-          <a-descriptions-item label="状态">
-            <a-tag :color="getStatusColor(selectedField.status)">{{ getStatusText(selectedField.status) }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="负责人">{{ selectedField.manager }}</a-descriptions-item>
-          <a-descriptions-item label="联系电话">{{ selectedField.phone }}</a-descriptions-item>
-          <a-descriptions-item label="预计产量">{{ selectedField.expectedYield }} 吨</a-descriptions-item>
-          <a-descriptions-item label="实际产量">{{ selectedField.actualYield || '待收割' }} 吨</a-descriptions-item>
-          <a-descriptions-item label="收割进度">{{ selectedField.progress }}%</a-descriptions-item>
-          <a-descriptions-item label="预计完成时间">{{ selectedField.estimatedDate || '待定' }}</a-descriptions-item>
-          <a-descriptions-item label="土壤类型">{{ selectedField.soilType || '壤土' }}</a-descriptions-item>
-          <a-descriptions-item label="灌溉方式">{{ selectedField.irrigation || '滴灌' }}</a-descriptions-item>
-          <a-descriptions-item label="种植品种">{{ selectedField.variety || '优质油菜' }}</a-descriptions-item>
-          <a-descriptions-item label="种植日期">{{ selectedField.plantDate || '2023-09-15' }}</a-descriptions-item>
-        </a-descriptions>
-        
-        <div class="mt-4">
-          <h4>收割作业记录</h4>
-          <a-table 
-            :dataSource="selectedField.harvestRecords || []" 
-            :columns="harvestRecordColumns" 
-            :pagination="false"
-            size="small"
-          />
-        </div>
-      </div>
-    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { reactive, ref, nextTick, computed, onMounted, onUnmounted, unref } from 'vue';
+import { useRouter } from 'vue-router';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './harvest.data';
-import { getHarvestList, deleteHarvest, exportHarvest, importHarvest } from './harvest.api';
+import { getHarvestList, deleteHarvest, exportHarvest, importHarvest, getHarvestStats, getHarvesterStatus, getYieldChartData, getPlotHarvestSummary } from './harvest.api';
 import HarvestModal from './HarvestModal.vue';
 import BarMulti from '/@/components/chart/BarMulti.vue';
 import { useScript } from '/@/hooks/web/useScript';
-import AerialMap from '/@/components/AerialMap/index.vue';
+import TiandituHarvestMap from '/@/components/TiandituHarvestMap';
+import { useSelectStore } from '/@/store/selectStore';
+import { storeToRefs } from 'pinia';
 
-// 地图数据类型定义
-interface MapPoint {
-  lng: number;
-  lat: number;
-}
-
-interface MapMarker {
-  id: number;
-  title: string;
-  status: 'harvesting' | 'completed' | 'pending';
-  lng: number;
-  lat: number;
-  area?: number;
-  manager?: string;
-  phone?: string;
-  expectedYield?: number;
-  actualYield?: number;
-  progress?: number;
-  estimatedDate?: string;
-  soilType?: string;
-  irrigation?: string;
-  variety?: string;
-  plantDate?: string;
-  harvestRecords?: any[];
-}
-
-interface FieldBoundary {
-  id: number;
-  name: string;
-  status: 'harvesting' | 'completed' | 'pending';
-  points: MapPoint[]; // 地块边界的坐标点数组
-  center: MapPoint; // 地块中心点
-  area?: number; // 地块面积
-  manager?: string;
-  phone?: string;
-  expectedYield?: number;
-  actualYield?: number;
-  progress?: number;
-  estimatedDate?: string;
-  soilType?: string;
-  irrigation?: string;
-  variety?: string;
-  plantDate?: string;
-  harvestRecords?: any[];
-}
-
-interface MapData {
-  center: MapPoint;
-  zoom: number;
-  markers: MapMarker[];
-  boundaries?: FieldBoundary[]; // 添加地块边界数据
-}
 
 const { createMessage } = useMessage();
+const router = useRouter();
 const [registerModal, { openModal }] = useModal();
 const searchInfo = reactive<Recordable>({});
 const fileList = ref<any[]>([]);
+const harvestedPlotIds = ref<Array<number | string>>([]);
+const harvestingPlotIds = ref<Array<number | string>>([]);
 
 // 加载状态
 const loading = ref(false);
@@ -377,12 +302,9 @@ const yieldChartData = ref([
   { fieldName: 'E区-01号', actual: 450, expected: 420 },
 ]);
 
-const mapData = ref<MapData>({
-  center: { lng: 112.616279, lat: 31.176021 },
-  zoom: 12,
-  markers: [],
-  boundaries: [], // 初始化地块边界数据
-});
+// 选中基地（用于地图联动）
+const selectStore = useSelectStore();
+const { selectedBase } = storeToRefs(selectStore);
 
 // 图表颜色配置
 const seriesColor = [
@@ -434,19 +356,16 @@ const chartDataForBarMulti = computed(() => {
   // 加载收获统计数据
   async function loadHarvestStats() {
     try {
-      // 这里应该调用实际的API获取统计数据
-      // const stats = await getHarvestStats();
-      // harvestStats.value = stats;
-      
-      // 模拟数据
+      const stats = await getHarvestStats();
+      // 兼容后端返回的字段名
       harvestStats.value = {
-        harvestedArea: 2456,
-        unharvestedArea: 872,
-        totalYield: 1842,
-        machineCount: 8,
-        harvestedAreaTrend: 12.5,
-        unharvestedAreaTrend: -8.3,
-        totalYieldTrend: 15.2,
+        harvestedArea: stats?.harvestedArea ?? 0,
+        unharvestedArea: stats?.unharvestedArea ?? 0,
+        totalYield: stats?.totalYield ?? 0,
+        machineCount: stats?.machineCount ?? 0,
+        harvestedAreaTrend: stats?.harvestedAreaTrend ?? 0,
+        unharvestedAreaTrend: stats?.unharvestedAreaTrend ?? 0,
+        totalYieldTrend: stats?.totalYieldTrend ?? 0,
       };
     } catch (error) {
       console.error('加载收获统计数据失败:', error);
@@ -456,37 +375,8 @@ const chartDataForBarMulti = computed(() => {
 // 加载收割机状态数据
 async function loadHarvesterStatus() {
   try {
-    // 这里应该调用实际的API获取收割机状态
-    // const status = await getHarvesterStatus();
-    // harvesterStatus.value = status;
-    
-    // 模拟数据
-    harvesterStatus.value = [
-      {
-        id: 1,
-        name: '收割机#1',
-        status: 'working',
-        location: '地块A-3区域',
-      },
-      {
-        id: 2,
-        name: '收割机#2',
-        status: 'working',
-        location: '地块B-1区域',
-      },
-      {
-        id: 3,
-        name: '收割机#3',
-        status: 'idle',
-        location: '维修区',
-      },
-      {
-        id: 4,
-        name: '收割机#4',
-        status: 'working',
-        location: '地块C-2区域',
-      },
-    ];
+    const status = await getHarvesterStatus();
+    harvesterStatus.value = Array.isArray(status) ? status : [];
   } catch (error) {
     console.error('加载收割机状态失败:', error);
   }
@@ -495,283 +385,16 @@ async function loadHarvesterStatus() {
 // 加载产量图表数据
 async function loadYieldChartData() {
   try {
-    // 这里应该调用实际的API获取图表数据
-    // const chartData = await getYieldChartData();
-    // yieldChartData.value = chartData;
-    
-    // 模拟数据
-    yieldChartData.value = [
-      { fieldName: 'A区-03号', actual: 320, expected: 350 },
-      { fieldName: 'B区-07号', actual: 410, expected: 400 },
-      { fieldName: 'C区-02号', actual: 380, expected: 380 },
-      { fieldName: 'D区-05号', actual: 290, expected: 320 },
-      { fieldName: 'E区-01号', actual: 450, expected: 420 },
-    ];
+    const chartData = await getYieldChartData();
+    yieldChartData.value = Array.isArray(chartData) ? chartData : [];
   } catch (error) {
     console.error('加载产量图表数据失败:', error);
   }
 }
 
-// 地图相关
-  const mapRef = ref<HTMLDivElement | null>(null);
-  let markers: any[] = [];
-  
-  // 地图工具栏相关
-  const searchKeyword = ref('');
-
-// 地块详情弹窗相关
-const detailModalVisible = ref(false);
-const selectedField = ref<any>(null);
-
-// 航拍图相关
-const mapImageUrl = ref('/images/aerial-map.jpg'); // 航拍图URL
-const mapPolygons = ref<any[]>([]); // 地图多边形数据
-
-// 收割记录表格列
-const harvestRecordColumns = [
-  { title: '作业日期', dataIndex: 'date', width: 100 },
-  { title: '作业人员', dataIndex: 'operator', width: 100 },
-  { title: '作业时长', dataIndex: 'duration', width: 80 },
-  { title: '作业面积', dataIndex: 'area', width: 80 },
-  { title: '产量', dataIndex: 'yield', width: 80 },
-  { title: '备注', dataIndex: 'remark' },
-];
-
-// 加载地图数据
-const loadMapData = async () => {
-  console.log('开始加载地图数据...');
-  try {
-    // 模拟从API获取地图数据
-    const response = await new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          data: {
-            center: { lng: 112.616279, lat: 31.176021 },
-            zoom: 15,
-            markers: [
-              { id: 1, title: '东区地块A', status: 'harvesting', lng: 112.626279, lat: 31.186021 },
-              { id: 2, title: '东区地块B', status: 'completed', lng: 112.636279, lat: 31.176021 },
-              { id: 3, title: '西区地块C', status: 'pending', lng: 112.606279, lat: 31.166021 },
-              { id: 4, title: '西区地块D', status: 'harvesting', lng: 112.616279, lat: 31.166021 },
-              { id: 5, title: '南区地块E', status: 'completed', lng: 112.616279, lat: 31.156021 },
-            ],
-            // 添加地块边界数据
-            boundaries: [
-              {
-                id: 1,
-                name: '东区地块A',
-                status: 'harvesting',
-                center: { lng: 112.626279, lat: 31.186021 },
-                points: [
-                  { lng: 112.622279, lat: 31.189021 },
-                  { lng: 112.630279, lat: 31.189021 },
-                  { lng: 112.630279, lat: 31.183021 },
-                  { lng: 112.622279, lat: 31.183021 },
-                  { lng: 112.622279, lat: 31.189021 }
-                ],
-                area: 120,
-                manager: '张三',
-                phone: '13800138001',
-                expectedYield: 60,
-                actualYield: 35,
-                progress: 58,
-                estimatedDate: '2023-11-15',
-                soilType: '壤土',
-                irrigation: '滴灌',
-                variety: '优质油菜',
-                plantDate: '2023-09-15'
-              },
-              {
-                id: 2,
-                name: '东区地块B',
-                status: 'completed',
-                center: { lng: 112.636279, lat: 31.176021 },
-                points: [
-                  { lng: 112.632279, lat: 31.179021 },
-                  { lng: 112.640279, lat: 31.179021 },
-                  { lng: 112.640279, lat: 31.173021 },
-                  { lng: 112.632279, lat: 31.173021 },
-                  { lng: 112.632279, lat: 31.179021 }
-                ],
-                area: 95,
-                manager: '李四',
-                phone: '13800138002',
-                expectedYield: 48,
-                actualYield: 52,
-                progress: 100,
-                estimatedDate: '2023-11-10',
-                soilType: '砂壤土',
-                irrigation: '喷灌',
-                variety: '高产油菜',
-                plantDate: '2023-09-10'
-              },
-              {
-                id: 3,
-                name: '西区地块C',
-                status: 'pending',
-                center: { lng: 112.606279, lat: 31.166021 },
-                points: [
-                  { lng: 112.602279, lat: 31.169021 },
-                  { lng: 112.610279, lat: 31.169021 },
-                  { lng: 112.610279, lat: 31.163021 },
-                  { lng: 112.602279, lat: 31.163021 },
-                  { lng: 112.602279, lat: 31.169021 }
-                ],
-                area: 110,
-                manager: '王五',
-                phone: '13800138003',
-                expectedYield: 55,
-                actualYield: 0,
-                progress: 0,
-                estimatedDate: '2023-11-20',
-                soilType: '黏土',
-                irrigation: '漫灌',
-                variety: '耐旱油菜',
-                plantDate: '2023-09-20'
-              },
-              {
-                id: 4,
-                name: '西区地块D',
-                status: 'harvesting',
-                center: { lng: 112.616279, lat: 31.166021 },
-                points: [
-                  { lng: 112.612279, lat: 31.169021 },
-                  { lng: 112.620279, lat: 31.169021 },
-                  { lng: 112.620279, lat: 31.163021 },
-                  { lng: 112.612279, lat: 31.163021 },
-                  { lng: 112.612279, lat: 31.169021 }
-                ],
-                area: 85,
-                manager: '赵六',
-                phone: '13800138004',
-                expectedYield: 42,
-                actualYield: 20,
-                progress: 48,
-                estimatedDate: '2023-11-18',
-                soilType: '壤土',
-                irrigation: '滴灌',
-                variety: '优质油菜',
-                plantDate: '2023-09-12'
-              },
-              {
-                id: 5,
-                name: '南区地块E',
-                status: 'completed',
-                center: { lng: 112.616279, lat: 31.156021 },
-                points: [
-                  { lng: 112.612279, lat: 31.159021 },
-                  { lng: 112.620279, lat: 31.159021 },
-                  { lng: 112.620279, lat: 31.153021 },
-                  { lng: 112.612279, lat: 31.153021 },
-                  { lng: 112.612279, lat: 31.159021 }
-                ],
-                area: 100,
-                manager: '钱七',
-                phone: '13800138005',
-                expectedYield: 50,
-                actualYield: 53,
-                progress: 100,
-                estimatedDate: '2023-11-08',
-                soilType: '砂土',
-                irrigation: '喷灌',
-                variety: '早熟油菜',
-                plantDate: '2023-09-05'
-              }
-            ]
-          }
-        });
-      }, 500);
-    });
-    
-    mapData.value = response.data as any;
-    console.log('地图数据加载完成:', mapData.value);
-    
-    // 将边界数据转换为航拍图组件需要的格式
-    if (mapData.value.boundaries) {
-      mapPolygons.value = mapData.value.boundaries.map(boundary => ({
-        id: boundary.id,
-        name: boundary.name,
-        points: boundary.points.map(point => [point.lng, point.lat]),
-        status: boundary.status,
-        area: boundary.area,
-        manager: boundary.manager,
-        phone: boundary.phone,
-        expectedYield: boundary.expectedYield,
-        actualYield: boundary.actualYield,
-        progress: boundary.progress,
-        estimatedDate: boundary.estimatedDate,
-        soilType: boundary.soilType,
-        irrigation: boundary.irrigation,
-        variety: boundary.variety,
-        plantDate: boundary.plantDate
-      }));
-    }
-  } catch (error) {
-    console.error('加载地图数据失败:', error);
-  }
-};
 
 
   
-  // 获取状态颜色
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'success';
-      case 'harvesting':
-        return 'processing';
-      case 'pending':
-        return 'default';
-      default:
-        return 'default';
-    }
-  };
-  
-  // 获取状态文本
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return '已完成';
-      case 'harvesting':
-        return '收割中';
-      case 'pending':
-        return '未开始';
-      default:
-        return '未知';
-    }
-  };
-  
-  // 处理地块详情
-  const handleFieldDetail = (fieldId: string) => {
-    // 根据ID查找地块数据
-    const field = mapData.value.markers.find(item => item.id === fieldId);
-    
-    if (field) {
-      // 补充地块详细信息
-      selectedField.value = {
-        ...field,
-        manager: '张' + Math.floor(Math.random() * 1000), // 模拟负责人
-        phone: '138' + Math.floor(Math.random() * 100000000), // 模拟电话
-        expectedYield: (Math.random() * 50 + 20).toFixed(1), // 模拟预计产量
-        actualYield: field.status === 'completed' ? (Math.random() * 40 + 15).toFixed(1) : null, // 已完成才有实际产量
-        progress: field.status === 'completed' ? 100 : field.status === 'harvesting' ? Math.floor(Math.random() * 80) + 20 : 0,
-        estimatedDate: field.status === 'pending' ? '2023-10-20' : field.status === 'harvesting' ? '2023-10-15' : '2023-10-10',
-        soilType: ['壤土', '砂壤土', '黏土'][Math.floor(Math.random() * 3)],
-        irrigation: ['滴灌', '喷灌', '漫灌'][Math.floor(Math.random() * 3)],
-        variety: ['优质油菜', '高产油菜', '抗病油菜'][Math.floor(Math.random() * 3)],
-        plantDate: '2023-09-15',
-        harvestRecords: field.status === 'completed' ? [
-          { date: '2023-10-10', operator: '王师傅', duration: '4小时', area: '25亩', yield: '12.5吨', remark: '天气良好' },
-          { date: '2023-10-11', operator: '李师傅', duration: '3.5小时', area: '20亩', yield: '10.2吨', remark: '设备正常' }
-        ] : field.status === 'harvesting' ? [
-          { date: '2023-10-12', operator: '王师傅', duration: '2小时', area: '15亩', yield: '7.5吨', remark: '进行中' }
-        ] : []
-      };
-      
-      // 打开详情弹窗
-      detailModalVisible.value = true;
-    }
-  };
   
 
 
@@ -805,7 +428,6 @@ async function loadAllData() {
       loadHarvestStats(),
       loadHarvesterStatus(),
       loadYieldChartData(),
-      loadMapData(),
     ]);
   } catch (error) {
     console.error('加载数据失败:', error);
@@ -818,12 +440,12 @@ async function loadAllData() {
 // 页面挂载时初始化数据
 onMounted(() => {
   loadAllData();
+  loadPlotSummary();
 });
 
 // 页面卸载时清理资源
 onUnmounted(() => {
-  // 清理地图相关资源
-  markers = [];
+  // 页面资源清理占位
 });
 
 /**
@@ -839,6 +461,28 @@ async function loadHarvestData() {
     createMessage.error('加载收获数据失败，请稍后重试');
   } finally {
     loading.value = false;
+  }
+}
+
+function goMachine() {
+  router.push({ name: 'RapeseedHarvestMachine' });
+}
+
+function goTask() {
+  router.push({ name: 'RapeseedHarvestTask' });
+}
+
+// 加载地块收割派生视图，用于地图状态
+async function loadPlotSummary() {
+  try {
+    const baseId = selectedBase.value?.baseId;
+    const params = baseId ? { baseId } : undefined; // 避免传递空值导致后端解析错误
+    const list = await getPlotHarvestSummary(params);
+    const arr = Array.isArray(list) ? list : [];
+    harvestedPlotIds.value = arr.filter((item: any) => item.harvestStatus === 2).map((item: any) => item.plotId);
+    harvestingPlotIds.value = arr.filter((item: any) => item.harvestStatus === 1).map((item: any) => item.plotId);
+  } catch (e) {
+    console.error('加载地块收割视图失败:', e);
   }
 }
 
