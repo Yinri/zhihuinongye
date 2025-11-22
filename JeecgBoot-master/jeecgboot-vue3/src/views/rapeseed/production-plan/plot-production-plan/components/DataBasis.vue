@@ -27,6 +27,21 @@
             <p class="param-item">结实率：{{ seedParams.settingRate || '未设置' }}%</p>
           </div>
         </div>
+        <!-- 肥料参数卡片（新增） -->
+        <div class="basis-card">
+          <p class="card-title">肥料计算参数</p>
+          <!-- 直接用下拉框显示+调整，和递增率结构完全一致 -->
+          <div class="increase-rate-container" style="margin-top: 16px;">
+            <label class="rate-label">安全系数：</label>
+            <select v-model="localSafetyCoefficient" class="rate-select">
+              <option value="1.1">1.1</option>
+              <option value="1.15">1.15</option>
+              <option value="1.2" selected>1.2</option>
+              <option value="1.25">1.25</option>
+              <option value="1.3">1.3</option>
+            </select>
+          </div>
+        </div>
         <!-- 气象预测模块 -->
         <div class="basis-card info-card">
           <p class="card-title">当年气象预测</p>
@@ -145,12 +160,14 @@ export default {
   name: 'YieldCalcBasis',
   setup() {
     const cropStore = useCropVarietyStore();
-    const { selected, yieldCalcData } = storeToRefs(cropStore);
-    const { updateYieldCalcData } = cropStore;
+    const { selected, yieldCalcData,fertilizerParams} = storeToRefs(cropStore);
+    const { updateYieldCalcData,updateFertilizerParams} = cropStore;
     return {
       selected,
       yieldCalcData,
-      updateYieldCalcData
+      updateYieldCalcData,
+      fertilizerParams,
+      updateFertilizerParams
     };
   },
   data() {
@@ -172,7 +189,9 @@ export default {
         harvestCoefficient: null,
         seedlingRate: null,
         settingRate: null
-      }
+      },
+      // 肥料安全系数（新增）
+      localSafetyCoefficient: 1.2, // 新增：本地临时变量，避免重复
     };
   },
   computed: {
@@ -190,6 +209,19 @@ export default {
       },
       set(val) {
         this.updateYieldCalcData({ increaseRate: val });
+      }
+    },
+    // 肥料安全系数（关联Pinia，新增）
+    safetyCoefficient: {
+      get() {
+        // 从Pinia读取，没有则用本地默认值1.2
+        return this.fertilizerParams?.safetyCoefficient || 1.2;
+      },
+      set(val) {
+        // 同步到Pinia，供计算肥料投入量使用
+        this.updateFertilizerParams({
+          safetyCoefficient: Number(val)
+        });
       }
     }
   },
@@ -209,6 +241,9 @@ export default {
           this.seedParams = { harvestCoefficient: null, seedlingRate: null, settingRate: null, id: null };
         }
       }
+    },
+    localSafetyCoefficient(newVal) {
+      this.safetyCoefficient = Number(newVal); // 触发computed的setter，同步到Pinia
     }
   },
   methods: {
@@ -530,11 +565,11 @@ export default {
 }
 
 .basis-card {
-  //min-width: 200px;
+  min-width: 100px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: none;
   border-radius: 12px;
-  padding: 24px;
+  padding: 10px;
   text-align: center;
   display: flex;
   flex-direction: column;

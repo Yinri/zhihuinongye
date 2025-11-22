@@ -52,7 +52,17 @@ export const useCropVarietyStore = defineStore('cropVariety', {
       id: null // 参数记录ID（用于修改）
     },
     // 新增：种子参数缺失提示状态标记
-    seedParamWarned: false // 避免重复弹窗提示
+    seedParamWarned: false ,// 避免重复弹窗提示
+    // 新增：肥料计算参数（含安全系数，默认1.2）
+    fertilizerParams: {
+      safetyCoefficient: 1.2, // 安全系数默认值
+      // 后续计算肥料还需要利用率，提前加上（避免后续再改）
+      utilizationRate: {
+        n: 0.4, // N肥利用率40%（小数形式）
+        p: 0.3, // P₂O₅利用率30%
+        k: 0.45 // K₂O利用率45%
+      }
+    }
   }),
 
   // 动作：修改状态的方法（推荐通过方法修改，便于追踪和扩展）
@@ -71,6 +81,10 @@ export const useCropVarietyStore = defineStore('cropVariety', {
 // 新增：更新种子参数
     updateSeedParams(params) {
       this.seedParams = { ...this.seedParams, ...params };
+    },
+    // 新增：更新肥料参数（安全系数、利用率等）
+    updateFertilizerParams(params) {
+      this.fertilizerParams = { ...this.fertilizerParams, ...params };
     },
     // 新增：重置种子参数（品种切换时调用）
     resetSeedParams() {
