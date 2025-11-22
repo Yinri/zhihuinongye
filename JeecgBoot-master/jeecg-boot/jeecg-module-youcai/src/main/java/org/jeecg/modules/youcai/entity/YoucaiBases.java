@@ -66,23 +66,13 @@ public class YoucaiBases implements Serializable {
     /**面积（亩）*/
     @Excel(name = "面积（亩）", width = 15)
     @Schema(description = "基地面积（亩）")
-    private BigDecimal area; // 对应表中 decimal 类型，用 BigDecimal 避免精度丢失
-
-    /**种植作物*/
-    @Excel(name = "种植作物", width = 15, dicCode = "crop_type") // 若有字典表，可配置 dicCode
-    @Schema(description = "种植作物（如：中油杂19、其他）")
-    private String crop;
+    private BigDecimal area;
 
     /**土壤状况*/
-    @Excel(name = "土壤状况", width = 15, dicCode = "soil_type") // 建议配置字典（黏土/沙土/壤土）
+    @Excel(name = "土壤状况", width = 15, dicCode = "soil_type")
     @Schema(description = "土壤状况（黏土/沙土/壤土）")
-    @Dict(dicCode = "soil_type") // 配合 Jeecg 的 Dict 注解实现字典回显
+    @Dict(dicCode = "soil_type")
     private String soilType;
-
-    /**基地俯视图URL*/
-    @Excel(name = "基地俯视图", width = 15)
-    @Schema(description = "基地俯视图URL（存储图片访问路径）")
-    private String topViewUrl;
     // ---------------------- 新增字段结束 ----------------------
 
     /**创建人*/

@@ -113,14 +113,23 @@ public class YoucaiBasesController extends JeecgController<YoucaiBases, IYoucaiB
 	 * @param id
 	 * @return
 	 */
-	@AutoLog(value = "基地表-通过id删除")
-	@Operation(summary="基地表-通过id删除")
-	@RequiresPermissions("youcai:youcai_bases:delete")
-	@DeleteMapping(value = "/delete")
-	public Result<String> delete(@RequestParam(name="id",required=true) String id) {
-		youcaiBasesService.removeById(id);
-		return Result.OK("删除成功!");
-	}
+    @AutoLog(value = "基地表-通过id删除")
+    @Operation(summary="基地表-通过id删除")
+    @RequiresPermissions("youcai:youcai_bases:delete")
+    @DeleteMapping(value = "/delete")
+    public Result<String> delete(@RequestParam(name="id",required=true) String id) {
+        youcaiBasesService.removeById(id);
+        return Result.OK("删除成功!");
+    }
+
+    @AutoLog(value = "基地表-通过id删除(REST风格)")
+    @Operation(summary="基地表-通过id删除(REST风格)")
+    @RequiresPermissions("youcai:youcai_bases:delete")
+    @DeleteMapping(value = "/delete/{id}")
+    public Result<String> deleteByPath(@PathVariable("id") String id) {
+        youcaiBasesService.removeById(id);
+        return Result.OK("删除成功!");
+    }
 	
 	/**
 	 *  批量删除
