@@ -152,7 +152,7 @@ public class YoucaiGrowthMonitoringController extends JeecgController<YoucaiGrow
 		 // 使用 LambdaQueryWrapper 避免字段硬编码
 		 LambdaQueryWrapper<YoucaiGrowthMonitoring> queryWrapper = new LambdaQueryWrapper<>();
 		 queryWrapper.eq(YoucaiGrowthMonitoring::getPlotId, plotId)
-				 .orderByDesc(YoucaiGrowthMonitoring::getCreateTime) // 按创建时间倒序
+				 .orderByDesc(YoucaiGrowthMonitoring::getMonitoringDate) // 按创建时间倒序
 				 .last("LIMIT 1"); // 取最新一条
 
 		 YoucaiGrowthMonitoring latestData = youcaiGrowthMonitoringService.getOne(queryWrapper);
