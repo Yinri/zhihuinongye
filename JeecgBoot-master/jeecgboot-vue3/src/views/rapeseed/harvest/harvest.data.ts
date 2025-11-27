@@ -1,16 +1,17 @@
 import { FormSchema } from '/@/components/Form';
 import { BasicColumn } from '/@/components/Table';
+import { getPlotInfoList } from '../plot-info/plotInfo.api';
 
 export const columns: BasicColumn[] = [
   {
-    title: '基地ID',
-    dataIndex: 'baseId',
-    width: 100,
+    title: '地块编号',
+    dataIndex: 'plotCode',
+    width: 120,
   },
   {
-    title: '地块ID',
-    dataIndex: 'plotId',
-    width: 100,
+    title: '地块名',
+    dataIndex: 'plotName',
+    width: 150,
   },
   {
     title: '本次收割面积(亩)',
@@ -36,6 +37,15 @@ export const columns: BasicColumn[] = [
     title: '收获日期',
     dataIndex: 'harvestDate',
     width: 160,
+    customRender: ({ text }) => {
+      if (!text) return '';
+      // 格式化日期，只显示年月日
+      const date = new Date(text);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    },
   },
   {
     title: '作业人员',
@@ -51,14 +61,8 @@ export const columns: BasicColumn[] = [
 
 export const searchFormSchema: FormSchema[] = [
   {
-    field: 'baseId',
-    label: '基地ID',
-    component: 'Input',
-    colProps: { span: 8 },
-  },
-  {
-    field: 'plotId',
-    label: '地块ID',
+    field: 'plotName',
+    label: '地块名',
     component: 'Input',
     colProps: { span: 8 },
   },
@@ -68,8 +72,8 @@ export const searchFormSchema: FormSchema[] = [
     component: 'RangePicker',
     colProps: { span: 8 },
     componentProps: {
-      showTime: true,
-      format: 'YYYY-MM-DD HH:mm:ss',
+      showTime: false,
+      format: 'YYYY-MM-DD',
     },
   },
 ];
@@ -79,15 +83,25 @@ export const formSchema: FormSchema[] = [
     field: 'baseId',
     label: '基地ID',
     component: 'Input',
+    show: false, // 默认隐藏基地ID字段
     required: true,
     rules: [{ required: true, message: '请输入基地ID' }],
   },
   {
     field: 'plotId',
-    label: '地块ID',
-    component: 'Input',
+    label: '地块',
+    component: 'Select',
+    show: false, // 默认隐藏地块字段，新增时动态显示
     required: true,
-    rules: [{ required: true, message: '请输入地块ID' }],
+    rules: [{ required: true, message: '请选择地块' }],
+    componentProps: {
+      options: [],
+      fieldNames: { label: 'plotName', value: 'plotId' },
+      showSearch: true,
+      filterOption: (input: string, option: any) => {
+        return option.plotName.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+      },
+    },
   },
   {
     field: 'area',
@@ -130,8 +144,8 @@ export const formSchema: FormSchema[] = [
     required: true,
     rules: [{ required: true, message: '请选择收获日期' }],
     componentProps: {
-      showTime: true,
-      format: 'YYYY-MM-DD HH:mm:ss',
+      showTime: false,
+      format: 'YYYY-MM-DD',
     },
   },
   {

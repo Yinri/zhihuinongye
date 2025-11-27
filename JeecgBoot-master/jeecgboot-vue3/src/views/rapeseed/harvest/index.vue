@@ -413,6 +413,11 @@ const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
   showTableSetting: false,
   bordered: true,
   showIndexColumn: false,
+  pagination: {
+    defaultPageSize: 10, // 默认每页显示10条数据
+    showSizeChanger: true, // 显示每页条数选择器
+    pageSizeOptions: ['10', '20', '50', '100'], // 可选的每页条数
+  },
   beforeFetch: (params) => {
     // 添加当前选中的基地ID到查询参数中
     if (selectedBase.value?.baseId) {
@@ -454,10 +459,13 @@ watch(
       loadAllData();
       loadPlotSummary();
       // 重新加载表格数据
-      reload();
+      try {
+        reload();
+      } catch (error) {
+        console.warn('表格尚未初始化，跳过reload操作');
+      }
     }
-  },
-  { immediate: true }
+  }
 );
 
 // 页面挂载时初始化数据
@@ -478,7 +486,11 @@ async function loadHarvestData() {
   try {
     loading.value = true;
     // 重新加载数据
-    await reload();
+    try {
+      await reload();
+    } catch (error) {
+      console.warn('表格尚未初始化，跳过reload操作');
+    }
   } catch (error) {
     console.error('加载收获数据失败:', error);
     createMessage.error('加载收获数据失败，请稍后重试');
@@ -525,12 +537,20 @@ function handleEdit(record: Recordable) {
 async function handleDelete(record: Recordable) {
   await deleteHarvest(record.id);
   createMessage.success('删除成功');
-  reload();
+  try {
+    reload();
+  } catch (error) {
+    console.warn('表格尚未初始化，跳过reload操作');
+  }
 }
 
 function handleSuccess() {
   createMessage.success('操作成功');
-  reload();
+  try {
+    reload();
+  } catch (error) {
+    console.warn('表格尚未初始化，跳过reload操作');
+  }
 }
 
 async function handleExport() {
@@ -561,7 +581,11 @@ async function handleImport() {
   try {
     await importHarvest(formData);
     createMessage.success('导入成功');
-    reload();
+    try {
+      reload();
+    } catch (error) {
+      console.warn('表格尚未初始化，跳过reload操作');
+    }
     fileList.value = [];
   } catch (error) {
     createMessage.error('导入失败');

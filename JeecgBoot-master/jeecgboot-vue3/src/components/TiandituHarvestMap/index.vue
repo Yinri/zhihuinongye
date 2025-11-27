@@ -315,7 +315,7 @@ watch(() => props.plots, () => {
 .tdt-map { width: 100%; height: 100%; border-radius: 6px; overflow: hidden; }
 .map-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.6); z-index: 10; }
 .map-error { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 11; }
-.map-legend { position: absolute; z-index: 9999; background: rgba(255,255,255,0.95); border: 1px solid #f0f0f0; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 8px 12px; min-width: 120px; pointer-events: none; }
+.map-legend { position: absolute; z-index: 1000; background: rgba(255,255,255,0.95); border: 1px solid #f0f0f0; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); padding: 8px 12px; min-width: 120px; pointer-events: auto; }
 .map-legend.bottom-right { right: 12px; bottom: 12px; }
 .map-legend.bottom-left { left: 12px; bottom: 12px; }
 .map-legend.top-right { right: 12px; top: 12px; }
