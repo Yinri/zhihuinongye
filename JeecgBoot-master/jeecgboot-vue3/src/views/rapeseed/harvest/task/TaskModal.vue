@@ -56,6 +56,10 @@ const getTitle = computed(() => (isUpdate.value ? '编辑收获任务' : '新增
 async function handleSubmit() {
   const values = await validate();
   try {
+    // 如果不是更新操作，且当前有选中的基地，则自动添加基地ID
+    if (!isUpdate.value && selectedBase.value?.baseId) {
+      values.baseId = selectedBase.value.baseId;
+    }
     if (isUpdate.value) {
       await editTask(values);
     } else {

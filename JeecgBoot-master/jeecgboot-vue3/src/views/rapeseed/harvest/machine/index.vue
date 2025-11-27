@@ -1,6 +1,11 @@
 <template>
   <div class="machine-page">
     <a-card :bordered="false" title="农机档案">
+      <template #extra>
+        <a-button @click="goBack">
+          <Icon icon="ant-design:arrow-left-outlined" /> 返回收获管理
+        </a-button>
+      </template>
       <BasicTable @register="registerTable" :searchInfo="searchInfo">
         <template #toolbar>
           <a-button type="primary" @click="handleCreate">
@@ -34,6 +39,7 @@ import { reactive, ref, watch } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { Icon } from '/@/components/Icon';
 import { useMessage } from '/@/hooks/web/useMessage';
+import { useRouter } from 'vue-router';
 import { columns as baseColumns, searchFormSchema } from './machine.data';
 import { getMachineList, deleteMachine, exportMachine, importMachine } from './machine.api';
 import { getHarvesterStatus } from '../harvest.api';
@@ -44,6 +50,7 @@ import MachineModal from './MachineModal.vue';
 import { useModal } from '/@/components/Modal';
 
 const { createMessage } = useMessage();
+const router = useRouter();
 const [registerModal, { openModal }] = useModal();
 
 const selectStore = useSelectStore();
@@ -95,6 +102,11 @@ const [registerTable, { reload }] = useTable({
 
 function handleCreate() {
   openModal(true, { isUpdate: false });
+}
+
+// 返回收获管理页面
+function goBack() {
+  router.push('/rapeseed/harvest');
 }
 
 function handleEdit(record: Recordable) {

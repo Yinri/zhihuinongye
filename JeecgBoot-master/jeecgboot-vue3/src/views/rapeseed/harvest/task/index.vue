@@ -1,6 +1,11 @@
 <template>
   <div class="task-page">
     <a-card :bordered="false" title="收获计划任务">
+      <template #extra>
+        <a-button @click="goBack">
+          <Icon icon="ant-design:arrow-left-outlined" /> 返回收获管理
+        </a-button>
+      </template>
       <BasicTable @register="registerTable" :searchInfo="searchInfo">
         <template #toolbar>
           <a-button type="primary" @click="handleCreate">
@@ -34,6 +39,7 @@ import { reactive, ref, watch } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { Icon } from '/@/components/Icon';
 import { useMessage } from '/@/hooks/web/useMessage';
+import { useRouter } from 'vue-router';
 import { columns, searchFormSchema } from './task.data';
 import { getTaskList, deleteTask, exportTask, importTask } from './task.api';
 import { useSelectStore } from '/@/store/selectStore';
@@ -43,6 +49,7 @@ import { useModal } from '/@/components/Modal';
 
 const { createMessage } = useMessage();
 const [registerModal, { openModal }] = useModal();
+const router = useRouter();
 const selectStore = useSelectStore();
 const { selectedBase } = storeToRefs(selectStore);
 const searchInfo = reactive<Recordable>({ baseId: selectedBase.value?.baseId });
@@ -61,6 +68,10 @@ const [registerTable, { reload }] = useTable({
 
 function handleCreate() {
   openModal(true, { isUpdate: false });
+}
+
+function goBack() {
+  router.push('/rapeseed/harvest');
 }
 
 function handleEdit(record: Recordable) {
