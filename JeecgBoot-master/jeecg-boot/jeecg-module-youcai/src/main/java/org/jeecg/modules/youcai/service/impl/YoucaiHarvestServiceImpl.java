@@ -1,15 +1,19 @@
 package org.jeecg.modules.youcai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.jeecg.modules.youcai.dto.harvest.HarvestStatsDTO;
 import org.jeecg.modules.youcai.dto.harvest.HarvesterStatusDTO;
 import org.jeecg.modules.youcai.dto.harvest.YieldChartBarDTO;
 import org.jeecg.modules.youcai.dto.harvest.PlotHarvestSummaryDTO;
+import org.jeecg.modules.youcai.dto.harvest.HarvestWithPlotDTO;
 import org.jeecg.modules.youcai.entity.YoucaiHarvest;
 import org.jeecg.modules.youcai.entity.YoucaiPlots;
 import org.jeecg.modules.youcai.mapper.YoucaiHarvestMapper;
+import org.jeecg.modules.youcai.mapper.HarvestWithPlotMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
 import org.jeecg.modules.youcai.mapper.PlotHarvestSummaryMapper;
 import org.jeecg.modules.youcai.entity.YoucaiHarvesterMachine;
@@ -35,6 +39,8 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
     private PlotHarvestSummaryMapper summaryMapper;
     @Autowired
     private YoucaiHarvesterMachineMapper machineMapper;
+    @Autowired
+    private HarvestWithPlotMapper harvestWithPlotMapper;
 
     @Override
     public HarvestStatsDTO getHarvestStats(String baseId) {
@@ -258,5 +264,10 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
 
     private double round(double v) {
         return Math.round(v * 100.0) / 100.0;
+    }
+    
+    @Override
+    public IPage<HarvestWithPlotDTO> queryHarvestWithPlot(Page<HarvestWithPlotDTO> page, YoucaiHarvest harvest, String plotName) {
+        return harvestWithPlotMapper.selectHarvestWithPlot(page, harvest, plotName);
     }
 }

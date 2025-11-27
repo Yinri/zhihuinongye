@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jeecg.modules.youcai.mapper.HarvestWithPlotMapper">
+    
+    <select id="selectHarvestWithPlot" resultType="org.jeecg.modules.youcai.dto.harvest.HarvestWithPlotDTO">
+        SELECT 
+            h.id,
+            h.base_id AS baseId,
+            h.plot_id AS plotId,
+            p.plot_code AS plotCode,
+            p.plot_name AS plotName,
+            h.area,
+            h.predict_yield AS predictYield,
+            h.total_yield AS totalYield,
+            h.machine_name AS machineName,
+            h.harvest_date AS harvestDate,
+            h.operator,
+            h.work_duration AS workDuration,
+            h.remark,
+            h.create_by AS createBy,
+            h.create_time AS createTime,
+            h.update_by AS updateBy,
+            h.update_time AS updateTime
+        FROM youcai_harvest h
+        LEFT JOIN youcai_plots p ON h.plot_id = p.id
+        WHERE h.del_flag = 0
+        <if test="harvest.baseId != null and harvest.baseId != ''">
+            AND h.base_id = #{harvest.baseId}
+        </if>
+        <if test="harvest.plotId != null and harvest.plotId != ''">
+            AND h.plot_id = #{harvest.plotId}
+        </if>
+        <if test="harvest.machineName != null and harvest.machineName != ''">
+            AND h.machine_name LIKE CONCAT('%', #{harvest.machineName}, '%')
+        </if>
+        <if test="plotName != null and plotName != ''">
+            AND p.plot_name LIKE CONCAT('%', #{plotName}, '%')
+        </if>
+        <if test="harvest.harvestDate != null">
+            AND DATE(h.harvest_date) = DATE(#{harvest.harvestDate})
+        </if>
+        ORDER BY h.create_time DESC
+    </select>
+    
+</mapper>

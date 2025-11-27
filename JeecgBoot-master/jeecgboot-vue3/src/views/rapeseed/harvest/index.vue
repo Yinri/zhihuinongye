@@ -231,7 +231,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref, nextTick, computed, onMounted, onUnmounted, unref } from 'vue';
+import { reactive, ref, nextTick, computed, onMounted, onUnmounted, unref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
@@ -413,6 +413,13 @@ const [registerTable, { reload, getSelectRows, dataSource }] = useTable({
   showTableSetting: false,
   bordered: true,
   showIndexColumn: false,
+  beforeFetch: (params) => {
+    // 添加当前选中的基地ID到查询参数中
+    if (selectedBase.value?.baseId) {
+      params.baseId = selectedBase.value.baseId;
+    }
+    return params;
+  },
 });
 
 
@@ -438,6 +445,20 @@ async function loadAllData() {
     loading.value = false;
   }
 }
+
+// 监听选中基地变化，重新加载数据
+watch(
+  () => selectedBase.value?.baseId,
+  (newBaseId) => {
+    if (newBaseId) {
+      loadAllData();
+      loadPlotSummary();
+      // 重新加载表格数据
+      reload();
+    }
+  },
+  { immediate: true }
+);
 
 // 页面挂载时初始化数据
 onMounted(() => {

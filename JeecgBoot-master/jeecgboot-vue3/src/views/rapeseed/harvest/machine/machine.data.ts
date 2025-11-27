@@ -16,24 +16,24 @@ export const searchFormSchema: FormSchema[] = [
   { field: 'machineName', label: '农机名称', component: 'Input', colProps: { span: 6 } },
   { field: 'status', label: '状态', component: 'Select', colProps: { span: 6 }, componentProps: {
     options: [
-      { label: '作业中', value: 'working' },
-      { label: '待命', value: 'idle' },
-      { label: '维护中', value: 'maintenance' },
+      { label: '空闲', value: '空闲' },
+      { label: '作业中', value: '作业中' },
+      { label: '维修中', value: '维修中' },
     ],
   } },
 ];
 
 export const formSchema: FormSchema[] = [
   { field: 'id', label: 'ID', component: 'Input', show: false },
-  { field: 'baseId', label: '基地ID', component: 'InputNumber', required: true },
+  { field: 'baseId', label: '基地ID', component: 'Input', required: true },
   { field: 'machineName', label: '农机名称', component: 'Input', required: true },
   { field: 'brand', label: '品牌', component: 'Input' },
   { field: 'model', label: '型号', component: 'Input' },
   { field: 'status', label: '状态', component: 'Select', required: true, componentProps: {
     options: [
-      { label: '作业中', value: 'working' },
-      { label: '待命', value: 'idle' },
-      { label: '维护中', value: 'maintenance' },
+      { label: '空闲', value: '空闲' },
+      { label: '作业中', value: '作业中' },
+      { label: '维修中', value: '维修中' },
     ],
   } },
   { field: 'lastLocation', label: '最后位置', component: 'Input' },

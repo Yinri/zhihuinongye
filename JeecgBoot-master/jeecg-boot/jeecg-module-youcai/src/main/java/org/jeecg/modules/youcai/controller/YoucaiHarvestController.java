@@ -15,6 +15,7 @@ import org.jeecg.modules.youcai.dto.harvest.HarvestStatsDTO;
 import org.jeecg.modules.youcai.dto.harvest.HarvesterStatusDTO;
 import org.jeecg.modules.youcai.dto.harvest.YieldChartBarDTO;
 import org.jeecg.modules.youcai.dto.harvest.PlotHarvestSummaryDTO;
+import org.jeecg.modules.youcai.dto.harvest.HarvestWithPlotDTO;
 import org.jeecg.modules.youcai.service.IYoucaiHarvestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -42,13 +43,13 @@ public class YoucaiHarvestController extends JeecgController<YoucaiHarvest, IYou
      */
     @Operation(summary = "收获管理-分页列表查询")
     @GetMapping(value = "/list")
-    public Result<IPage<YoucaiHarvest>> queryPageList(YoucaiHarvest harvest,
+    public Result<IPage<HarvestWithPlotDTO>> queryPageList(YoucaiHarvest harvest,
                                                       @RequestParam(name = "pageNo", defaultValue = "1") Integer pageNo,
                                                       @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+                                                      @RequestParam(name = "plotName", required = false) String plotName,
                                                       HttpServletRequest req) {
-        QueryWrapper<YoucaiHarvest> queryWrapper = QueryGenerator.initQueryWrapper(harvest, req.getParameterMap());
-        Page<YoucaiHarvest> page = new Page<>(pageNo, pageSize);
-        IPage<YoucaiHarvest> pageList = harvestService.page(page, queryWrapper);
+        Page<HarvestWithPlotDTO> page = new Page<>(pageNo, pageSize);
+        IPage<HarvestWithPlotDTO> pageList = harvestService.queryHarvestWithPlot(page, harvest, plotName);
         return Result.OK(pageList);
     }
 
