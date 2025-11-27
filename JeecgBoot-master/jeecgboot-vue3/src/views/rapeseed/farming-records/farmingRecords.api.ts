@@ -1,9 +1,11 @@
 import { defHttp } from '/@/utils/http/axios';
 import { AxiosRequestConfig } from 'axios';
+import { getBaseInfoList } from '../base-info/baseInfo.api';
+import { getPlotInfoList } from '../plot-info/plotInfo.api';
 
 enum Api {
   // 农事记录列表
-  GetFarmingRecordsList = '/youcai/farmingRecords/queryByBaseId',
+  GetFarmingRecordsList = '/youcai/farmingRecords/list',
   // 保存农事记录
   SaveFarmingRecords = '/youcai/farmingRecords/add',
   // 编辑农事记录
@@ -24,8 +26,44 @@ enum Api {
  * 获取农事记录列表
  * @param params 查询参数
  */
-export const getFarmingRecordsList = (params?: any) => {
-  return defHttp.get<any>({ url: Api.GetFarmingRecordsList, params });
+export const getFarmingRecordsList = async (params?: any) => {
+  // 获取农事记录数据
+  const farmingRecordsData = await defHttp.get<any>({ url: Api.GetFarmingRecordsList, params });
+  
+  // 如果没有数据，直接返回
+  if (!farmingRecordsData || !farmingRecordsData.records || farmingRecordsData.records.length === 0) {
+    return farmingRecordsData;
+  }
+  
+  // 获取基地信息列表
+  const baseInfoData = await getBaseInfoList({ page: 1, pageSize: 1000 });
+  const baseMap = new Map();
+  if (baseInfoData && baseInfoData.records) {
+    baseInfoData.records.forEach(base => {
+      baseMap.set(base.id, base.baseName);
+    });
+  }
+  
+  // 获取地块信息列表
+  const plotInfoData = await getPlotInfoList({ page: 1, pageSize: 1000 });
+  const plotMap = new Map();
+  if (plotInfoData && plotInfoData.records) {
+    plotInfoData.records.forEach(plot => {
+      plotMap.set(plot.id, plot.plotName);
+    });
+  }
+  
+  // 为农事记录添加基地名称和地块名称
+  farmingRecordsData.records.forEach(record => {
+    if (record.baseId && baseMap.has(record.baseId)) {
+      record.baseName = baseMap.get(record.baseId);
+    }
+    if (record.plotId && plotMap.has(record.plotId)) {
+      record.plotName = plotMap.get(record.plotId);
+    }
+  });
+  
+  return farmingRecordsData;
 };
 
 /**

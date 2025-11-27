@@ -266,6 +266,39 @@ onMounted(() => {
   initMap();
 });
 
+// 监听baseId变化，重新渲染地图
+watch(() => props.baseId, async () => {
+  if (map) {
+    // 更新地图中心点
+    const lng = selectedBase.value?.longitude ?? 116.40969;
+    const lat = selectedBase.value?.latitude ?? 39.89945;
+    map.centerAndZoom(new T.LngLat(lng, lat), selectedBase.value?.latitude ? 16 : 5);
+    
+    // 重新渲染地块
+    await renderPlots();
+  }
+});
+
+// 监听selectedBase变化，重新渲染地图
+watch(() => selectedBase.value, async () => {
+  if (map) {
+    // 更新地图中心点
+    const lng = selectedBase.value?.longitude ?? 116.40969;
+    const lat = selectedBase.value?.latitude ?? 39.89945;
+    map.centerAndZoom(new T.LngLat(lng, lat), selectedBase.value?.latitude ? 16 : 5);
+    
+    // 重新渲染地块
+    await renderPlots();
+  }
+}, { deep: true });
+
+// 监听收获状态变化，重新渲染地图
+watch([() => props.harvestedPlotIds, () => props.harvestingPlotIds], () => {
+  if (map) {
+    renderPlots();
+  }
+}, { deep: true });
+
 onUnmounted(() => {
   clearOverlays();
   try { if (infoWindow) map.removeOverLay(infoWindow); } catch (e) {}

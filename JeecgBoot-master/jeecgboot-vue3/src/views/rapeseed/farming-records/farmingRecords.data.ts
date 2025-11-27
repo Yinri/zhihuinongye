@@ -154,11 +154,18 @@ export const searchFormSchema: FormSchema[] = [
 
 export const formSchema: FormSchema[] = [
   {
+    field: 'id',
+    label: 'ID',
+    component: 'Input',
+    show: false,
+  },
+  {
     field: 'recordCode',
     label: '记录编号',
     component: 'Input',
     required: true,
     rules: [{ required: true, message: '请输入记录编号' }],
+    show: false,
   },
   {
     field: 'baseId',
@@ -166,11 +173,13 @@ export const formSchema: FormSchema[] = [
     component: 'Input',
     required: true,
     rules: [{ required: true, message: '请输入基地ID' }],
+    show: false,
   },
   {
     field: 'plotId',
     label: '地块ID',
     component: 'Input',
+    show: false,
   },
   {
     field: 'farmingType',

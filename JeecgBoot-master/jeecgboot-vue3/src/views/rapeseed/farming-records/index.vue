@@ -101,6 +101,20 @@ const [registerTable, { reload, getForm }] = useTable({
     }
     return params;
   },
+  afterFetch: (data) => {
+    // 确保数据中有baseName和plotName字段
+    if (data && data.records) {
+      data.records.forEach(record => {
+        if (!record.baseName && record.baseId) {
+          record.baseName = `基地${record.baseId}`;
+        }
+        if (!record.plotName && record.plotId) {
+          record.plotName = `地块${record.plotId}`;
+        }
+      });
+    }
+    return data;
+  },
   columns,
   formConfig: {
     labelWidth: 120,

@@ -4,7 +4,7 @@
     :title="getTitle"
     @ok="handleSubmit"
     @register="registerModal"
-    :width="800"
+    :width="900"
   >
     <BasicForm @register="registerForm" />
   </BasicModal>
@@ -30,6 +30,9 @@
     schemas: formSchema,
     showActionButtonGroup: false,
     baseColProps: { span: 12 },
+    actionColOptions: {
+      span: 24,
+    },
   });
 
   const [registerModal, { setModalProps, closeModal }] = useModalInner(async (data) => {
