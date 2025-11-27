@@ -100,7 +100,7 @@ public class YoucaiBasesController extends JeecgController<YoucaiBases, IYoucaiB
 	 */
 	@AutoLog(value = "基地表-编辑")
 	@Operation(summary="基地表-编辑")
-	@RequiresPermissions("youcai:youcai_bases:edit")
+//	@RequiresPermissions("youcai:youcai_bases:edit")
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<String> edit(@RequestBody YoucaiBases youcaiBases) {
 		youcaiBasesService.updateById(youcaiBases);

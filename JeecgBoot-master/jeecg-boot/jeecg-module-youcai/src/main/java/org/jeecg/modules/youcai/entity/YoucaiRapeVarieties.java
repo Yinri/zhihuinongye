@@ -1,6 +1,6 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.math.BigDecimal;
@@ -28,12 +28,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="油菜品种表")
-public class YoucaiRapeVarieties implements Serializable {
+public class YoucaiRapeVarieties extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-	@TableId(type = IdType.AUTO)
-	@Schema(description = "品种ID")
-	private java.lang.Integer id;
 	/**品种名称*/
 	@Excel(name = "品种名称", width = 15)
     @Schema(description = "品种名称")
@@ -54,22 +51,6 @@ public class YoucaiRapeVarieties implements Serializable {
 	@Excel(name = "抗病性", width = 15)
     @Schema(description = "抗病性")
     private java.lang.String diseaseResistance;
-	/**创建人*/
-    @Schema(description = "创建人")
-    private java.lang.String createBy;
-	/**创建时间*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "创建时间")
-    private java.util.Date createTime;
-	/**更新人*/
-    @Schema(description = "更新人")
-    private java.lang.String updateBy;
-	/**更新时间*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "更新时间")
-    private java.util.Date updateTime;
 	/**所属部门*/
     @Schema(description = "所属部门")
     private java.lang.String sysOrgCode;

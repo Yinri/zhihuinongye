@@ -1,11 +1,9 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.math.BigDecimal;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -32,13 +30,9 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="地块信息表")
-public class YoucaiPlots implements Serializable {
+public class YoucaiPlots extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-	/**地块ID*/
-	@TableId(type = IdType.AUTO)
-    @Schema(description = "地块ID")
-    private Integer id;
 	/**地块名称*/
 	@Excel(name = "地块名称", width = 15)
     @Schema(description = "地块名称")
@@ -46,43 +40,27 @@ public class YoucaiPlots implements Serializable {
 	/**所属基地ID*/
 	@Excel(name = "所属基地ID", width = 15)
     @Schema(description = "所属基地ID")
-    private java.lang.Integer baseId;
+    private java.lang.String baseId;
+    
+    @Excel(name = "地块编码", width = 15)
+    @Schema(description = "地块编码")
+    private java.lang.String plotCode;
+    @Excel(name = "土壤类型", width = 15)
+    @Schema(description = "土壤类型")
+    private java.lang.String soilType;
+
+    @Excel(name = "地块状态", width = 15)
+    @Schema(description = "地块状态（空闲/种植中/休耕）")
+    private java.lang.String status;
 	/**地块面积(亩)*/
 	@Excel(name = "地块面积(亩)", width = 15)
     @Schema(description = "地块面积(亩)")
     private java.math.BigDecimal area;
-    /**生长阶段*/
-    @Excel(name = "生长阶段", width = 15, dicCode = "base_growth_stage")
-    @Schema(description = "生长阶段（未播种/已播种/苗期/蕾薹期/开花期/角果成熟期/收获与整地）")
-    private java.lang.String growthStage;
-	/**纬度*/
-	@Excel(name = "纬度", width = 15)
-    @Schema(description = "纬度")
-    private java.math.BigDecimal latitude;
-	/**经度*/
-	@Excel(name = "经度", width = 15)
-    @Schema(description = "经度")
-    private java.math.BigDecimal longitude;
+
 	/**多边形坐标点(JSON格式)*/
 	@TableField(typeHandler = JacksonTypeHandler.class)
     @Schema(description = "多边形坐标点(JSON格式)")
     private String polygonCoords;
-	/**创建人*/
-    @Schema(description = "创建人")
-    private java.lang.String createBy;
-	/**创建日期*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "创建日期")
-    private java.util.Date createTime;
-	/**更新人*/
-    @Schema(description = "更新人")
-    private java.lang.String updateBy;
-	/**更新日期*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "更新日期")
-    private java.util.Date updateTime;
 	/**所属部门*/
     @Schema(description = "所属部门")
     private java.lang.String sysOrgCode;
@@ -93,3 +71,4 @@ public class YoucaiPlots implements Serializable {
     private java.lang.Integer delFlag;
 
 }
+    

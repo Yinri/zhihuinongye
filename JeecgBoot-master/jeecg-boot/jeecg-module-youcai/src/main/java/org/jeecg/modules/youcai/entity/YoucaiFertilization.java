@@ -1,10 +1,8 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.math.BigDecimal;
 import java.util.Date;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -19,24 +17,21 @@ import org.springframework.format.annotation.DateTimeFormat;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="施肥管理表")
-public class YoucaiFertilization implements Serializable {
+public class YoucaiFertilization extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-    @TableId(type = IdType.AUTO)
-    @Schema(description = "ID")
-    private Integer id;
 
     @Schema(description = "基地ID")
-    private Integer baseId;
+    private String baseId;
 
     @Schema(description = "地块ID")
-    private Integer plotId;
+    private String plotId;
 
     @Schema(description = "地块名称")
     private String plotName;
 
     @Schema(description = "品种ID")
-    private Integer varietyId;
+    private String varietyId;
 
     @Schema(description = "品种名称")
     private String varietyName;
@@ -106,21 +101,6 @@ public class YoucaiFertilization implements Serializable {
     @Schema(description = "预测JSON")
     private String forecastJson;
 
-    @Schema(description = "创建人")
-    private String createBy;
-
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "创建时间")
-    private Date createTime;
-
-    @Schema(description = "更新人")
-    private String updateBy;
-
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "更新时间")
-    private Date updateTime;
 
     @Schema(description = "所属部门")
     private String sysOrgCode;

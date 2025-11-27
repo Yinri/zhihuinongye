@@ -577,6 +577,40 @@ const riskLegend = reactive([
 
 
 // ==================== 工具函数 ====================
+// 风险等级配置
+const RISK_LEVELS = [
+  { min: 0.0, max: 0.30, level: '低风险', color: '#52c41a' },
+  { min: 0.30, max: 0.50, level: '中低风险', color: '#afcb2b' },
+  { min: 0.50, max: 0.65, level: '中等风险', color: '#faad14' },
+  { min: 0.65, max: 0.80, level: '高风险', color: '#ff4d4f' },
+  { min: 0.80, max: 1.0, level: '极高风险', color: '#d32f2f' }
+];
+
+// 根据风险评分获取风险等级和颜色
+function getRiskInfo(score: number, type: 'level' | 'color' | 'both' = 'both'): { level: string, color: string } | string {
+  // 确保分数在有效范围内
+  const normalizedScore = Math.max(0, Math.min(1, score));
+  
+  // 查找匹配的风险等级
+  const riskLevel = RISK_LEVELS.find(level => normalizedScore >= level.min && normalizedScore < level.max) || 
+                   RISK_LEVELS[RISK_LEVELS.length - 1]; // 默认返回最高风险等级
+  
+  if (type === 'level') return riskLevel.level;
+  if (type === 'color') return riskLevel.color;
+  
+  return { level: riskLevel.level, color: riskLevel.color };
+}
+
+// 根据风险评分获取颜色
+function getRiskColor(score: number): string {
+  return getRiskInfo(score, 'color') as string;
+}
+
+// 根据风险评分获取风险等级
+function getRiskLevel(score: number): string {
+  return getRiskInfo(score, 'level') as string;
+}
+
 // 获取图标组件
 function getIconComponent(iconName: string) {
   const iconMap = {
@@ -861,11 +895,17 @@ async function submitGrowthForm() {
   };
   
   try {
+    // 显示提交提示
+    createMessage.loading('正在提交生长监测数据...', 0);
+    
     // 调用API提交数据
     await addGrowthMonitoring(formData);
     
+    // 移除提交提示
+    createMessage.destroyAll();
+    
     // 显示成功消息
-    createMessage.success('生长监测数据已成功提交');
+    createMessage.success('生长监测数据已成功提交，系统将重新计算倒伏风险');
     
     // 重置表单
     Object.assign(growthForm, {
@@ -878,47 +918,18 @@ async function submitGrowthForm() {
     
     // 刷新当前地块的倒伏风险数据
     if (selectedPlotData.value?.plotId) {
-      await loadPlotRiskData(selectedPlotData.value.plotId);
+      await loadLodgingRiskData();
+      createMessage.success('倒伏风险数据已更新');
     }
   } catch (error) {
+    // 移除提交提示
+    createMessage.destroyAll();
     console.error('提交生长监测数据失败:', error);
-    createMessage.error('提交失败，请重试');
+    createMessage.error('提交失败，请检查网络连接或稍后重试');
   }
 }
 
-// 根据风险评分获取颜色
-function getRiskColor(score: number): string {
-  if (score >= 0.0 && score < 0.30) {
-    return "#52c41a"; // 低风险 - 绿色
-  } else if (score >= 0.30 && score < 0.50) {
-    return "#afcb2b"; // 中低风险 - 黄绿色
-  } else if (score >= 0.50 && score < 0.65) {
-    return "#faad14"; // 中等风险 - 橙色
-  } else if (score >= 0.65 && score < 0.80) {
-    return "#ff4d4f"; // 高风险 - 红色
-  } else if (score >= 0.80 && score <= 1.0) {
-    return "#d32f2f"; // 极高风险 - 深红色
-  }
-  
-  return "#faad14"; // 默认橙色
-}
 
-// 根据风险评分获取风险等级
-function getRiskLevel(score: number): string {
-  if (score >= 0.0 && score < 0.30) {
-    return "低风险";
-  } else if (score >= 0.30 && score < 0.50) {
-    return "中低风险";
-  } else if (score >= 0.50 && score < 0.65) {
-    return "中等风险";
-  } else if (score >= 0.65 && score < 0.80) {
-    return "高风险";
-  } else if (score >= 0.80 && score <= 1.0) {
-    return "极高风险";
-  }
-  
-  return "中等风险"; // 默认
-}
 
 // 格式化时间显示
 function formatDateTime(dateTimeStr: string): string {
@@ -944,6 +955,30 @@ function formatDateTime(dateTimeStr: string): string {
     console.error('时间格式化错误:', error);
     return '时间格式错误';
   }
+}
+
+// 生长阶段配置
+const GROWTH_STAGES = {
+  SEEDLING: { id: '苗期', name: '苗期', valid: true },
+  BOLTING: { id: '蕾薹期', name: '蕾薹期', valid: true },
+  FLOWERING: { id: '开花期', name: '开花期', valid: true },
+  POD_MATURING: { id: '角果成熟期', name: '角果成熟期', valid: true },
+  HARVEST: { id: '收获期', name: '收获期', valid: false },
+  FALLOW: { id: '休耕期', name: '休耕期', valid: false }
+};
+
+// 检查生长阶段是否适合显示倒伏风险
+function isValidGrowthStage(growthStage: string): boolean {
+  // 查找匹配的生长阶段
+  const stage = Object.values(GROWTH_STAGES).find(s => s.id === growthStage);
+  return stage ? stage.valid : false;
+}
+
+// 获取生长阶段名称
+function getGrowthStageName(growthStage: string): string {
+  // 查找匹配的生长阶段
+  const stage = Object.values(GROWTH_STAGES).find(s => s.id === growthStage);
+  return stage ? stage.name : growthStage; // 如果找不到匹配项，返回原始值
 }
 
 // ==================== 地图相关函数 ====================
@@ -1025,11 +1060,10 @@ const handlePlotClick = async (plotId) => {
         monitorDate: growthData.monitoringDate ? dayjs(growthData.monitoringDate) : null
       });
       
-      // 检查生长阶段是否为苗期、蕾薹期、开花期或角果成熟期
-      const validGrowthStages = ['苗期', '蕾薹期', '开花期', '角果成熟期'];
+      // 使用优化后的生长阶段判断函数
       const currentGrowthStage = growthData.growthStage;
       
-      if (currentGrowthStage && validGrowthStages.includes(currentGrowthStage)) {
+      if (currentGrowthStage && isValidGrowthStage(currentGrowthStage)) {
         // 如果是有效的生长阶段，显示倒伏风险面板
         showLodgingRiskPanel.value = true;
         showGrowthStageWarning.value = false;
@@ -1055,34 +1089,59 @@ const handlePlotClick = async (plotId) => {
   console.log('点击地块，显示倒伏风险面板:', plot);
 };
 
+// 风险建议和分析配置
+const RISK_RECOMMENDATIONS = [
+  { 
+    min: 0.0, max: 0.30, 
+    recommendation: "保持常规管理，定期监测",
+    analysis: "当前倒伏风险较低，作物生长状况良好。建议保持常规管理，定期监测作物生长状态和天气变化。"
+  },
+  { 
+    min: 0.30, max: 0.50, 
+    recommendation: "增加监测频率，注意天气变化",
+    analysis: "存在一定倒伏风险，主要受近期天气影响。建议增加监测频率，特别关注大风暴雨等极端天气预警。"
+  },
+  { 
+    min: 0.50, max: 0.65, 
+    recommendation: "采取预防措施，加固植株",
+    analysis: "倒伏风险较高，作物可能受到多方面因素影响。建议采取预防性措施，如适当培土、加固植株等。"
+  },
+  { 
+    min: 0.65, max: 0.80, 
+    recommendation: "立即采取防护措施，减少损失",
+    analysis: "倒伏风险高，需要立即采取防护措施。建议检查植株健康状况，考虑减少灌溉，避免加重倒伏风险。"
+  },
+  { 
+    min: 0.80, max: 1.0, 
+    recommendation: "紧急处理，考虑收割或转移",
+    analysis: "倒伏风险极高，作物面临严重威胁。建议紧急处理，如提前收割或采取其他减少损失的措施。"
+  }
+];
+
 // 根据风险评分获取建议措施
 function getRecommendation(score: number): string {
-  if (score < 0.30) {
-    return "保持常规管理，定期监测";
-  } else if (score < 0.50) {
-    return "增加监测频率，注意天气变化";
-  } else if (score < 0.65) {
-    return "采取预防措施，加固植株";
-  } else if (score < 0.80) {
-    return "立即采取防护措施，减少损失";
-  } else {
-    return "紧急处理，考虑收割或转移";
-  }
+  // 确保分数在有效范围内
+  const normalizedScore = Math.max(0, Math.min(1, score));
+  
+  // 查找匹配的风险等级建议
+  const riskConfig = RISK_RECOMMENDATIONS.find(config => 
+    normalizedScore >= config.min && normalizedScore < config.max
+  ) || RISK_RECOMMENDATIONS[RISK_RECOMMENDATIONS.length - 1]; // 默认返回最高风险等级建议
+  
+  return riskConfig.recommendation;
 }
 
 // 获取风险分析描述
 function getRiskAnalysis(score: number): string {
-  if (score < 0.30) {
-    return "当前倒伏风险较低，作物生长状况良好。建议保持常规管理，定期监测作物生长状态和天气变化。";
-  } else if (score < 0.50) {
-    return "存在一定倒伏风险，主要受近期天气影响。建议增加监测频率，特别关注大风暴雨等极端天气预警。";
-  } else if (score < 0.65) {
-    return "倒伏风险较高，作物可能受到多方面因素影响。建议采取预防性措施，如适当培土、加固植株等。";
-  } else if (score < 0.80) {
-    return "倒伏风险高，需要立即采取防护措施。建议检查植株健康状况，考虑减少灌溉，避免加重倒伏风险。";
-  } else {
-    return "倒伏风险极高，作物面临严重威胁。建议紧急处理，如提前收割或采取其他减少损失的措施。";
-  }
+  // 确保分数在有效范围内
+  const normalizedScore = Math.max(0, Math.min(1, score));
+  
+  // 查找匹配的风险等级分析
+  const riskConfig = RISK_RECOMMENDATIONS.find(config => 
+    normalizedScore >= config.min && normalizedScore < config.max
+  ) || RISK_RECOMMENDATIONS[RISK_RECOMMENDATIONS.length - 1]; // 默认返回最高风险等级分析
+  
+  return riskConfig.analysis;
 }
 
 // 关闭地块详情
@@ -1117,23 +1176,21 @@ function getFactorName(key: string): string {
 function getFactorColor(status: string | number): string {
   // 如果是数值类型，将其转换为风险等级
   if (typeof status === 'number') {
-    if (status >= 0.0 && status < 0.30) {
-      return '#52c41a'; // 低风险 - 绿色
-    } else if (status >= 0.30 && status < 0.65) {
-      return '#faad14'; // 中等风险 - 橙色
-    } else {
-      return '#ff4d4f'; // 高风险 - 红色
-    }
+    // 使用统一的风险等级判断逻辑
+    return getRiskInfo(status, 'color') as string;
   }
   
   // 如果是字符串类型，按原来的逻辑处理
-  if (status === 'high' || status === 'danger') {
-    return '#ff4d4f'; // 高风险 - 红色
-  } else if (status === 'medium' || status === 'warning') {
-    return '#faad14'; // 中等风险 - 橙色
-  } else {
-    return '#52c41a'; // 低风险 - 绿色
-  }
+  const statusColorMap: Record<string, string> = {
+    'high': '#ff4d4f',      // 高风险 - 红色
+    'danger': '#ff4d4f',    // 危险 - 红色
+    'medium': '#faad14',    // 中等风险 - 橙色
+    'warning': '#faad14',   // 警告 - 橙色
+    'low': '#52c41a',       // 低风险 - 绿色
+    'success': '#52c41a'    // 成功 - 绿色
+  };
+  
+  return statusColorMap[status] || '#52c41a'; // 默认绿色
 }
 
 // 获取星期几
@@ -1249,28 +1306,36 @@ const loadWeatherSensorData = async () => {
     // 首先检查是否有选中的基地
     if (!selectStore.selectedBase || !selectStore.selectedBase.baseId) {
       console.warn('没有选中的基地，无法加载气象传感器数据');
-      createMessage.warning('请先选择一个基地');
+      createMessage.warning('请先选择一个基地，以便获取气象传感器数据');
       return;
     }
     
+    // 显示加载提示
+    createMessage.loading('正在获取气象传感器数据...', 0);
+    
     // 有选中的基地，调用API获取气象传感器数据
     const baseId = selectStore.selectedBase.baseId;
-    console.log('加载基地ID:', baseId, '的气象传感器数据');
+    console.log('正在加载基地ID:', baseId, '的气象传感器数据');
     
     // 调用API获取数据
     const weatherData = await getWeatherSensorData(baseId);
     console.log('气象传感器数据加载成功:', weatherData);
     
+    // 移除加载提示
+    createMessage.destroyAll();
+    
     if (weatherData) {
       // 更新气象数据
       updateWeatherData(weatherData);
-      createMessage.success('气象传感器数据加载成功');
+      createMessage.success('气象传感器数据已更新');
     } else {
       throw new Error('API返回的气象传感器数据为空');
     }
   } catch (error) {
+    // 移除加载提示
+    createMessage.destroyAll();
     console.error('加载气象传感器数据失败:', error);
-    createMessage.warning('气象传感器数据加载失败');
+    createMessage.error('无法获取气象传感器数据，请检查网络连接或稍后重试');
     // 不再使用模拟数据作为后备
     throw error;
   }
@@ -1348,22 +1413,33 @@ const loadLodgingRiskData = async () => {
     dataLoaded.value = false;
     console.log('开始加载倒伏风险数据...');
     
+    // 显示加载提示
+    createMessage.loading('正在分析倒伏风险数据...', 0);
+    
     // 首先加载气象传感器数据
     await loadWeatherSensorData();
     
     // 检查是否有选中的基地
     if (!selectStore.selectedBase || !selectStore.selectedBase.baseId) {
       console.warn('没有选中的基地，无法加载数据');
-      createMessage.warning('请先选择一个基地');
+      createMessage.destroy();
+      createMessage.warning('请先选择一个基地，以便分析倒伏风险');
       return;
     }
     
     // 调用API获取基地下所有地块的倒伏风险数据
     const baseId = selectStore.selectedBase.baseId;
-    console.log('加载基地ID:', baseId, '的倒伏风险数据');
+    console.log('正在分析基地ID:', baseId, '的倒伏风险数据');
+    
+    // 更新加载提示
+    createMessage.destroy();
+    createMessage.loading('正在计算各地块风险等级...', 0);
     
     const batchData = await getBatchLodgingRiskDataByBaseId(baseId);
     console.log('倒伏风险数据加载成功:', batchData);
+    
+    // 移除加载提示
+    createMessage.destroy();
     
     if (batchData && batchData.plotRisks) {
       console.log('plotRisks数据:', batchData.plotRisks);
@@ -1387,11 +1463,24 @@ const loadLodgingRiskData = async () => {
       prepareBarChartData();
       
       errorCount.value = 0; // 重置错误计数
-      createMessage.success(`成功加载基地下${batchData.plotRisks.length}个地块的倒伏风险数据`);
+      
+      // 显示成功消息，包含更详细的信息
+      const highRiskCount = batchData.baseStatistics.highRiskPlots + batchData.baseStatistics.extremeRiskPlots;
+      let message = `成功分析${batchData.plotRisks.length}个地块的倒伏风险数据`;
+      
+      if (highRiskCount > 0) {
+        message += `，其中${highRiskCount}个地块存在高风险`;
+        createMessage.warning(message);
+      } else {
+        message += '，当前所有地块风险等级正常';
+        createMessage.success(message);
+      }
     } else {
       throw new Error('API返回的数据格式不正确');
     }
   } catch (error) {
+    // 移除加载提示
+    createMessage.destroy();
     console.error('加载倒伏风险数据失败:', error);
     errorCount.value++;
     
@@ -1402,7 +1491,7 @@ const loadLodgingRiskData = async () => {
         loadLodgingRiskData();
       }, 2000 * errorCount.value); // 递增延迟
     } else {
-      createMessage.error('数据加载失败，请稍后重试');
+      createMessage.error('无法加载倒伏风险数据，请检查网络连接或稍后重试');
       // 不再使用模拟数据，直接显示错误状态
       dataLoaded.value = false;
     }
@@ -1422,9 +1511,11 @@ const refreshData = debounce(async () => {
     // 重新加载数据
     await loadLodgingRiskData();
     
+    createMessage.success('数据已更新');
+    
   } catch (error) {
     console.error('刷新数据失败:', error);
-    createMessage.error('数据刷新失败，请稍后重试');
+    createMessage.error('数据刷新失败，请检查网络连接或稍后重试');
   } finally {
     loading.value = false;
   }

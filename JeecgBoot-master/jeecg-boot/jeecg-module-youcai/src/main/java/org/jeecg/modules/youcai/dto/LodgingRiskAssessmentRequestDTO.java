@@ -21,7 +21,7 @@ public class LodgingRiskAssessmentRequestDTO implements Serializable {
      * 地块ID
      */
     @JsonProperty("plot_id")
-    private Integer plotId;
+    private String plotId;
 
     /**
      * 植株高度(cm)

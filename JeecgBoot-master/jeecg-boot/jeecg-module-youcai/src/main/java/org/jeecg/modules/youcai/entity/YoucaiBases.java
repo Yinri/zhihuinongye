@@ -1,11 +1,9 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.math.BigDecimal;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import org.jeecg.common.constant.ProvinceCityArea;
@@ -30,13 +28,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="基地表")
-public class YoucaiBases implements Serializable {
+public class YoucaiBases extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-	/**主键*/
-    @TableId(type = IdType.AUTO) // 对应数据库自增策略
-    @Schema(description = "主键")
-    private Integer id; // 类型改为 Integer，与数据库 int 匹配
 	/**基地名称*/
 	@Excel(name = "基地名称", width = 15)
     @Schema(description = "基地名称")
@@ -73,24 +67,13 @@ public class YoucaiBases implements Serializable {
     @Schema(description = "土壤状况（黏土/沙土/壤土）")
     @Dict(dicCode = "soil_type")
     private String soilType;
+    
+    /**地块编码前缀*/
+    @Excel(name = "地块编码前缀", width = 15)
+    @Schema(description = "地块编码前缀，如 JMZ")
+    private String codePrefix;
     // ---------------------- 新增字段结束 ----------------------
 
-    /**创建人*/
-    @Schema(description = "创建人")
-    private java.lang.String createBy;
-	/**创建日期*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "创建日期")
-    private java.util.Date createTime;
-	/**更新人*/
-    @Schema(description = "更新人")
-    private java.lang.String updateBy;
-	/**更新日期*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "更新日期")
-    private java.util.Date updateTime;
 	/**所属部门*/
     @Schema(description = "所属部门")
     private java.lang.String sysOrgCode;

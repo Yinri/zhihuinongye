@@ -20,19 +20,19 @@ public class RapeseedIrrigationController {
 
     @Operation(summary="地块状态")
     @GetMapping("/plotStatus/{plotId}")
-    public Result<Map<String, Object>> plotStatus(@PathVariable Integer plotId) {
+    public Result<Map<String, Object>> plotStatus(@PathVariable String plotId) {
         return Result.OK(irrigationService.getPlotStatus(plotId));
     }
 
     @Operation(summary="Penman建议与数据")
     @GetMapping("/penmanPredict")
-    public Result<Map<String, Object>> penmanPredict(@RequestParam Integer plotId) {
+    public Result<Map<String, Object>> penmanPredict(@RequestParam String plotId) {
         return Result.OK(irrigationService.getPenmanPredict(plotId));
     }
 
     @Operation(summary="干预对比")
     @GetMapping("/interventionComparison")
-    public Result<Map<String, Object>> interventionComparison(@RequestParam Integer plotId) {
+    public Result<Map<String, Object>> interventionComparison(@RequestParam String plotId) {
         return Result.OK(irrigationService.getInterventionComparison(plotId));
     }
 }

@@ -58,7 +58,7 @@ public class YoucaiHarvesterMachineController extends JeecgController<YoucaiHarv
     @AutoLog("农机档案-通过id删除")
     @Operation(summary = "农机档案-通过id删除")
     @DeleteMapping("/delete")
-    public Result<String> delete(@RequestParam(name = "id") Long id) {
+    public Result<String> delete(@RequestParam(name = "id") String id) {
         machineService.removeById(id);
         return Result.OK("删除成功！");
     }
@@ -73,7 +73,7 @@ public class YoucaiHarvesterMachineController extends JeecgController<YoucaiHarv
 
     @Operation(summary = "农机档案-通过id查询")
     @GetMapping("/queryById")
-    public Result<YoucaiHarvesterMachine> queryById(@RequestParam(name = "id") Long id) {
+    public Result<YoucaiHarvesterMachine> queryById(@RequestParam(name = "id") String id) {
         YoucaiHarvesterMachine machine = machineService.getById(id);
         return machine == null ? Result.error("未找到对应数据") : Result.OK(machine);
     }

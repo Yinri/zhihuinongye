@@ -9,9 +9,14 @@ export const columns: BasicColumn[] = [
     width: 120,
   },
   {
+    title: '基地名称',
+    dataIndex: 'baseName',
+    width: 150,
+  },
+  {
     title: '地块名称',
     dataIndex: 'plotName',
-    width: 120,
+    width: 150,
   },
   {
     title: '农事类型',
@@ -20,13 +25,13 @@ export const columns: BasicColumn[] = [
     customRender: ({ record }) => {
       const type = record.farmingType;
       const typeMap = {
-        '1': { text: '播种', color: 'green' },
-        '2': { text: '施肥', color: 'blue' },
-        '3': { text: '灌溉', color: 'cyan' },
-        '4': { text: '除草', color: 'orange' },
-        '5': { text: '病虫害防治', color: 'red' },
-        '6': { text: '收获', color: 'purple' },
-        '7': { text: '其他', color: 'default' },
+        1: { text: '播种', color: 'blue' },
+        2: { text: '施肥', color: 'green' },
+        3: { text: '灌溉', color: 'cyan' },
+        4: { text: '除草', color: 'orange' },
+        5: { text: '病虫害防治', color: 'red' },
+        6: { text: '收获', color: 'purple' },
+        7: { text: '其他', color: 'default' },
       };
       const config = typeMap[type] || { text: '未知', color: 'default' };
       return h(Tag, { color: config.color }, () => config.text);
@@ -50,7 +55,8 @@ export const columns: BasicColumn[] = [
   {
     title: '使用物资',
     dataIndex: 'materials',
-    width: 120,
+    width: 150,
+    ellipsis: true,
   },
   {
     title: '物资用量',
@@ -69,10 +75,10 @@ export const columns: BasicColumn[] = [
     customRender: ({ record }) => {
       const status = record.workStatus;
       const statusMap = {
-        '1': { text: '计划中', color: 'blue' },
-        '2': { text: '进行中', color: 'processing' },
-        '3': { text: '已完成', color: 'success' },
-        '4': { text: '已取消', color: 'error' },
+        1: { text: '计划中', color: 'blue' },
+        2: { text: '进行中', color: 'processing' },
+        3: { text: '已完成', color: 'success' },
+        4: { text: '已取消', color: 'error' },
       };
       const config = statusMap[status] || { text: '未知', color: 'default' };
       return h(Tag, { color: config.color }, () => config.text);
@@ -109,13 +115,13 @@ export const searchFormSchema: FormSchema[] = [
     component: 'Select',
     componentProps: {
       options: [
-        { label: '播种', value: '1' },
-        { label: '施肥', value: '2' },
-        { label: '灌溉', value: '3' },
-        { label: '除草', value: '4' },
-        { label: '病虫害防治', value: '5' },
-        { label: '收获', value: '6' },
-        { label: '其他', value: '7' },
+        { label: '播种', value: 1 },
+        { label: '施肥', value: 2 },
+        { label: '灌溉', value: 3 },
+        { label: '除草', value: 4 },
+        { label: '病虫害防治', value: 5 },
+        { label: '收获', value: 6 },
+        { label: '其他', value: 7 },
       ],
     },
     colProps: { span: 8 },
@@ -124,6 +130,10 @@ export const searchFormSchema: FormSchema[] = [
     field: 'farmingDate',
     label: '农事日期',
     component: 'RangePicker',
+    componentProps: {
+      showTime: true,
+      format: 'YYYY-MM-DD HH:mm:ss',
+    },
     colProps: { span: 8 },
   },
   {
@@ -132,10 +142,10 @@ export const searchFormSchema: FormSchema[] = [
     component: 'Select',
     componentProps: {
       options: [
-        { label: '计划中', value: '1' },
-        { label: '进行中', value: '2' },
-        { label: '已完成', value: '3' },
-        { label: '已取消', value: '4' },
+        { label: '计划中', value: 1 },
+        { label: '进行中', value: 2 },
+        { label: '已完成', value: 3 },
+        { label: '已取消', value: 4 },
       ],
     },
     colProps: { span: 8 },
@@ -151,11 +161,16 @@ export const formSchema: FormSchema[] = [
     rules: [{ required: true, message: '请输入记录编号' }],
   },
   {
-    field: 'plotName',
-    label: '地块名称',
+    field: 'baseId',
+    label: '基地ID',
     component: 'Input',
     required: true,
-    rules: [{ required: true, message: '请输入地块名称' }],
+    rules: [{ required: true, message: '请输入基地ID' }],
+  },
+  {
+    field: 'plotId',
+    label: '地块ID',
+    component: 'Input',
   },
   {
     field: 'farmingType',
@@ -164,13 +179,13 @@ export const formSchema: FormSchema[] = [
     required: true,
     componentProps: {
       options: [
-        { label: '播种', value: '1' },
-        { label: '施肥', value: '2' },
-        { label: '灌溉', value: '3' },
-        { label: '除草', value: '4' },
-        { label: '病虫害防治', value: '5' },
-        { label: '收获', value: '6' },
-        { label: '其他', value: '7' },
+        { label: '播种', value: 1 },
+        { label: '施肥', value: 2 },
+        { label: '灌溉', value: 3 },
+        { label: '除草', value: 4 },
+        { label: '病虫害防治', value: 5 },
+        { label: '收获', value: 6 },
+        { label: '其他', value: 7 },
       ],
     },
     rules: [{ required: true, message: '请选择农事类型' }],
@@ -179,56 +194,58 @@ export const formSchema: FormSchema[] = [
     field: 'farmingDate',
     label: '农事日期',
     component: 'DatePicker',
-    required: true,
-    rules: [{ required: true, message: '请选择农事日期' }],
+    componentProps: {
+      showTime: true,
+      format: 'YYYY-MM-DD HH:mm:ss',
+    },
   },
   {
     field: 'worker',
     label: '作业人员',
     component: 'Input',
-    required: true,
-    rules: [{ required: true, message: '请输入作业人员' }],
   },
   {
     field: 'workArea',
     label: '作业面积(亩)',
     component: 'InputNumber',
-    required: true,
-    rules: [{ required: true, message: '请输入作业面积' }],
+    componentProps: {
+      min: 0,
+      precision: 2,
+    },
   },
   {
     field: 'materials',
     label: '使用物资',
     component: 'Input',
-    required: false,
+    helpMessage: '多个物资用逗号分隔',
   },
   {
     field: 'materialAmount',
     label: '物资用量',
     component: 'Input',
-    required: false,
+    helpMessage: '与物资顺序对应，用逗号分隔',
   },
   {
     field: 'workDuration',
     label: '作业时长(小时)',
     component: 'InputNumber',
-    required: true,
-    rules: [{ required: true, message: '请输入作业时长' }],
+    componentProps: {
+      min: 0,
+      precision: 2,
+    },
   },
   {
     field: 'workStatus',
     label: '作业状态',
     component: 'Select',
-    required: true,
     componentProps: {
       options: [
-        { label: '计划中', value: '1' },
-        { label: '进行中', value: '2' },
-        { label: '已完成', value: '3' },
-        { label: '已取消', value: '4' },
+        { label: '计划中', value: 1 },
+        { label: '进行中', value: 2 },
+        { label: '已完成', value: 3 },
+        { label: '已取消', value: 4 },
       ],
     },
-    rules: [{ required: true, message: '请选择作业状态' }],
   },
   {
     field: 'remark',

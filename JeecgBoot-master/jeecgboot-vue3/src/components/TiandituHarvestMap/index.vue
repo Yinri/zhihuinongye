@@ -36,7 +36,7 @@ import { storeToRefs } from 'pinia';
 import { getPlotInfoList } from '/@/views/rapeseed/plot-info/plotInfo.api';
 
 const props = defineProps({
-  baseId: { type: Number, default: null },
+  baseId: { type: [Number, String], default: null },
   plots: { type: Array, default: () => [] },
   mapWidth: { type: [Number, String], default: '100%' },
   mapHeight: { type: [Number, String], default: '480px' },

@@ -1,7 +1,6 @@
 package org.jeecg.modules.youcai.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -21,20 +20,17 @@ import java.util.Date;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "收获计划任务")
-public class YoucaiHarvestTask implements Serializable {
+public class YoucaiHarvestTask extends JeecgEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @TableId(type = IdType.AUTO)
-    @Schema(description = "主键ID")
-    private Long id;
 
     @Excel(name = "基地ID", width = 15)
     @Schema(description = "基地ID")
-    private Integer baseId;
+    private String baseId;
 
     @Excel(name = "地块ID", width = 15)
     @Schema(description = "地块ID")
-    private Integer plotId;
+    private String plotId;
 
     @Excel(name = "任务标题", width = 20)
     @Schema(description = "任务标题")
@@ -52,10 +48,10 @@ public class YoucaiHarvestTask implements Serializable {
 
     @Excel(name = "分配农机ID", width = 15)
     @Schema(description = "分配农机ID")
-    private Long assignedMachineId;
+    private String assignedMachineId;
 
     @Excel(name = "状态", width = 12)
-    @Schema(description = "状态：planned|running|done|canceled")
+    @Schema(description = "状态：计划中|执行中|已完成|已取消")
     private String status;
 
     @Excel(name = "执行进度(%)", width = 12)
@@ -66,21 +62,6 @@ public class YoucaiHarvestTask implements Serializable {
     @Schema(description = "备注")
     private String remark;
 
-    @Schema(description = "创建人")
-    private String createBy;
-
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "创建时间")
-    private Date createTime;
-
-    @Schema(description = "更新人")
-    private String updateBy;
-
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "更新时间")
-    private Date updateTime;
 
     @TableLogic
     @Schema(description = "删除标志（0-正常，1-删除）")

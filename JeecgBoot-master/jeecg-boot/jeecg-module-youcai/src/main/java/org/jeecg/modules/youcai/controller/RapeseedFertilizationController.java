@@ -197,7 +197,7 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
      * 地块养分状态查询（返回数据库真实土壤数据 + 真实目标产量）
      */
     @GetMapping("/plotStatus/{plotId}")
-    public Result<Map<String, Object>> plotStatus(@PathVariable Integer plotId) {
+    public Result<Map<String, Object>> plotStatus(@PathVariable String plotId) {
         try {
             Assert.notNull(plotId, "地块ID不能为空");
             // 1. 查询该地块最新的真实土壤肥力数据（仅选取必要列，规避不必要的id映射）
@@ -263,7 +263,7 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
     public Result<Map<String, Object>> recommend(@RequestBody Map<String, Object> params) {
         try {
             // 1. 解析请求参数（真实前端传递的参数）
-            Integer plotId = (Integer) params.get("plotId");
+            String plotId = params.get("plotId").toString();
             BigDecimal targetYield = params.get("targetYield") != null 
                     ? new BigDecimal(params.get("targetYield").toString()) 
                     : new BigDecimal("180.00");
@@ -351,7 +351,7 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
      * 一周天气与养分趋势（读取数据库真实天气数据 + 真实养分变化计算）
      */
     @GetMapping("/forecast/{plotId}")
-    public Result<Map<String, Object>> forecast(@PathVariable Integer plotId) {
+    public Result<Map<String, Object>> forecast(@PathVariable String plotId) {
         try {
             Assert.notNull(plotId, "地块ID不能为空");
             com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<YoucaiSoilFertility> soilWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
@@ -413,7 +413,7 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
     public Result<String> quickApply(@RequestBody Map<String, Object> params) {
         try {
             // 解析真实请求参数
-            Integer plotId = (Integer) params.get("plotId");
+            String plotId = params.get("plotId").toString();
             String formula = (String) params.get("formula"); // 真实肥料配方（如15-15-15）
             BigDecimal areaMu = new BigDecimal(params.get("areaMu").toString()); // 真实施肥面积
             Integer splitTimes = (Integer) params.get("splitTimes"); // 真实分施次数
@@ -484,7 +484,7 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
     @PostMapping("/quickPlan")
     public Result<Map<String, Object>> quickPlan(@RequestBody Map<String, Object> params) {
         try {
-            Integer plotId = (Integer) params.get("plotId");
+            String plotId = params.get("plotId").toString();
             String risk = (String) params.get("risk");
             BigDecimal areaMu = new BigDecimal(params.get("areaMu").toString());
             Assert.notNull(plotId, "地块ID不能为空");

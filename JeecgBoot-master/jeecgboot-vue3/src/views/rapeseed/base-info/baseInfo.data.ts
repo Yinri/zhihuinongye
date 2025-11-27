@@ -11,6 +11,7 @@ export const columns: BasicColumn[] = [
   { title: '纬度', dataIndex: 'latitude', width: 100, align: 'center' },
   { title: '面积(亩)', dataIndex: 'area', width: 100, align: 'center' },
   { title: '土壤状况', dataIndex: 'soilType', width: 120, align: 'center' },
+  { title: '地块编码前缀', dataIndex: 'codePrefix', width: 120, align: 'center' },
   { title: '创建时间', dataIndex: 'createTime', width: 160, align: 'center' },
 ];
 
@@ -32,6 +33,7 @@ export const searchFormSchema: FormSchema[] = [
     },
     colProps: { span: 6 },
   },
+  { field: 'codePrefix', label: '地块编码前缀', component: 'Input', colProps: { span: 6 } },
 ];
 
 export const formSchema: FormSchema[] = [
@@ -58,4 +60,5 @@ export const formSchema: FormSchema[] = [
     required: true,
     rules: [{ required: true, message: '请选择土壤状况' }],
   },
+  { field: 'codePrefix', label: '地块编码前缀', component: 'Input', defaultValue: 'YCC', required: true, rules: [{ required: true, message: '请输入地块编码前缀' }] },
 ];

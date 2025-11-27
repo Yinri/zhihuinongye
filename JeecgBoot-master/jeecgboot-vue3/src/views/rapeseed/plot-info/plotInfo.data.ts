@@ -12,6 +12,12 @@ export const columns: BasicColumn[] = [
     align: 'center',
   },
   {
+    title: '地块编码',
+    dataIndex: 'plotCode',
+    width: 120,
+    align: 'center',
+  },
+  {
     title: '地块名称',
     dataIndex: 'plotName',
     width: 180,
@@ -23,36 +29,41 @@ export const columns: BasicColumn[] = [
     align: 'center',
   },
   {
-    title: '生长阶段',
-    dataIndex: 'growthStage',
-    width: 120,
+    title: '土壤类型',
+    dataIndex: 'soilType',
+    width: 100,
     align: 'center',
-    customRender: ({ text }) => {
-      const stage = text || '未播种';
-      const colorMap: Record<string, string> = {
-        '未播种': 'gray',
-        '已播种': 'green',
-        '苗期': 'blue',
-        '蕾薹期': 'cyan',
-        '开花期': 'orange',
-        '角果成熟期': 'gold',
-        '收获与整地': 'purple'
-      };
-      const color = colorMap[stage] || 'default';
-      return h(Tag, { color }, () => stage);
+  },
+  {
+    title: '地块状态',
+    dataIndex: 'status',
+    width: 100,
+    align: 'center',
+    customRender: ({ record }) => {
+      const status = record.status;
+      let color = '';
+      let text = '';
+      
+      switch(status) {
+        case '空闲':
+          color = 'green';
+          text = '空闲';
+          break;
+        case '种植中':
+          color = 'blue';
+          text = '种植中';
+          break;
+        case '休耕':
+          color = 'orange';
+          text = '休耕';
+          break;
+        default:
+          color = 'default';
+          text = status || '-';
+      }
+      
+      return h(Tag, { color }, () => text);
     },
-  },
-  {
-    title: '纬度',
-    dataIndex: 'latitude',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: '经度',
-    dataIndex: 'longitude',
-    width: 100,
-    align: 'center',
   },
   {
     title: '创建时间',
@@ -71,6 +82,12 @@ export const searchFormSchema: FormSchema[] = [
     colProps: { span: 6 },
   },
   {
+    field: 'plotCode',
+    label: '地块编码',
+    component: 'Input',
+    colProps: { span: 6 },
+  },
+  {
     field: 'plotName',
     label: '地块名称',
     component: 'Input',
@@ -83,19 +100,30 @@ export const searchFormSchema: FormSchema[] = [
     colProps: { span: 6 },
   },
   {
-    field: 'growthStage',
-    label: '生长阶段',
+    field: 'soilType',
+    label: '土壤类型',
     component: 'Select',
     componentProps: {
       options: [
-        { label: '未播种', value: '未播种' },
-        { label: '已播种', value: '已播种' },
-        { label: '苗期', value: '苗期' },
-        { label: '蕾薹期', value: '蕾薹期' },
-        { label: '开花期', value: '开花期' },
-        { label: '角果成熟期', value: '角果成熟期' },
-        { label: '收获与整地', value: '收获与整地' },
+        { label: '黏土', value: '黏土' },
+        { label: '沙土', value: '沙土' },
+        { label: '壤土', value: '壤土' },
       ],
+      allowClear: true,
+    },
+    colProps: { span: 6 },
+  },
+  {
+    field: 'status',
+    label: '地块状态',
+    component: 'Select',
+    componentProps: {
+      options: [
+        { label: '空闲', value: '空闲' },
+        { label: '种植中', value: '种植中' },
+        { label: '休耕', value: '休耕' },
+      ],
+      allowClear: true,
     },
     colProps: { span: 6 },
   },
@@ -108,6 +136,21 @@ export const formSchema: FormSchema[] = [
     label: '地块ID',
     component: 'Input',
     show: false,
+  },
+  {
+    field: 'plotCode',
+    label: '地块编码',
+    component: 'Input',
+    required: true,
+    disabled: true, // 禁用，由后端自动生成
+    componentProps: {
+      placeholder: '系统自动生成',
+    },
+    ifShow: ({ values }) => {
+      // 只有在编辑模式下才显示地块编码（有id值表示是编辑模式）
+      return !!values.id;
+    },
+    rules: [{ required: true, message: '地块编码不能为空!' }],
   },
   {
     field: 'plotName',
@@ -135,48 +178,34 @@ export const formSchema: FormSchema[] = [
     rules: [{ required: true, message: '请输入地块面积!' }],
   },
   {
-    field: 'latitude',
-    label: '纬度',
-    component: 'InputNumber',
-    show: false, // 隐藏字段
-    required: false,
-    componentProps: {
-      min: -90,
-      max: 90,
-      precision: 6,
-      placeholder: '请输入纬度',
-    },
-  },
-  {
-    field: 'longitude',
-    label: '经度',
-    component: 'InputNumber',
-    show: false, // 隐藏字段
-    required: false,
-    componentProps: {
-      min: -180,
-      max: 180,
-      precision: 6,
-      placeholder: '请输入经度',
-    },
-  },
-  {
-    field: 'growthStage',
-    label: '生长阶段',
+    field: 'soilType',
+    label: '土壤类型',
     component: 'Select',
-    defaultValue: '未播种',
+    defaultValue: '黏土',
     componentProps: {
       options: [
-        { label: '未播种', value: '未播种' },
-        { label: '已播种', value: '已播种' },
-        { label: '苗期', value: '苗期' },
-        { label: '蕾薹期', value: '蕾薹期' },
-        { label: '开花期', value: '开花期' },
-        { label: '角果成熟期', value: '角果成熟期' },
-        { label: '收获与整地', value: '收获与整地' },
+        { label: '黏土', value: '黏土' },
+        { label: '沙土', value: '沙土' },
+        { label: '壤土', value: '壤土' },
       ],
     },
-    rules: [{ required: true, message: '请选择生长阶段!' }],
+    required: true,
+    rules: [{ required: true, message: '请选择土壤类型!' }],
+  },
+  {
+    field: 'status',
+    label: '地块状态',
+    component: 'Select',
+    defaultValue: '空闲',
+    componentProps: {
+      options: [
+        { label: '空闲', value: '空闲' },
+        { label: '种植中', value: '种植中' },
+        { label: '休耕', value: '休耕' },
+      ],
+    },
+    required: true,
+    rules: [{ required: true, message: '请选择地块状态!' }],
   },
   {
     field: 'polygonCoords',

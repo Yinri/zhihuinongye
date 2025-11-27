@@ -9,10 +9,10 @@ import java.util.Date;
 @Data
 public class PlotHarvestSummaryDTO {
     @Schema(description = "地块ID")
-    private Integer plotId;
+    private String plotId;
 
     @Schema(description = "基地ID")
-    private Integer baseId;
+    private String baseId;
 
     @Schema(description = "地块面积(亩)")
     private BigDecimal plotArea;

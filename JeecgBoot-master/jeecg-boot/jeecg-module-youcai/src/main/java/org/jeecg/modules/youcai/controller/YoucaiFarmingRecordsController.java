@@ -150,12 +150,14 @@ public class YoucaiFarmingRecordsController extends JeecgController<YoucaiFarmin
 	 */
 	@Operation(summary="农事记录表-根据基地ID分页查询")
 	@GetMapping(value = "/queryByBaseId")
-	public Result<IPage<YoucaiFarmingRecords>> queryByBaseId(@RequestParam(name="baseId",required=true) Integer baseId,
+	public Result<IPage<YoucaiFarmingRecords>> queryByBaseId(@RequestParam(name="baseId",required=false) String baseId,
 								   @RequestParam(name="pageNo", defaultValue="1") Integer pageNo,
 								   @RequestParam(name="pageSize", defaultValue="10") Integer pageSize,
 								   HttpServletRequest req) {
 		QueryWrapper<YoucaiFarmingRecords> queryWrapper = new QueryWrapper<>();
-		queryWrapper.eq("base_id", baseId);
+		if (baseId != null && !baseId.isEmpty()) {
+			queryWrapper.eq("base_id", baseId);
+		}
 		queryWrapper.orderByDesc("farming_date");
 		Page<YoucaiFarmingRecords> page = new Page<YoucaiFarmingRecords>(pageNo, pageSize);
 		IPage<YoucaiFarmingRecords> pageList = youcaiFarmingRecordsService.page(page, queryWrapper);

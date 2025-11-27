@@ -53,25 +53,14 @@
       </ACol>
     </ARow>
 
-    <Divider class="enter-x">{{ t('sys.login.otherSignIn') }}</Divider>
-
-    <div class="flex justify-evenly enter-x" :class="`${prefixCls}-sign-in-way`">
-      <a @click="onThirdLogin('github')" title="github"><GithubFilled /></a>
-      <a @click="onThirdLogin('wechat_enterprise')" title="企业微信"> <icon-font class="item-icon" type="icon-qiyeweixin3" /></a>
-      <a @click="onThirdLogin('dingtalk')" title="钉钉"><DingtalkCircleFilled /></a>
-      <a @click="onThirdLogin('wechat_open')" title="微信"><WechatFilled /></a>
-    </div>
   </Form>
-  <!-- 第三方登录相关弹框 -->
-  <ThirdModal ref="thirdModalRef"></ThirdModal>
+  
 </template>
 <script lang="ts" setup>
   import { reactive, ref, toRaw, unref, computed } from 'vue';
 
-  import { Checkbox, Form, Input, Row, Col, Button, Divider } from 'ant-design-vue';
-  import { GithubFilled, WechatFilled, DingtalkCircleFilled, createFromIconfontCN } from '@ant-design/icons-vue';
+  import { Checkbox, Form, Input, Row, Col, Button } from 'ant-design-vue';
   import LoginFormTitle from './LoginFormTitle.vue';
-  import ThirdModal from './ThirdModal.vue';
   import { useI18n } from '/@/hooks/web/useI18n';
   import { useMessage } from '/@/hooks/web/useMessage';
 
@@ -84,9 +73,6 @@
   const ARow = Row;
   const FormItem = Form.Item;
   const InputPassword = Input.Password;
-  const IconFont = createFromIconfontCN({
-    scriptUrl: '//at.alicdn.com/t/font_2316098_umqusozousr.js',
-  });
   const { t } = useI18n();
   const { notification, createErrorModal } = useMessage();
   const { prefixCls } = useDesign('login');
@@ -96,7 +82,6 @@
   const { getFormRules } = useFormRules();
 
   const formRef = ref();
-  const thirdModalRef = ref();
   const loading = ref(false);
   const rememberMe = ref(false);
 
@@ -138,12 +123,5 @@
       });
       loading.value = false;
     }
-  }
-  /**
-   * 第三方登录
-   * @param type
-   */
-  function onThirdLogin(type) {
-    thirdModalRef.value.onThirdLogin(type);
   }
 </script>

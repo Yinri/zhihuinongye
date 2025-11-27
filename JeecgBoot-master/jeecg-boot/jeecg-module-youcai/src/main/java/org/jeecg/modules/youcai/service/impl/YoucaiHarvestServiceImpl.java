@@ -37,7 +37,7 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
     private YoucaiHarvesterMachineMapper machineMapper;
 
     @Override
-    public HarvestStatsDTO getHarvestStats(Integer baseId) {
+    public HarvestStatsDTO getHarvestStats(String baseId) {
         HarvestStatsDTO dto = new HarvestStatsDTO();
 
         // 总地块面积
@@ -92,7 +92,7 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
     }
 
     @Override
-    public List<HarvesterStatusDTO> getHarvesterStatus(Integer baseId) {
+    public List<HarvesterStatusDTO> getHarvesterStatus(String baseId) {
         // 基于农机档案表的机器列表为基线，并结合最近收获记录推断状态
         QueryWrapper<YoucaiHarvesterMachine> machineQ = new QueryWrapper<>();
         machineQ.eq(baseId != null, "base_id", baseId)
@@ -119,7 +119,7 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
             records.sort(Comparator.comparing(YoucaiHarvest::getHarvestDate, Comparator.nullsLast(Date::compareTo)).reversed());
             YoucaiHarvest latest = records.isEmpty() ? null : records.get(0);
 
-            String status = m.getStatus() == null ? "maintenance" : m.getStatus();
+            String status = m.getStatus() == null ? "维修中" : m.getStatus();
             if (latest != null && latest.getHarvestDate() != null) {
                 LocalDate d = latest.getHarvestDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
                 if (d.isEqual(today)) {
@@ -132,7 +132,15 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
             HarvesterStatusDTO dto = new HarvesterStatusDTO();
             dto.setName(name);
             dto.setStatus(status);
-            dto.setLocation(latest != null ? (latest.getPlotName() != null ? latest.getPlotName() : (m.getLastLocation() == null ? "待定位置" : m.getLastLocation())) : (m.getLastLocation() == null ? "待定位置" : m.getLastLocation()));
+            // 通过 plotId 查询地块名称
+            String location = m.getLastLocation() == null ? "待定位置" : m.getLastLocation();
+            if (latest != null && latest.getPlotId() != null) {
+                YoucaiPlots plot = plotsMapper.selectById(latest.getPlotId());
+                if (plot != null && plot.getPlotName() != null) {
+                    location = plot.getPlotName();
+                }
+            }
+            dto.setLocation(location);
             result.add(dto);
             seen.add(name);
         }
@@ -143,19 +151,27 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
             List<YoucaiHarvest> records = entry.getValue();
             records.sort(Comparator.comparing(YoucaiHarvest::getHarvestDate, Comparator.nullsLast(Date::compareTo)).reversed());
             YoucaiHarvest latest = records.isEmpty() ? null : records.get(0);
-            String status = "maintenance";
+            String status = "维修中";
             if (latest != null && latest.getHarvestDate() != null) {
                 LocalDate d = latest.getHarvestDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
                 if (d.isEqual(today)) {
-                    status = "working";
+                    status = "作业中";
                 } else if (!d.isBefore(today.minusDays(3))) {
-                    status = "idle";
+                    status = "空闲";
                 }
             }
             HarvesterStatusDTO dto = new HarvesterStatusDTO();
             dto.setName(entry.getKey());
             dto.setStatus(status);
-            dto.setLocation(latest != null ? (latest.getPlotName() != null ? latest.getPlotName() : "待定位置") : "待定位置");
+            // 通过 plotId 查询地块名称
+            String location = "待定位置";
+            if (latest != null && latest.getPlotId() != null) {
+                YoucaiPlots plot = plotsMapper.selectById(latest.getPlotId());
+                if (plot != null && plot.getPlotName() != null) {
+                    location = plot.getPlotName();
+                }
+            }
+            dto.setLocation(location);
             result.add(dto);
         }
 
@@ -163,7 +179,7 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
     }
 
     @Override
-    public List<YieldChartBarDTO> getYieldChart(Integer baseId) {
+    public List<YieldChartBarDTO> getYieldChart(String baseId) {
         // 统计今日每个地块的实际与预计产量（kg -> 吨）
         QueryWrapper<YoucaiHarvest> wrapper = new QueryWrapper<>();
         wrapper.eq(baseId != null, "base_id", baseId)
@@ -171,12 +187,17 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
                 .apply("date(harvest_date) = curdate()");
         List<YoucaiHarvest> todays = this.list(wrapper);
 
+        // 按 plotId 分组，然后查询地块名称
         Map<String, List<YoucaiHarvest>> byPlot = todays.stream()
-                .filter(h -> h.getPlotName() != null)
-                .collect(Collectors.groupingBy(YoucaiHarvest::getPlotName));
+                .filter(h -> h.getPlotId() != null)
+                .collect(Collectors.groupingBy(YoucaiHarvest::getPlotId));
 
         List<YieldChartBarDTO> result = new ArrayList<>();
-        byPlot.forEach((plotName, list) -> {
+        byPlot.forEach((plotId, list) -> {
+            // 查询地块名称
+            YoucaiPlots plot = plotsMapper.selectById(plotId);
+            String plotName = (plot != null && plot.getPlotName() != null) ? plot.getPlotName() : plotId;
+            
             double actualKg = list.stream().map(h -> h.getTotalYield() == null ? 0.0 : h.getTotalYield().doubleValue()).mapToDouble(Double::doubleValue).sum();
             double expectedKg = list.stream().map(h -> h.getPredictYield() == null ? 0.0 : h.getPredictYield().doubleValue()).mapToDouble(Double::doubleValue).sum();
             YieldChartBarDTO dto = new YieldChartBarDTO();
@@ -191,14 +212,14 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
     }
 
     @Override
-    public List<PlotHarvestSummaryDTO> getPlotHarvestSummary(Integer baseId) {
+    public List<PlotHarvestSummaryDTO> getPlotHarvestSummary(String baseId) {
         if (baseId == null) {
             return summaryMapper.selectAll();
         }
         return summaryMapper.selectByBaseId(baseId);
     }
 
-    private double sumByDateArea(Integer baseId, LocalDate date) {
+    private double sumByDateArea(String baseId, LocalDate date) {
         QueryWrapper<YoucaiHarvest> wrapper = new QueryWrapper<>();
         wrapper.eq(baseId != null, "base_id", baseId)
                 .eq("del_flag", 0)
@@ -208,7 +229,7 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
                 .mapToDouble(Double::doubleValue).sum();
     }
 
-    private double sumByDateYieldTon(Integer baseId, LocalDate date) {
+    private double sumByDateYieldTon(String baseId, LocalDate date) {
         QueryWrapper<YoucaiHarvest> wrapper = new QueryWrapper<>();
         wrapper.eq(baseId != null, "base_id", baseId)
                 .eq("del_flag", 0)
@@ -218,7 +239,7 @@ public class YoucaiHarvestServiceImpl extends ServiceImpl<YoucaiHarvestMapper, Y
                 .mapToDouble(Double::doubleValue).sum() / 1000.0;
     }
 
-    private double sumUntilDateArea(Integer baseId, LocalDate dateInclusive) {
+    private double sumUntilDateArea(String baseId, LocalDate dateInclusive) {
         QueryWrapper<YoucaiHarvest> wrapper = new QueryWrapper<>();
         wrapper.eq(baseId != null, "base_id", baseId)
                 .eq("del_flag", 0)

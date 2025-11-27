@@ -117,7 +117,7 @@
             <TiandituHarvestMap
               :mapWidth="'100%'"
               :mapHeight="'480px'"
-              :baseId="selectedBase?.baseId"
+              :baseId="selectedBase?.baseId ? String(selectedBase.baseId) : null"
               :enableHover="true"
               :harvestedPlotIds="harvestedPlotIds"
               :harvestingPlotIds="harvestingPlotIds"
@@ -145,7 +145,9 @@
                   <div class="harvester-info">
                     <div class="harvester-header">
                       <h4 class="harvester-name">{{ harvester.name }}</h4>
-                      <span class="status-badge" :class="harvester.status">{{ harvester.status === 'working' ? '作业中' : harvester.status === 'idle' ? '待命' : '维护中' }}</span>
+                      <span class="status-badge" :class="harvester.status">
+                        {{ harvester.status === '作业中' ? '作业中' : harvester.status === '空闲' ? '空闲' : '维修中' }}
+                      </span>
                     </div>
                     <p class="harvester-location">{{ harvester.location }}</p>
                   </div>
@@ -271,25 +273,25 @@ const harvesterStatus = ref([
   {
     id: 1,
     name: '收割机#1',
-    status: 'working',
+    status: '作业中',
     location: '地块A-3区域',
   },
   {
     id: 2,
     name: '收割机#2',
-    status: 'idle',
+    status: '空闲',
     location: '维修区',
   },
   {
     id: 3,
     name: '收割机#3',
-    status: 'working',
+    status: '作业中',
     location: '地块B-1区域',
   },
   {
     id: 4,
     name: '收割机#4',
-    status: 'idle',
+    status: '空闲',
     location: '待命区',
   },
 ]);
@@ -821,7 +823,7 @@ const onMapLoad = () => {
       border-radius: 8px;
       border: 1px solid #f0f0f0;
       
-      &.working {
+      &.作业中 {
         background-color: rgba(24, 144, 255, 0.05);
         border-color: rgba(24, 144, 255, 0.2);
         
@@ -836,7 +838,7 @@ const onMapLoad = () => {
         }
       }
       
-      &.idle {
+      &.空闲 {
         background-color: #f5f5f5;
         border-color: #d9d9d9;
         
@@ -848,6 +850,21 @@ const onMapLoad = () => {
         .status-badge {
           background-color: #f0f0f0;
           color: #8c8c8c;
+        }
+      }
+      
+      &.维修中 {
+        background-color: rgba(250, 173, 20, 0.05);
+        border-color: rgba(250, 173, 20, 0.2);
+        
+        .harvester-icon {
+          background-color: rgba(250, 173, 20, 0.1);
+          color: #faad14;
+        }
+        
+        .status-badge {
+          background-color: rgba(250, 173, 20, 0.1);
+          color: #faad14;
         }
       }
       

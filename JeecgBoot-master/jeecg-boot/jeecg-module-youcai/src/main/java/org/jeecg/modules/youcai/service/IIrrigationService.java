@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface IIrrigationService {
-    Map<String, Object> getPlotStatus(Integer plotId);
-    Map<String, Object> getPenmanPredict(Integer plotId);
-    Map<String, Object> getInterventionComparison(Integer plotId);
+    Map<String, Object> getPlotStatus(String plotId);
+    Map<String, Object> getPenmanPredict(String plotId);
+    Map<String, Object> getInterventionComparison(String plotId);
 }

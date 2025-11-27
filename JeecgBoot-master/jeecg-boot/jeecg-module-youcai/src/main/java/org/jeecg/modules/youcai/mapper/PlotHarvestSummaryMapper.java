@@ -9,5 +9,5 @@ import java.util.List;
 @Mapper
 public interface PlotHarvestSummaryMapper {
     List<PlotHarvestSummaryDTO> selectAll();
-    List<PlotHarvestSummaryDTO> selectByBaseId(@Param("baseId") Integer baseId);
+    List<PlotHarvestSummaryDTO> selectByBaseId(@Param("baseId") String baseId);
 }

@@ -105,13 +105,13 @@ const loadPlotList = async () => {
     plotOptions.value = rows || [];
     
     if (props.defaultPlotId && plotOptions.value.length > 0) {
-      selectedPlotId.value = props.defaultPlotId;
-      emit('update:modelValue', props.defaultPlotId);
-      emit('change', props.defaultPlotId);
+      selectedPlotId.value = String(props.defaultPlotId);
+      emit('update:modelValue', String(props.defaultPlotId));
+      emit('change', String(props.defaultPlotId));
     } else if (plotOptions.value.length > 0 && !selectedPlotId.value) {
-      selectedPlotId.value = plotOptions.value[0].id;
-      emit('update:modelValue', plotOptions.value[0].id);
-      emit('change', plotOptions.value[0].id);
+      selectedPlotId.value = String(plotOptions.value[0].id);
+      emit('update:modelValue', String(plotOptions.value[0].id));
+      emit('change', String(plotOptions.value[0].id));
     }
     
     emit('loaded', plotOptions.value);

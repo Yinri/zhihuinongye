@@ -12,12 +12,12 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @Version: V1.0
  */
 public interface IYoucaiLodgingRiskWarningService extends IService<YoucaiLodgingRiskWarning> {    
-    LodgingRiskAssessmentResponseDTO riskAssessmentById(Integer plotId);
+    LodgingRiskAssessmentResponseDTO riskAssessmentById(String plotId);
     
     /**
      * 批量获取基地下所有地块的倒伏风险数据
      * @param baseId 基地ID
      * @return 批量倒伏风险评估响应DTO
      */
-    LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchRiskAssessmentByBaseId(Integer baseId);
+    LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchRiskAssessmentByBaseId(String baseId);
 }

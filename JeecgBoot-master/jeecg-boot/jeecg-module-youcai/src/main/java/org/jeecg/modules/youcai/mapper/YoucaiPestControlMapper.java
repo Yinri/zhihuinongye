@@ -1,6 +1,6 @@
 package org.jeecg.modules.youcai.mapper;
 
-import io.lettuce.core.dynamic.annotation.Param;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -22,7 +22,7 @@ public interface YoucaiPestControlMapper extends BaseMapper<YoucaiPestControl> {
         AND control_date BETWEEN #{start} AND #{end}
       ORDER BY control_date DESC
       """)
-      List<YoucaiPestControl> queryControlHistory(@Param("plotId") Integer plotId,
+      List<YoucaiPestControl> queryControlHistory(@Param("plotId") String plotId,
                                                   @Param("start") String start,
                                                   @Param("end") String end);
 }

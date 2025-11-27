@@ -18,10 +18,10 @@
       const rowId = ref('');
 
       const [registerForm, { setFieldsValue, resetFields, validate }] = useForm({
-        labelWidth: 100,
+        labelWidth: 140,
         schemas: formSchema,
         showActionButtonGroup: false,
-        baseColProps: { lg: 12, md: 24 },
+        baseColProps: { span: 24 },
       });
 
       const [registerModal, { setModalProps, closeModal }] = useModalInner(async (data) => {

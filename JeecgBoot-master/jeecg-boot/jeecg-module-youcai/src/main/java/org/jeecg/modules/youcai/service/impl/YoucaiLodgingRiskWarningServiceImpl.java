@@ -82,7 +82,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     private IYoucaiPlotsService youcaiPlotsService;
     
     @Override
-    public LodgingRiskAssessmentResponseDTO riskAssessmentById(Integer plotId) {
+    public LodgingRiskAssessmentResponseDTO riskAssessmentById(String plotId) {
         log.info("开始评估地块倒伏风险，地块ID: {}", plotId);
         long startTime = System.currentTimeMillis();
         
@@ -137,7 +137,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     /**
      * 构建基础请求数据
      */
-    private LodgingRiskAssessmentRequestDTO buildBasicRequestData(Integer plotId) {
+    private LodgingRiskAssessmentRequestDTO buildBasicRequestData(String plotId) {
         // 创建请求DTO
         LodgingRiskAssessmentRequestDTO requestDTO = new LodgingRiskAssessmentRequestDTO();
         requestDTO.setPlotId(plotId);
@@ -181,7 +181,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     /**
      * IoT传感器数据获取（优先查询本地数据库）
      */
-    private void fetchIoTSensorData(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
+    private void fetchIoTSensorData(LodgingRiskAssessmentRequestDTO requestDTO, String plotId) {
         try {
             log.debug("开始获取IoT传感器数据，地块ID: {}", plotId);
             
@@ -302,7 +302,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     /**
      * 天气预报数据获取
      */
-    private void fetchWeatherData(LodgingRiskAssessmentRequestDTO requestDTO, Integer plotId) {
+    private void fetchWeatherData(LodgingRiskAssessmentRequestDTO requestDTO, String plotId) {
         try {
             log.debug("开始获取天气预报数据，地块ID: {}", plotId);
             
@@ -612,7 +612,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             youcaiSensorInfo.setSensorCreateTime(sensorData.getDateCreated());
             youcaiSensorInfo.setSyncTime(LocalDateTime.now());
             youcaiSensorInfo.setProjectId(projectId);
-            youcaiSensorInfo.setCreateTime(LocalDateTime.now());
+            youcaiSensorInfo.setCreateTime(new Date(System.currentTimeMillis()));
             
             boolean saved = youcaiSensorInfoService.save(youcaiSensorInfo);
             if (saved) {
@@ -628,7 +628,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     }
     
     @Override
-    public LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchRiskAssessmentByBaseId(Integer baseId) {
+    public LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchRiskAssessmentByBaseId(String baseId) {
         log.info("开始批量评估基地下所有地块的倒伏风险，基地ID: {}", baseId);
         long startTime = System.currentTimeMillis();
         
@@ -720,7 +720,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     int extremeRiskPlots = 0;
     double totalRiskScore = 0.0;
     double highestRiskScore = 0.0;
-    Integer highestRiskPlotId = null;
+    String highestRiskPlotId = null;
         
         // 风险分布统计
         java.util.Map<String, Integer> riskDistribution = new java.util.HashMap<>();

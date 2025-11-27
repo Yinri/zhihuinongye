@@ -17,9 +17,6 @@
                 {{ item.baseName }}
               </div>
             </div>
-            <div class="create-option" @click.stop="openCreateDialog">
-              创建
-            </div>
           </div>
         </div>
 
@@ -59,84 +56,12 @@
 
   <div class="main-content"></div>
 
-  <!-- 创建基地弹窗 -->
-  <div class="create-dialog" v-if="isDialogOpen">
-    <div class="dialog-mask" @click.stop></div>
-    <div class="dialog-content">
-      <div class="dialog-header">
-        <h3>创建基地</h3>
-        <button class="close-btn" @click="isDialogOpen = false">×</button>
-      </div>
-      <div class="dialog-form">
-        <div class="form-item">
-          <label>全称 <span class="required">*</span></label>
-          <input type="text" v-model="formData.fullName" placeholder="请输入基地全称">
-        </div>
-        <div class="form-item">
-          <label>基地负责人 <span class="required">*</span></label>
-          <input type="text" v-model="formData.manager" placeholder="请输入负责人姓名">
-        </div>
-        <div class="form-item">
-          <label>电话 <span class="required">*</span></label>
-          <input type="text" v-model="formData.phone" placeholder="请输入联系电话">
-        </div>
-        <div class="form-item">
-          <label>地址</label>
-          <textarea v-model="formData.address" placeholder="请输入基地地址" rows="2"></textarea>
-        </div>
-        <div class="form-item">
-          <label>面积</label>
-          <div class="area-input-group">
-            <input type="number" v-model.number="formData.area" placeholder="请输入面积" min="0">
-            <span>亩</span>
-          </div>
-        </div>
-        <div class="form-item">
-          <label>土壤状况</label>
-          <div class="soil-types">
-            <label>
-              <input type="radio" v-model="formData.soilType" value="黏土"> 黏土
-            </label>
-            <label>
-              <input type="radio" v-model="formData.soilType" value="沙土"> 沙土
-            </label>
-            <label>
-              <input type="radio" v-model="formData.soilType" value="壤土"> 壤土
-            </label>
-          </div>
-        </div>
-        <div class="form-item">
-          <label>基地图片 <span class="required">*</span></label>
-          <div class="upload-container">
-            <label class="upload-btn">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/jpg"
-                @change="handleImageUpload"
-                hidden
-                ref="fileInput"
-              >
-              <div class="btn-text">点击选择图片</div>
-            </label>
-            <div class="image-preview" v-if="formData.imageUrl">
-              <img :src="formData.imageUrl" alt="基地图片">
-              <button class="delete-img" @click.stop="clearImage">×</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <button class="create-btn" @click="handleCreate">创建</button>
-        <button class="cancel-btn" @click="isDialogOpen = false">返回</button>
-      </div>
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">
 import {ref, reactive, onMounted, watch} from 'vue';
 import { useSelectStore } from '../../../../store/selectStore';
-import {getBaseList, getPlotsByBaseId,getPlotById,createBase} from '../../../../views/rapeseed/production-plan/plot-production-plan/base.api';
+import {getBaseList, getPlotsByBaseId,getPlotById} from '../../../../views/rapeseed/production-plan/plot-production-plan/base.api';
 
 // 定义基地类型接口
 interface BaseItem {
@@ -173,18 +98,6 @@ const stageList = ref([
 ]);
 
 // 弹窗状态与表单数据
-const isDialogOpen = ref(false);
-const fileInput = ref<HTMLInputElement>(null);
-const formData = reactive({
-  fullName: '',
-  manager: '',
-  phone: '',
-  address: '',
-  area: 0,
-  soilType: '黏土',
-  imageUrl: '',
-  imageBase64: ''
-});
 
 // 基础提示函数
 const showMessage = (text: string, isError = false) => {
@@ -262,8 +175,8 @@ const fetchPlotList = async () => {
   try {
     const res = await getPlotsByBaseId(currentBaseId);
     plotList.value = res.map((item: any) => ({
-      plotId: item.id, // 按接口实际字段名（如id/plot_id）调整
-      plotName: item.plotName  // 按接口实际字段名调整
+      plotId: String(item.id),
+      plotName: item.plotName
     }));
     // 选中第一个地块（若有）
     if (plotList.value.length > 0) {
@@ -334,112 +247,6 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
 };
 
 // 打开创建弹窗
-const openCreateDialog = () => {
-  isDropdownOpen.value.base = false;
-  isDialogOpen.value = true;
-  resetForm();
-};
-
-// 处理图片上传
-const handleImageUpload = (e: Event) => {
-  const target = e.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (!file) return;
-
-  const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-  if (!validTypes.includes(file.type)) {
-    showMessage('请选择 JPG 或 PNG 格式的图片', true);
-    target.value = '';
-    return;
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    showMessage('图片大小不能超过 5MB', true);
-    target.value = '';
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const base64Str = (event.target?.result as string).split(',')[1];
-    formData.imageBase64 = base64Str;
-    formData.imageUrl = URL.createObjectURL(file);
-  };
-  reader.readAsDataURL(file);
-};
-
-// 清除已选图片
-const clearImage = () => {
-  formData.imageUrl = '';
-  formData.imageBase64 = '';
-  if (fileInput.value) {
-    fileInput.value.value = '';
-  }
-};
-
-// 重置表单
-const resetForm = () => {
-  formData.fullName = '';
-  formData.manager = '';
-  formData.phone = '';
-  formData.address = '';
-  formData.area = 0;
-  formData.soilType = '黏土';
-  clearImage();
-};
-
-// 处理创建逻辑
-const handleCreate = async () => {
-  if (!formData.fullName.trim()) {
-    showMessage('请填写基地全称', true);
-    return;
-  }
-  if (formData.fullName.length > 50) {
-    showMessage('基地全称不能超过50个字符', true);
-    return;
-  }
-  if (!formData.manager.trim()) {
-    showMessage('请填写基地负责人', true);
-    return;
-  }
-  if (!formData.phone.trim()) {
-    showMessage('请填写联系电话', true);
-    return;
-  }
-  if (!formData.address.trim()) {
-    showMessage('请填写基地地址', true);
-    return;
-  }
-  if (formData.address.length > 200) {
-    showMessage('地址不能超过200个字符', true);
-    return;
-  }
-  if (formData.area < 0) {
-    showMessage('面积不能为负数', true);
-    return;
-  }
-
-  try {
-    const submitData = {
-      baseName: formData.fullName.trim(),
-      manager: formData.manager.trim() || null,
-      phone: formData.phone.trim() || null,
-      address: formData.address.trim(),
-      area: formData.area > 0 ? formData.area : null,
-      soilType: formData.soilType,
-      topViewUrl: formData.imageBase64 || null
-    };
-
-    const res=await createBase(submitData);
-    showMessage('基地创建成功');
-      // 重新加载基地列表（确保能获取到新基地的ID）
-      fetchBaseList();
-      isDialogOpen.value = false;
-  } catch (error) {
-    console.error('创建基地请求错误：', error);
-    showMessage('网络请求失败，请检查接口地址或Token', true);
-  }
-};
 // 根据地块ID查询生长阶段
 const fetchPlotGrowthStage = async (plotId: string | number) => {
   try {

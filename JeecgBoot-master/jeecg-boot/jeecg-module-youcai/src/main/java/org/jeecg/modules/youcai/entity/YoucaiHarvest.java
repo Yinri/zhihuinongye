@@ -1,10 +1,8 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.math.BigDecimal;
 import java.util.Date;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -26,30 +24,21 @@ import org.springframework.format.annotation.DateTimeFormat;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="收获管理记录")
-public class YoucaiHarvest implements Serializable {
+public class YoucaiHarvest extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-    /** 主键ID */
-    @TableId(type = IdType.ASSIGN_ID)
-    @Schema(description = "主键ID")
-    private String id;
 
     /** 基地ID */
     @Excel(name = "基地ID", width = 15)
     @Schema(description = "基地ID")
-    private Integer baseId;
+    private String baseId;
 
     /** 地块ID */
     @Excel(name = "地块ID", width = 15)
     @Schema(description = "地块ID")
-    private Integer plotId;
+    private String plotId;
 
-    /** 地块名称 */
-    @Excel(name = "地块名称", width = 20)
-    @Schema(description = "地块名称")
-    private String plotName;
-
-    /** 面积(亩) */
+    /** 本次收割面积(亩) */
     @Excel(name = "面积(亩)", width = 15)
     @Schema(description = "面积(亩)")
     private BigDecimal area;
@@ -70,10 +59,10 @@ public class YoucaiHarvest implements Serializable {
     private String machineName;
 
     /** 收获日期 */
-    @Excel(name = "收获日期", width = 20, format = "yyyy-MM-dd")
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    @Schema(description = "收获日期")
+    @Excel(name = "收获日期", width = 20, format = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @Schema(description = "收获日期（精确到时分秒）")
     private Date harvestDate;
 
     /** 作业人员 */
@@ -91,25 +80,6 @@ public class YoucaiHarvest implements Serializable {
     @Schema(description = "备注")
     private String remark;
 
-    /** 创建人 */
-    @Schema(description = "创建人")
-    private String createBy;
-
-    /** 创建时间 */
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "创建时间")
-    private Date createTime;
-
-    /** 更新人 */
-    @Schema(description = "更新人")
-    private String updateBy;
-
-    /** 更新时间 */
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "更新时间")
-    private Date updateTime;
 
     /** 删除标志（0-正常，1-删除） */
     @Schema(description = "删除标志（0-正常，1-删除）")

@@ -48,7 +48,7 @@ export const getBaseList: Function = (params) => {
  * @returns 基地详情
  */
 export const getBaseById: Function = (id) => {
-  return defHttp.get({ url: getUrl(Api.getBaseById, { id }) });
+  return defHttp.get({ url: getUrl(Api.getBaseById, { id: id + '' }) });
 };
 
 /**
@@ -59,7 +59,7 @@ export const getBaseById: Function = (id) => {
 export const getPlotsByBaseId: Function = (baseId) => {
   return defHttp.get({
     url: Api.getPlotsByBaseId,
-    params: { baseId }  // 明确传递 baseId 参数
+    params: { baseId: baseId + '' }
   });
 };
 
@@ -69,10 +69,9 @@ export const getPlotsByBaseId: Function = (baseId) => {
  * @returns 生长监控数据
  */
 export const getPlotById: Function = (plotId) => {
-  // 正确方式：通过 params 传递请求参数（会自动拼接为 ?plotId=xxx）
   return defHttp.get({
-    url: Api.getPlotById, // 假设 Api.getPlotById 是基础路径：'/youcai/youcaiGrowthMonitoring/queryByPlotId'
-    params: { plotId } // 关键：传递 plotId 作为请求参数
+    url: Api.getPlotById,
+    params: { plotId: plotId + '' }
   });
 };
 
@@ -96,7 +95,7 @@ export const createBase: Function = (data) => {
 export const getPlotPlanByPlotId: Function = (plotId) => {
   return defHttp.get({
     url: Api.getPlotPlanByPlotId,
-    params: { plotId }  // 与后端接口参数名一致
+    params: { plotId: plotId + '' }
   });
 };
 
@@ -117,11 +116,10 @@ export const getAllVariety: Function = () => {
  * @returns 分页的产量历史数据
  */
 export const getVarietyHistoryByVarietyId: Function = (params) => {
-  // 从对象中解构参数，设置默认值
   const { varietyId, pageNo = 1, pageSize = 10, ...otherParams } = params || {};
   return defHttp.get({
     url: Api.getVarietyHistoryByVarietyId,
-    params: { varietyId, pageNo, pageSize, ...otherParams }
+    params: { varietyId: varietyId + '', pageNo, pageSize, ...otherParams }
   });
 };
 

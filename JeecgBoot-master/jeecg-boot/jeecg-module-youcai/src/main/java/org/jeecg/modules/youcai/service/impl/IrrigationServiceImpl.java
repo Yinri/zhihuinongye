@@ -1,10 +1,13 @@
 package org.jeecg.modules.youcai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.jeecg.modules.youcai.entity.YoucaiPlots;
+import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
 import org.jeecg.modules.youcai.entity.YoucaiSensorHourly;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiSensorHourlyMapper;
+import org.jeecg.modules.youcai.mapper.YoucaiGrowthMonitoringMapper;
 import org.jeecg.modules.youcai.service.IIrrigationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,8 +25,10 @@ public class IrrigationServiceImpl implements IIrrigationService {
     private YoucaiSensorHourlyMapper sensorHourlyMapper;
     @Autowired
     private YoucaiPlotsMapper plotsMapper;
+    @Autowired
+    private YoucaiGrowthMonitoringMapper growthMonitoringMapper;
 
-    public Map<String, Object> getPlotStatus(Integer plotId) {
+    public Map<String, Object> getPlotStatus(String plotId) {
         Map<String, Object> r = new HashMap<>();
         QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
         qw.lambda().eq(YoucaiSensorHourly::getPlotId, plotId)
@@ -41,12 +46,20 @@ public class IrrigationServiceImpl implements IIrrigationService {
         YoucaiPlots plot = plotsMapper.selectById(plotId);
         r.put("soilMoisturePercent", latest);
         r.put("soilMoistureTrend", trend);
-        r.put("currentStageId", plot != null ? plot.getGrowthStage() : "");
+        YoucaiGrowthMonitoring latestMonitor = growthMonitoringMapper.selectOne(
+                new LambdaQueryWrapper<YoucaiGrowthMonitoring>()
+                        .eq(YoucaiGrowthMonitoring::getPlotId, plotId)
+                        .eq(YoucaiGrowthMonitoring::getDelFlag, 0)
+                        .orderByDesc(YoucaiGrowthMonitoring::getMonitoringDate)
+                        .orderByDesc(YoucaiGrowthMonitoring::getCreateTime)
+                        .last("LIMIT 1")
+        );
+        r.put("currentStageId", latestMonitor != null ? (latestMonitor.getGrowthStage() == null ? "" : latestMonitor.getGrowthStage()) : "");
         r.put("lastUpdated", rows.stream().map(YoucaiSensorHourly::getHourTs).findFirst().orElse(null));
         return r;
     }
 
-    public Map<String, Object> getPenmanPredict(Integer plotId) {
+    public Map<String, Object> getPenmanPredict(String plotId) {
         Map<String, Object> r = new HashMap<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         List<Map<String, Object>> days = aggregateDaily(plotId, 7);
@@ -79,7 +92,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
         return r;
     }
 
-    public Map<String, Object> getInterventionComparison(Integer plotId) {
+    public Map<String, Object> getInterventionComparison(String plotId) {
         Map<String, Object> r = new HashMap<>();
         List<Map<String, Object>> days = aggregateDaily(plotId, 7);
         List<String> dates = days.stream().map(m -> (String) m.get("date")).collect(Collectors.toList());
@@ -97,7 +110,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
         return r;
     }
 
-    private BigDecimal latestSoilMoisture(Integer plotId) {
+    private BigDecimal latestSoilMoisture(String plotId) {
         QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
         qw.lambda().eq(YoucaiSensorHourly::getPlotId, plotId)
                 .eq(YoucaiSensorHourly::getDelFlag, 0)
@@ -107,7 +120,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
         return row != null && row.getSoilMoisturePct() != null ? row.getSoilMoisturePct() : BigDecimal.ZERO;
     }
 
-    private List<Map<String, Object>> aggregateDaily(Integer plotId, int days) {
+    private List<Map<String, Object>> aggregateDaily(String plotId, int days) {
         QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
         qw.lambda().eq(YoucaiSensorHourly::getPlotId, plotId)
                 .eq(YoucaiSensorHourly::getDelFlag, 0)

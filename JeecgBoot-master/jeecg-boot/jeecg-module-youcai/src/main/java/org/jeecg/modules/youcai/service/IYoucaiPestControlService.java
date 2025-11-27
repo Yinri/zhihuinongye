@@ -20,6 +20,6 @@ public interface IYoucaiPestControlService extends IService<YoucaiPestControl> {
        Mono <List<Map<String, Object>>> getPestImages();
        String aiAnalysis(AnalysisRequestDTO req) throws Exception;
        Mono<List<Map<String, Object>>> getAllPestImages(String startDate, String endDate);
-       List<YoucaiPestControl> findControl(Integer plotId, String start, String end);
+       List<YoucaiPestControl> findControl(String plotId, String start, String end);
 
 }

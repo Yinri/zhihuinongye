@@ -25,39 +25,12 @@
               </div>
             </form>
           </div>
-          <div class="aui-flex aui-third-text">
-            <div class="aui-flex-box aui-third-border">
-              <span>{{ t('sys.login.otherSignIn') }}</span>
-            </div>
-          </div>
-          <div class="aui-flex" :class="`${prefixCls}-sign-in-way`">
-            <div class="aui-flex-box">
-              <div class="aui-third-login">
-                <a href="" title="github" @click="onThirdLogin('github')"><GithubFilled /></a>
-              </div>
-            </div>
-            <div class="aui-flex-box">
-              <div class="aui-third-login">
-                <a href="" title="企业微信" @click="onThirdLogin('wechat_enterprise')"><icon-font class="item-icon" type="icon-qiyeweixin3" /></a>
-              </div>
-            </div>
-            <div class="aui-flex-box">
-              <div class="aui-third-login">
-                <a href="" title="钉钉" @click="onThirdLogin('dingtalk')"><DingtalkCircleFilled /></a>
-              </div>
-            </div>
-            <div class="aui-flex-box">
-              <div class="aui-third-login">
-                <a href="" title="微信" @click="onThirdLogin('wechat_open')"><WechatFilled /></a>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
     </div>
   </div>
-  <!-- 第三方登录相关弹框 -->
-  <ThirdModal ref="thirdModalRef"></ThirdModal>
+  
 </template>
 
 <script lang="ts" setup name="mini-code-login">
@@ -65,22 +38,19 @@
   import { getLoginQrcode, getQrcodeToken } from '/@/api/sys/user';
   import { useUserStore } from '/@/store/modules/user';
   import { QrCode } from '/@/components/Qrcode/index';
-  import ThirdModal from '/@/views/sys/login/ThirdModal.vue';
+  
   import logoImg from '/@/assets/loginmini/icon/jeecg_logo.png';
   import adTextImg from '/@/assets/loginmini/icon/jeecg_ad_text.png';
   import { useI18n } from '/@/hooks/web/useI18n';
   import { useDesign } from "/@/hooks/web/useDesign";
-  import { GithubFilled, WechatFilled, DingtalkCircleFilled, createFromIconfontCN } from '@ant-design/icons-vue';
+  
 
-  const IconFont = createFromIconfontCN({
-    scriptUrl: '//at.alicdn.com/t/font_2316098_umqusozousr.js',
-  });
+  
   const { prefixCls } = useDesign('minilogin');
   const { t } = useI18n();
   const qrCodeUrl = ref<string>('');
   let timer: IntervalHandle;
   const state = ref('0');
-  const thirdModalRef = ref();
   const userStore = useUserStore();
   const emit = defineEmits(['go-back', 'success', 'register']);
 
@@ -128,13 +98,7 @@
     if (timer) clearInterval(timer);
   }
 
-  /**
-   * 第三方登录
-   * @param type
-   */
-  function onThirdLogin(type) {
-    thirdModalRef.value.onThirdLogin(type);
-  }
+  
 
   /**
    * 初始化表单

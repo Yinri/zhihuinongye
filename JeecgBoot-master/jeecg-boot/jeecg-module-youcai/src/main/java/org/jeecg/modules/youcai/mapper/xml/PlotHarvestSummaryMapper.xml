@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jeecg.modules.youcai.mapper.PlotHarvestSummaryMapper">
+    
+    <select id="selectAll" resultType="org.jeecg.modules.youcai.dto.harvest.PlotHarvestSummaryDTO">
+        SELECT 
+           p.id AS plotId, 
+           p.base_id AS baseId, 
+           p.area AS plotArea, 
+           COALESCE(SUM(h.area), 0) AS harvestedArea, 
+           COALESCE(SUM(h.total_yield), 0) AS harvestedYield, 
+           MAX(h.harvest_date) AS lastHarvestDate, 
+           CASE 
+             WHEN COALESCE(SUM(h.area), 0) >= p.area THEN 2 
+             WHEN COALESCE(SUM(h.area), 0) > 0 THEN 1 
+             ELSE 0 
+           END AS harvestStatus, 
+           ROUND( 
+             CASE 
+               WHEN p.area = 0 THEN 0 
+               ELSE LEAST(COALESCE(SUM(h.area), 0) / p.area, 1) 
+             END * 100, 
+             2 
+           ) AS harvestPercent 
+         FROM youcai_plots p 
+         LEFT JOIN youcai_harvest h 
+           ON h.plot_id = p.id AND h.del_flag = 0 
+         GROUP BY p.id, p.base_id, p.area
+    </select>
+    
+    <select id="selectByBaseId" resultType="org.jeecg.modules.youcai.dto.harvest.PlotHarvestSummaryDTO">
+        SELECT 
+           p.id AS plotId, 
+           p.base_id AS baseId, 
+           p.area AS plotArea, 
+           COALESCE(SUM(h.area), 0) AS harvestedArea, 
+           COALESCE(SUM(h.total_yield), 0) AS harvestedYield, 
+           MAX(h.harvest_date) AS lastHarvestDate, 
+           CASE 
+             WHEN COALESCE(SUM(h.area), 0) >= p.area THEN 2 
+             WHEN COALESCE(SUM(h.area), 0) > 0 THEN 1 
+             ELSE 0 
+           END AS harvestStatus, 
+           ROUND( 
+             CASE 
+               WHEN p.area = 0 THEN 0 
+               ELSE LEAST(COALESCE(SUM(h.area), 0) / p.area, 1) 
+             END * 100, 
+             2 
+           ) AS harvestPercent 
+         FROM youcai_plots p 
+         LEFT JOIN youcai_harvest h 
+           ON h.plot_id = p.id AND h.del_flag = 0 
+         WHERE p.base_id = #{baseId}
+         GROUP BY p.id, p.base_id, p.area
+    </select>
+</mapper>

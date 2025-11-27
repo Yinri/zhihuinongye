@@ -1,11 +1,9 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.math.BigDecimal;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import org.jeecg.common.constant.ProvinceCityArea;
@@ -30,21 +28,17 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="种子投入表")
-public class YoucaiSeedInputs implements Serializable {
+public class YoucaiSeedInputs extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-	/**种子ID*/
-	@TableId(type = IdType.ASSIGN_ID)
-    @Schema(description = "种子ID")
-    private java.lang.Integer id;
 	/**生产计划ID*/
 	@Excel(name = "生产计划ID", width = 15)
     @Schema(description = "生产计划ID")
-    private java.lang.Integer planId;
+    private java.lang.String planId;
 	/**品种ID*/
 	@Excel(name = "品种ID", width = 15)
     @Schema(description = "品种ID")
-    private java.lang.Integer varietyId;
+    private java.lang.String varietyId;
 	/**种子用量(公斤)*/
 	@Excel(name = "种子用量(公斤)", width = 15)
     @Schema(description = "种子用量(公斤)")
@@ -63,22 +57,6 @@ public class YoucaiSeedInputs implements Serializable {
 	@Excel(name = "供应商", width = 15)
     @Schema(description = "供应商")
     private java.lang.String supplier;
-	/**创建人*/
-    @Schema(description = "创建人")
-    private java.lang.String createBy;
-	/**创建时间*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "创建时间")
-    private java.util.Date createTime;
-	/**更新人*/
-    @Schema(description = "更新人")
-    private java.lang.String updateBy;
-	/**更新时间*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "更新时间")
-    private java.util.Date updateTime;
 	/**所属部门*/
     @Schema(description = "所属部门")
     private java.lang.String sysOrgCode;

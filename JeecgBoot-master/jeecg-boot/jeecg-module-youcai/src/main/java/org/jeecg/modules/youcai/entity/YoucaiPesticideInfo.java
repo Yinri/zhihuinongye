@@ -1,14 +1,12 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.util.Date;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.DecimalMax;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
@@ -30,12 +28,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="农药信息表")
-public class YoucaiPesticideInfo implements Serializable {
+public class YoucaiPesticideInfo extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-    @TableId(type = IdType.AUTO)
-    @Schema(description = "农药ID")
-    private java.lang.Integer id;
     
     /**农药编码*/
     @Excel(name = "农药编码", width = 15)
@@ -107,25 +102,6 @@ public class YoucaiPesticideInfo implements Serializable {
     @Schema(description = "生产厂家")
     private java.lang.String manufacturer;
     
-    /**创建人*/
-    @Schema(description = "创建人")
-    private java.lang.String createBy;
-    
-    /**创建时间*/
-    @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "创建时间")
-    private java.util.Date createTime;
-    
-    /**更新人*/
-    @Schema(description = "更新人")
-    private java.lang.String updateBy;
-    
-    /**更新时间*/
-    @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
-    @DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "更新时间")
-    private java.util.Date updateTime;
     
     /**所属部门*/
     @Schema(description = "所属部门")

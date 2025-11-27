@@ -1,9 +1,8 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.math.BigDecimal;
 import java.util.Date;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,11 +14,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="油菜-传感器小时级数据")
-public class YoucaiSensorHourly implements Serializable {
-    @TableId
-    private Long id;
+public class YoucaiSensorHourly extends JeecgEntity {
     private String deviceCode;
-    private Integer plotId;
+    private String plotId;
     private Date hourTs;
     private BigDecimal airTempC;
     private BigDecimal relHumidityPct;
@@ -30,10 +27,7 @@ public class YoucaiSensorHourly implements Serializable {
     private BigDecimal soilMoisturePct;
     private BigDecimal dewTempC;
     private BigDecimal vpdKpa;
-    private String createBy;
-    private Date createTime;
-    private String updateBy;
-    private Date updateTime;
+    
     private String sysOrgCode;
     private Integer delFlag;
 }

@@ -40,10 +40,6 @@
       rowId.value = data.record.id;
     } else {
       //新增时重置表单
-      setFieldsValue({
-        growthStage: '未播种',
-      });
-      
       // 如果有传入的多边形坐标数据，设置到表单中
       if (data?.polygonCoords) {
         await setFieldsValue({

@@ -121,7 +121,7 @@ import { getPlotListByBaseId } from './plot.api';
       if (plotList && plotList.length > 0) {
         const plotOptions = plotList.map((plot) => ({
           label: plot.plotName,
-          value: plot.id,
+          value: String(plot.id),
         }));
 
         // 更新地块选择组件的选项

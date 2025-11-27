@@ -3,27 +3,30 @@
     <div ref="mapContainer" class="map-container"></div>
     
     <!-- 地块信息弹窗 -->
-    <div v-if="selectedPlot" class="plot-info-popup" :style="{ left: popupPosition.x + 'px', top: popupPosition.y + 'px' }">
-      <a-card size="small" :title="selectedPlot.plotName || selectedPlot.name || '地块信息'" class="plot-popup-card" style="width: 320px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
-        <template #extra>
-          <a-button type="text" size="small" @click="closePlotInfo">
-            <Icon icon="ant-design:close-outlined" />
-          </a-button>
-        </template>
-        <div class="plot-info-content">
-          <p><strong>地块编号：</strong>{{ selectedPlot.id || selectedPlot.code || '-' }}</p>
-          <p><strong>地块面积：</strong>{{ selectedPlot.area }} 亩</p>
-          <p><strong>土壤类型：</strong>{{ selectedPlot.soilType || '-' }}</p>
-          <p><strong>作物类型：</strong>{{ selectedPlot.cropType || '-' }}</p>
-          <p><strong>生长阶段：</strong>{{ selectedPlot.growthStage || '-' }}</p>
-          <p><strong>创建时间：</strong>{{ selectedPlot.createTime || '-' }}</p>
-          <p v-if="selectedPlot.description"><strong>描述：</strong>{{ selectedPlot.description }}</p>
-        </div>
-        <div class="plot-actions" v-if="enableManagement">
-          <a-button size="small" @click="editPlot(selectedPlot)">编辑</a-button>
-        </div>
-      </a-card>
-    </div>
+    <transition name="popup-fade">
+      <div v-if="selectedPlot" class="plot-info-popup" :style="{ left: popupPosition.x + 'px', top: popupPosition.y + 'px' }">
+        <a-card size="small" :title="popupTitle" class="plot-popup-card" style="width: 320px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
+          <template #extra>
+            <a-button type="text" size="small" @click="closePlotInfo">
+              <Icon icon="ant-design:close-outlined" />
+            </a-button>
+          </template>
+          
+          <!-- 使用插槽内容，如果提供了自定义插槽则使用自定义内容，否则使用默认内容 -->
+          <slot name="popup-content" :plot="selectedPlot">
+            <div class="plot-info-content">
+              <p><strong>地块面积：</strong>{{ selectedPlot.area }} 亩</p>
+              <p><strong>土壤类型：</strong>{{ selectedPlot.soilType || '-' }}</p>
+              <p><strong>地块状态：</strong>{{ selectedPlot.status || '-' }}</p>
+            </div>
+          </slot>
+          
+          <div class="plot-actions" v-if="enableManagement">
+            <a-button size="small" @click="editPlot(selectedPlot)">编辑</a-button>
+          </div>
+        </a-card>
+      </div>
+    </transition>
     
     <!-- 地图工具栏 -->
     <div class="map-toolbar" v-if="enableManagement">
@@ -110,6 +113,11 @@ const props = defineProps({
   showLodgingRiskBelow: {
     type: Boolean,
     default: false
+  },
+  // 新增prop，用于自定义弹出框标题
+  popupTitleFormatter: {
+    type: Function,
+    default: null
   }
 });
 
@@ -131,6 +139,16 @@ const mapHeightComputed = computed(() => {
   return props.mapHeight || '800px';
 });
 
+// 计算弹出框标题
+const popupTitle = computed(() => {
+  // 如果提供了自定义标题格式化函数，则使用它
+  if (props.popupTitleFormatter && typeof props.popupTitleFormatter === 'function') {
+    return props.popupTitleFormatter(selectedPlot.value);
+  }
+  // 否则使用默认格式
+  return `${selectedPlot.value?.plotName || selectedPlot.value?.name || '地块信息'} (${selectedPlot.value?.plotCode || selectedPlot.value?.id || '-'})`;
+});
+
 // 地图容器大小变化监听
 const resizeObserver = ref<ResizeObserver | null>(null);
 
@@ -138,6 +156,7 @@ const resizeObserver = ref<ResizeObserver | null>(null);
 const selectStore = useSelectStore();
 const { selectedBase } = storeToRefs(selectStore);
 const selectedBaseId = computed(() => selectedBase.value.baseId);
+const hasBaseCenter = computed(() => !!(selectedBase.value.longitude && selectedBase.value.latitude));
 
 const { createMessage } = useMessage();
 
@@ -212,7 +231,7 @@ const initMap = async () => {
     // 优先使用store中的基地经纬度信息，如果没有则使用默认坐标
     if (selectedBase.value.longitude && selectedBase.value.latitude) {
       console.log('使用基地坐标设置地图中心:', selectedBase.value.longitude, selectedBase.value.latitude);
-      mapInstance.centerAndZoom(new T.LngLat(selectedBase.value.longitude, selectedBase.value.latitude), 16);
+      mapInstance.centerAndZoom(new T.LngLat(selectedBase.value.longitude, selectedBase.value.latitude), 15);
     } else {
       // 设置地图中心和缩放级别（默认显示中国中心）
       console.log('使用默认坐标设置地图中心');
@@ -236,6 +255,15 @@ const initMap = async () => {
     if (props.enableManagement) {
       initDrawingTools();
     }
+    
+    // 添加点击地图空白区域关闭弹出框的事件
+    mapInstance.addEventListener('click', (event) => {
+      // 检查点击的目标是否是地块多边形
+      if (!event.target || !event.target.plotData) {
+        // 如果不是地块，关闭弹出框
+        closePlotInfo();
+      }
+    });
   } catch (error) {
     console.error('初始化地图失败:', error);
     createMessage.error('地图初始化失败，请刷新页面重试');
@@ -248,14 +276,14 @@ const loadBaseLocation = async () => {
     // 使用store中存储的基地经纬度信息
     if (selectedBase.value.longitude && selectedBase.value.latitude) {
       console.log('loadBaseLocation: 使用基地坐标设置地图中心:', selectedBase.value.longitude, selectedBase.value.latitude);
-      mapInstance.centerAndZoom(new T.LngLat(selectedBase.value.longitude, selectedBase.value.latitude), 16);
+      mapInstance.centerAndZoom(new T.LngLat(selectedBase.value.longitude, selectedBase.value.latitude), 15);
     } else {
       // 如果store中没有经纬度信息，调用API获取
       console.log('loadBaseLocation: 基地坐标为空，调用API获取');
       try {
         const baseInfo = await getBaseById(selectedBaseId.value);
         if (baseInfo && baseInfo.longitude && baseInfo.latitude) {
-          mapInstance.centerAndZoom(new T.LngLat(baseInfo.longitude, baseInfo.latitude), 16);
+          mapInstance.centerAndZoom(new T.LngLat(baseInfo.longitude, baseInfo.latitude), 18);
           // 更新store中的经纬度信息
           selectStore.updateSelectedBase({
             baseId: selectedBase.value.baseId,
@@ -416,6 +444,8 @@ const displayPlots = () => {
           
           // 添加点击事件
           polygon.addEventListener('click', plotClickHandler);
+          (polygon as any).__handlers = (polygon as any).__handlers || {};
+          (polygon as any).__handlers.click = plotClickHandler;
           
           // 只有在启用hover效果时才添加hover事件
           if (props.enablePlotHover) {
@@ -515,6 +545,8 @@ const displayPlots = () => {
             try {
               polygon.addEventListener('mouseover', hoverHandler);
               polygon.addEventListener('mouseout', leaveHandler);
+              (polygon as any).__handlers.mouseover = hoverHandler;
+              (polygon as any).__handlers.mouseout = leaveHandler;
               console.log('地块hover事件添加成功');
             } catch (e) {
               console.error('添加地块hover事件失败:', e);
@@ -536,15 +568,14 @@ const displayPlots = () => {
     // 调整地图视野以包含所有地块
     const bounds = calculateBounds(plotMarkers.value);
     if (bounds) {
-      try {
-        // 使用setViewport方法调整地图视野以包含所有地块
-        mapInstance.setViewport(bounds);
-      } catch (error) {
-        console.error('调整地图视野失败:', error);
-        // 如果setViewport失败，尝试使用centerAndZoom
-        if (bounds.getCenter) {
-          const center = bounds.getCenter();
-          mapInstance.centerAndZoom(center, 14);
+      if (!hasBaseCenter.value) {
+        try {
+          mapInstance.setViewport(bounds);
+        } catch (error) {
+          if (bounds.getCenter) {
+            const center = bounds.getCenter();
+          mapInstance.centerAndZoom(center, 15);
+          }
         }
       }
     }
@@ -582,8 +613,10 @@ const displaySensors = () => {
       // 存储传感器数据到标记对象，用于事件委托
       marker.sensorData = sensor;
       
-      // 添加点击事件
+      // 添加点击事件并存储 handler 引用
       marker.addEventListener('click', sensorClickHandler);
+      (marker as any).__handlers = (marker as any).__handlers || {};
+      (marker as any).__handlers.click = sensorClickHandler;
       
       // 将标记添加到地图（不使用DocumentFragment，因为地图元素可能不是标准DOM节点）
       mapInstance.addOverLay(marker);
@@ -596,15 +629,14 @@ const displaySensors = () => {
     // 调整地图视野以包含所有传感器
     const bounds = calculateBounds(sensorMarkers.value);
     if (bounds) {
-      try {
-        // 使用setViewport方法调整地图视野以包含所有传感器
-        mapInstance.setViewport(bounds);
-      } catch (error) {
-        console.error('调整地图视野失败:', error);
-        // 如果setViewport失败，尝试使用centerAndZoom
-        if (bounds.getCenter) {
-          const center = bounds.getCenter();
-          mapInstance.centerAndZoom(center, 14);
+      if (!hasBaseCenter.value) {
+        try {
+          mapInstance.setViewport(bounds);
+        } catch (error) {
+          if (bounds.getCenter) {
+            const center = bounds.getCenter();
+          mapInstance.centerAndZoom(center, 15);
+          }
         }
       }
     }
@@ -662,54 +694,81 @@ const showPlotInfo = async (plot, event) => {
         const point = mapInstance.lngLatToContainerPoint(lngLat);
         
         // 设置弹窗位置，考虑弹窗大小，避免超出屏幕
-        const popupWidth = props.useLodgingRiskPopup ? 800 : 320; // 根据弹窗类型设置宽度，与CSS保持一致
-        // 使用动态高度，根据视窗高度计算
-        const popupHeight = props.useLodgingRiskPopup ? Math.min(window.innerHeight * 0.85, 600) : 400; // 最大85vh
+        // 根据屏幕尺寸调整弹窗大小
+        const isMobile = window.innerWidth <= 768;
+        const popupWidth = isMobile ? window.innerWidth * 0.9 : 320; // 移动设备上使用90%宽度
+        const popupHeight = isMobile ? window.innerHeight * 0.6 : 200; // 移动设备上使用60%高度
         
         // 获取地图容器的位置和大小
         const mapRect = mapContainer.value.getBoundingClientRect();
         
         // 计算弹窗相对于地图容器的位置
-        let x = point.x + 10; // 右侧偏移10px
-        let y = point.y - popupHeight - 60; // 弹窗显示在点击点上方，向上偏移60px（增加40px）
+        // 默认显示在点击点的右上方
+        let x = point.x + 15; // 右侧偏移15px
+        let y = point.y - popupHeight - 15; // 上方偏移15px
         
-        // 检查是否超出右边界
-        if (x + popupWidth > mapRect.width) {
-          x = point.x - popupWidth - 10; // 显示在点击点左侧
-        }
-        
-        // 检查是否超出左边界
-        if (x < 10) {
-          x = 10; // 最小左边距
-        }
-        
-        // 检查是否超出上边界
-        if (y < 10) {
-          y = point.y + 10; // 改为显示在点击点下方
-        }
-        
-        // 再次检查是否超出下边界（特别是当改为显示在下方时）
-        if (y + popupHeight > mapRect.height - 10) {
-          // 如果下方也放不下，则居中显示
-          y = (mapRect.height - popupHeight) / 2;
+        // 移动设备上居中显示
+        if (isMobile) {
           x = (mapRect.width - popupWidth) / 2;
+          y = (mapRect.height - popupHeight) / 2;
+        } else {
+          // 桌面设备上的位置调整
+          // 检查是否超出右边界
+          if (x + popupWidth > mapRect.width - 10) {
+            x = point.x - popupWidth - 15; // 显示在点击点左侧
+          }
+          
+          // 检查是否超出左边界
+          if (x < 10) {
+            x = 10; // 最小左边距
+          }
+          
+          // 检查是否超出上边界
+          if (y < 10) {
+            y = point.y + 15; // 改为显示在点击点下方
+          }
+          
+          // 再次检查是否超出下边界
+          if (y + popupHeight > mapRect.height - 10) {
+            // 如果下方也放不下，则居中显示
+            y = (mapRect.height - popupHeight) / 2;
+            x = (mapRect.width - popupWidth) / 2;
+          }
+          
+          // 最后确保不会超出任何边界
+          x = Math.max(10, Math.min(x, mapRect.width - popupWidth - 10));
+          y = Math.max(10, Math.min(y, mapRect.height - popupHeight - 10));
         }
-        
-        // 最后确保不会超出任何边界
-        x = Math.max(10, Math.min(x, mapRect.width - popupWidth - 10));
-        y = Math.max(10, Math.min(y, mapRect.height - popupHeight - 10));
         
         popupPosition.value = { x, y };
       } else if (event && event.domEvent) {
         // 备用方案：使用domEvent
         const mapRect = mapContainer.value.getBoundingClientRect();
-        popupPosition.value = {
-          x: event.domEvent.clientX - mapRect.left + 10,
-          y: event.domEvent.clientY - mapRect.top + 10
-        };
+        const isMobile = window.innerWidth <= 768;
+        const popupWidth = isMobile ? window.innerWidth * 0.9 : 320;
+        
+        // 移动设备上居中显示
+        if (isMobile) {
+          popupPosition.value = {
+            x: (mapRect.width - popupWidth) / 2,
+            y: 50
+          };
+        } else {
+          popupPosition.value = {
+            x: event.domEvent.clientX - mapRect.left + 10,
+            y: event.domEvent.clientY - mapRect.top + 10
+          };
+        }
       } else {
         // 默认位置
-        popupPosition.value = { x: 50, y: 50 };
+        const mapRect = mapContainer.value.getBoundingClientRect();
+        const isMobile = window.innerWidth <= 768;
+        const popupWidth = isMobile ? window.innerWidth * 0.9 : 320;
+        
+        popupPosition.value = {
+          x: (mapRect.width - popupWidth) / 2,
+          y: 50
+        };
       }
     }
   } catch (error) {
@@ -766,6 +825,23 @@ const closePlotInfo = () => {
   selectedPlot.value = null;
 };
 
+// 监听ESC键关闭弹窗
+const handleKeyDown = (event) => {
+  if (event.key === 'Escape' && selectedPlot.value) {
+    closePlotInfo();
+  }
+};
+
+// 添加键盘事件监听
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown);
+});
+
+// 移除键盘事件监听
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown);
+});
+
 // 清除地块标记
 const clearPlotMarkers = () => {
   if (!mapInstance || !plotMarkers.value.length) return;
@@ -776,10 +852,12 @@ const clearPlotMarkers = () => {
       if (polygon) {
         // 移除所有事件监听器
         try {
-          if (polygon.removeEventListener) {
-            polygon.removeEventListener('click');
-            polygon.removeEventListener('mouseover');
-            polygon.removeEventListener('mouseout');
+          const handlers = (polygon as any).__handlers;
+          if (polygon.removeEventListener && handlers) {
+            if (handlers.click) polygon.removeEventListener('click', handlers.click);
+            if (handlers.mouseover) polygon.removeEventListener('mouseover', handlers.mouseover);
+            if (handlers.mouseout) polygon.removeEventListener('mouseout', handlers.mouseout);
+            (polygon as any).__handlers = undefined;
           }
         } catch (e) {
           console.warn('移除地块事件监听器失败:', e);
@@ -814,8 +892,10 @@ const clearSensorMarkers = () => {
       if (marker) {
         // 移除所有事件监听器
         try {
-          if (marker.removeEventListener) {
-            marker.removeEventListener('click');
+          const handlers = (marker as any).__handlers;
+          if (marker.removeEventListener && handlers) {
+            if (handlers.click) marker.removeEventListener('click', handlers.click);
+            (marker as any).__handlers = undefined;
           }
         } catch (e) {
           console.warn('移除传感器事件监听器失败:', e);
@@ -877,10 +957,17 @@ const toggleDrawingMode = (mode) => {
   console.log('drawingMode.value:', drawingMode.value);
   console.log('selectedBaseId.value:', selectedBaseId.value);
   
+  // 如果绘制工具未初始化，尝试重新初始化
   if (!drawingTool.value) {
-    console.error('绘制工具未初始化');
-    createMessage.error('绘制工具未初始化，请刷新页面重试');
-    return;
+    console.log('绘制工具未初始化，尝试重新初始化');
+    initDrawingTools();
+    
+    // 如果初始化仍然失败，返回错误
+    if (!drawingTool.value) {
+      console.error('绘制工具初始化失败');
+      createMessage.error('绘制工具初始化失败，请刷新页面重试');
+      return;
+    }
   }
   
   if (drawingMode.value === mode) {
@@ -1088,7 +1175,7 @@ const resetMapView = () => {
   
   if (selectedBaseId.value && selectedBase.value.longitude && selectedBase.value.latitude) {
     console.log('resetMapView: 使用基地坐标重置地图视图:', selectedBase.value.longitude, selectedBase.value.latitude);
-    mapInstance.centerAndZoom(new T.LngLat(selectedBase.value.longitude, selectedBase.value.latitude), 14);
+    mapInstance.centerAndZoom(new T.LngLat(selectedBase.value.longitude, selectedBase.value.latitude), 15);
   } else {
     // 重置到默认视图
     console.log('resetMapView: 使用默认坐标重置地图视图');
@@ -1104,6 +1191,9 @@ const resetMapView = () => {
 
 // 编辑地块
 const editPlot = (plot) => {
+  // 关闭当前信息弹窗
+  closePlotInfo();
+  
   currentPlotData.value = plot;
   openModal(true, {
     isUpdate: true,
@@ -1166,7 +1256,7 @@ const handlePlotFormCancel = () => {
     // 关闭绘制工具
     if (drawingTool.value) {
       drawingTool.value.close();
-      drawingTool.value = null;
+      // 不将drawingTool设置为null，以便后续可以继续使用
     }
     
     // 重置绘制模式
@@ -1236,7 +1326,7 @@ const stopWatchBaseLocation = watch(
   ([longitude, latitude]) => {
     if (longitude && latitude && mapInstance) {
       console.log('基地经纬度变化，更新地图中心:', longitude, latitude);
-      mapInstance.centerAndZoom(new T.LngLat(longitude, latitude), 14);
+      mapInstance.centerAndZoom(new T.LngLat(longitude, latitude), 15);
     }
   }
 );
@@ -1319,10 +1409,12 @@ onUnmounted(() => {
   // 清理当前多边形
   if (currentPolygon.value) {
     try {
-      if (currentPolygon.value.removeEventListener) {
-        currentPolygon.value.removeEventListener('click');
-        currentPolygon.value.removeEventListener('mouseover');
-        currentPolygon.value.removeEventListener('mouseout');
+      const handlers = (currentPolygon.value as any).__handlers;
+      if (currentPolygon.value.removeEventListener && handlers) {
+        if (handlers.click) currentPolygon.value.removeEventListener('click', handlers.click);
+        if (handlers.mouseover) currentPolygon.value.removeEventListener('mouseover', handlers.mouseover);
+        if (handlers.mouseout) currentPolygon.value.removeEventListener('mouseout', handlers.mouseout);
+        (currentPolygon.value as any).__handlers = undefined;
       }
       if (mapInstance) {
         mapInstance.removeOverLay(currentPolygon.value);
@@ -1391,30 +1483,39 @@ onUnmounted(() => {
   .plot-info-popup {
     position: absolute; /* 改为绝对定位，相对于地图容器 */
     z-index: 9999; /* 提高z-index确保显示在最上层 */
-    animation: fadeIn 0.3s ease-in-out;
     max-width: 95vw; /* 限制最大宽度，防止超出视口 */
     max-height: 95vh; /* 限制最大高度，防止超出视口 */
     overflow: visible; /* 确保内容可见 */
     
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
     .plot-popup-card {
-      width: 800px; /* 增加宽度以容纳更多信息 */
-      max-height: 85vh; /* 减小最大高度，确保在视口内 */
+      width: 320px; /* 调整宽度为更合适的尺寸 */
+      max-height: 90vh; /* 减小最大高度，确保在视口内 */
       overflow-y: auto; /* 添加垂直滚动条 */
       overflow-x: hidden; /* 隐藏水平滚动条 */
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      border-radius: 12px;
       position: relative; /* 确保相对定位 */
+      border: none;
+      
+      /* 添加微妙的背景渐变 */
+      background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+      
+      /* 添加微妙的边框光晕效果 */
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 12px;
+        padding: 1px;
+        background: linear-gradient(145deg, rgba(24, 144, 255, 0.2), rgba(82, 196, 26, 0.2));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        z-index: -1;
+      }
       
       /* 自定义滚动条样式 */
       &::-webkit-scrollbar {
@@ -1422,30 +1523,93 @@ onUnmounted(() => {
       }
       
       &::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: rgba(0, 0, 0, 0.05);
         border-radius: 3px;
       }
       
       &::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
+        background: rgba(0, 0, 0, 0.2);
         border-radius: 3px;
         
         &:hover {
-          background: #a8a8a8;
+          background: rgba(0, 0, 0, 0.3);
         }
+      }
+      
+      /* 卡片标题样式优化 */
+      :deep(.ant-card-head) {
+        background: linear-gradient(90deg, rgba(24, 144, 255, 0.05) 0%, rgba(82, 196, 26, 0.05) 100%);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 12px 12px 0 0;
+        
+        .ant-card-head-title {
+          font-weight: 600;
+          font-size: 15px;
+          color: rgba(0, 0, 0, 0.85);
+        }
+        
+        .ant-card-extra {
+          .ant-btn {
+            color: rgba(0, 0, 0, 0.45);
+            border: none;
+            box-shadow: none;
+            
+            &:hover {
+              color: rgba(0, 0, 0, 0.85);
+              background-color: rgba(0, 0, 0, 0.06);
+            }
+          }
+        }
+      }
+      
+      /* 卡片内容样式优化 */
+      :deep(.ant-card-body) {
+        padding: 16px;
       }
       
       .plot-info-content {
         p {
-          margin-bottom: 8px;
-          font-size: 13px;
-          line-height: 1.4;
+          margin-bottom: 12px;
+          font-size: 14px;
+          line-height: 1.6;
+          color: rgba(0, 0, 0, 0.75);
+          display: flex;
+          align-items: center;
+          
+          strong {
+            color: rgba(0, 0, 0, 0.9);
+            font-weight: 600;
+            margin-right: 8px;
+            min-width: 80px;
+          }
+          
+          /* 添加微妙的分隔线 */
+          &:not(:last-child)::after {
+            content: '';
+            display: block;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
+            margin: 12px 0 8px;
+          }
         }
       }
       
       .plot-actions {
-        margin-top: 12px;
+        margin-top: 16px;
         text-align: right;
+        padding-top: 12px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        
+        .ant-btn {
+          border-radius: 6px;
+          font-weight: 500;
+          height: 32px;
+          padding: 0 16px;
+          
+          &:not(:last-child) {
+            margin-right: 8px;
+          }
+        }
       }
       
       // 风险等级总览卡片样式
@@ -1768,6 +1932,22 @@ onUnmounted(() => {
   }
 }
 
+/* 弹出框过渡动画 */
+.popup-fade-enter-active,
+.popup-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.popup-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
+.popup-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .plot-info-popup .plot-popup-card {
@@ -1786,6 +1966,191 @@ onUnmounted(() => {
   
   .risk-factors-info {
     grid-template-columns: 1fr !important;
+  }
+  
+  .risk-forecast {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .plot-info-popup .plot-popup-card {
+    width: 95vw;
+    max-width: 500px;
+  }
+  
+  .plot-popup-header {
+    padding: 12px 16px;
+    
+    .plot-popup-title {
+      font-size: 16px;
+    }
+  }
+  
+  .plot-popup-content {
+    padding: 12px 16px;
+  }
+  
+  .risk-overview-content {
+    .risk-level-info {
+      min-width: 100px;
+      
+      .risk-level-text {
+        font-size: 14px;
+      }
+      
+      .risk-level-value {
+        font-size: 24px;
+      }
+    }
+  }
+  
+  .risk-factors-info {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    
+    .factor-item {
+      padding: 8px;
+      
+      .factor-label {
+        font-size: 12px;
+      }
+      
+      .factor-value {
+        font-size: 14px;
+      }
+    }
+  }
+  
+  .risk-forecast {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    
+    .forecast-day {
+      padding: 8px;
+      
+      .day-date {
+        font-size: 12px;
+      }
+      
+      .risk-probability .probability-value {
+        font-size: 16px;
+      }
+    }
+  }
+  
+  .risk-trend-chart {
+    height: 250px;
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 576px) {
+  .plot-info-popup {
+    max-height: 80vh;
+    
+    .plot-popup-card {
+      width: 95vw;
+      max-width: none;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+  }
+  
+  .plot-popup-header {
+    padding: 10px 12px;
+    
+    .plot-popup-title {
+      font-size: 14px;
+    }
+  }
+  
+  .plot-popup-content {
+    padding: 10px 12px;
+  }
+  
+  .risk-overview {
+    padding: 12px;
+    
+    .section-title {
+      font-size: 14px;
+    }
+  }
+  
+  .risk-overview-content {
+    gap: 12px;
+    
+    .risk-level-info {
+      min-width: 80px;
+      
+      .risk-level-text {
+        font-size: 12px;
+      }
+      
+      .risk-level-value {
+        font-size: 20px;
+      }
+    }
+  }
+  
+  .risk-factors-info {
+    gap: 6px;
+    
+    .factor-item {
+      padding: 6px;
+      
+      .factor-label {
+        font-size: 11px;
+      }
+      
+      .factor-value {
+        font-size: 13px;
+      }
+    }
+  }
+  
+  .risk-forecast {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    
+    .forecast-day {
+      padding: 6px;
+      
+      .day-date {
+        font-size: 11px;
+      }
+      
+      .risk-probability .probability-value {
+        font-size: 14px;
+      }
+      
+      .risk-factors .factor-item {
+        font-size: 11px;
+      }
+    }
+  }
+  
+  .risk-trend-chart {
+    height: 200px;
+    min-height: 200px;
+  }
+  
+  .suggestions-card {
+    .suggestions-panel {
+      .suggestions-content .suggestion-item {
+        padding: 6px;
+        
+        .suggestion-text {
+          .suggestion-title {
+            font-size: 13px;
+          }
+          
+          .suggestion-desc {
+            font-size: 11px;
+          }
+        }
+      }
+    }
   }
 }
 

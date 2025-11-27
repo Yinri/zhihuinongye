@@ -11,6 +11,14 @@
         >
           <a-button type="primary"> 导入 </a-button>
         </a-upload>
+        <a-button
+          type="primary"
+          danger
+          :disabled="!selectedRowKeys || selectedRowKeys.length === 0"
+          @click="handleBatchDelete"
+        >
+          批量删除
+        </a-button>
       </template>
       <template #bodyCell="{ column, record }">
         <template v-if="column.dataIndex === 'action'">
@@ -37,7 +45,7 @@
   </div>
 </template>
 <script lang="ts">
-  import { defineComponent, reactive } from 'vue';
+  import { defineComponent, reactive, ref } from 'vue';
 
   import { BasicTable, useTable, TableAction } from '/@/components/Table';
   import { useModal } from '/@/components/Modal';
@@ -62,7 +70,8 @@
       const { createMessage } = useMessage();
       
       const searchInfo = reactive<Recordable>({});
-      const [registerTable, { reload, getSelectRows, setLoading }] = useTable({
+      const selectedRowKeys = ref<string[]>([]);
+      const [registerTable, { reload, getSelectRows, setLoading, clearSelectedRowKeys }] = useTable({
         title: '肥料信息列表',
         api: getFertilizerInfoList,
         columns,
@@ -83,6 +92,10 @@
         },
         rowSelection: {
           type: 'checkbox',
+          selectedRowKeys: selectedRowKeys,
+          onChange: (keys: string[]) => {
+            selectedRowKeys.value = keys;
+          },
         },
       });
 
@@ -113,11 +126,17 @@
       }
 
       async function handleBatchDelete() {
+        if (!selectedRowKeys.value || selectedRowKeys.value.length === 0) {
+          createMessage.warning('请选择要删除的数据');
+          return;
+        }
         try {
           setLoading(true);
-          const ids = getSelectRows().map((item) => item.id).join(',');
+          const ids = selectedRowKeys.value.join(',');
           await deleteBatchFertilizerInfo({ ids });
           createMessage.success('批量删除成功');
+          selectedRowKeys.value = [];
+          clearSelectedRowKeys();
           reload();
         } catch (error) {
           createMessage.error('批量删除失败');
@@ -171,6 +190,7 @@
         handleImport,
         handleSuccess,
         searchInfo,
+        selectedRowKeys,
       };
     },
   });

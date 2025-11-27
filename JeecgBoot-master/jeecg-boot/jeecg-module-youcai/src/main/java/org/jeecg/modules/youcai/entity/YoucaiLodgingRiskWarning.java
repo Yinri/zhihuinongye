@@ -1,11 +1,9 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.math.BigDecimal;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import org.jeecg.common.constant.ProvinceCityArea;
@@ -30,16 +28,13 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="倒伏风险预警表")
-public class YoucaiLodgingRiskWarning implements Serializable {
+public class YoucaiLodgingRiskWarning extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-	@TableId(type = IdType.AUTO)
-    @Schema(description = "预警记录ID")
-    private java.lang.Integer id;
 	/**地块ID，外键关联youcai_plots表*/
 	@Excel(name = "地块ID，外键关联youcai_plots表", width = 15)
     @Schema(description = "地块ID，外键关联youcai_plots表")
-    private java.lang.Integer plotId;
+    private java.lang.String plotId;
 	/**风险等级：低 / 中 / 高*/
 	@Excel(name = "风险等级：低 / 中 / 高", width = 15)
     @Schema(description = "风险等级：低 / 中 / 高")
@@ -56,22 +51,6 @@ public class YoucaiLodgingRiskWarning implements Serializable {
 	@Excel(name = "预警状态", width = 15)
     @Schema(description = "预警状态")
     private java.lang.String warningStatus;
-	/**创建人*/
-    @Schema(description = "创建人")
-    private java.lang.String createBy;
-	/**记录创建时间，系统生成*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "记录创建时间，系统生成")
-    private java.util.Date createTime;
-	/**更新人*/
-    @Schema(description = "更新人")
-    private java.lang.String updateBy;
-	/**更新时间*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "更新时间")
-    private java.util.Date updateTime;
 	/**所属部门*/
     @Schema(description = "所属部门")
     private java.lang.String sysOrgCode;

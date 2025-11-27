@@ -177,7 +177,7 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
     }
 
     @Override
-    public List<YoucaiPestControl> findControl(Integer plotId, String start, String end) {
+    public List<YoucaiPestControl> findControl(String plotId, String start, String end) {
         return youcaiPestControlMapper.queryControlHistory(plotId, start, end);
     }
 

@@ -46,16 +46,7 @@
                           <a-input class="fix-auto-fill" type="password" :placeholder="t('sys.login.password')" v-model:value="formData.password" />
                         </a-form-item>
                       </div>
-                      <div class="aui-inputClear">
-                        <i class="icon icon-code"></i>
-                        <a-form-item>
-                          <a-input class="fix-auto-fill" type="text" :placeholder="t('sys.login.inputCode')" v-model:value="formData.inputCode" />
-                        </a-form-item>
-                        <div class="aui-code">
-                          <img v-if="randCodeData.requestCodeSuccess" :src="randCodeData.randCodeImage" @click="handleChangeCheckCode" />
-                          <img v-else style="margin-top: 2px; max-width: initial" :src="codeImg" @click="handleChangeCheckCode" />
-                        </div>
-                      </div>
+                      
                       <div class="aui-flex">
                         <div class="aui-flex-box">
                           <div class="aui-choice">
@@ -100,33 +91,7 @@
                 </div>
               </div>
               <a-form @keyup.enter.native="loginHandleClick">
-                <div class="aui-flex aui-third-text">
-                  <div class="aui-flex-box aui-third-border">
-                    <span>{{ t('sys.login.otherSignIn') }}</span>
-                  </div>
-                </div>
-                <div class="aui-flex" :class="`${prefixCls}-sign-in-way`">
-                  <div class="aui-flex-box">
-                    <div class="aui-third-login">
-                      <a title="github" @click="onThirdLogin('github')"><GithubFilled /></a>
-                    </div>
-                  </div>
-                  <div class="aui-flex-box">
-                    <div class="aui-third-login">
-                      <a title="企业微信" @click="onThirdLogin('wechat_enterprise')"><icon-font class="item-icon" type="icon-qiyeweixin3" /></a>
-                    </div>
-                  </div>
-                  <div class="aui-flex-box">
-                    <div class="aui-third-login">
-                      <a title="钉钉" @click="onThirdLogin('dingtalk')"><DingtalkCircleFilled /></a>
-                    </div>
-                  </div>
-                  <div class="aui-flex-box">
-                    <div class="aui-third-login">
-                      <a title="微信" @click="onThirdLogin('wechat_open')"><WechatFilled /></a>
-                    </div>
-                  </div>
-                </div>
+                
               </a-form>
             </div>
           </div>
@@ -142,23 +107,17 @@
     <div v-show="type === 'codeLogin'" :class="`${prefixCls}-form`">
       <MiniCodelogin ref="codeRef" @go-back="goBack" @success="handleSuccess" />
     </div>
-    <!-- 第三方登录相关弹框 -->
-    <ThirdModal ref="thirdModalRef"></ThirdModal>
     
-    <!-- 图片验证码弹窗 -->
-    <CaptchaModal @register="captchaRegisterModal" @ok="getLoginCode" />
   </div>
 </template>
 <script lang="ts" setup name="login-mini">
-  import { getCaptcha, getCodeInfo } from '/@/api/sys/user';
+  import { getCaptcha } from '/@/api/sys/user';
   import { computed, onMounted, reactive, ref, toRaw, unref } from 'vue';
-  import codeImg from '/@/assets/images/checkcode.png';
   import { Rule } from '/@/components/Form';
   import { useUserStore } from '/@/store/modules/user';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
   import { SmsEnum } from '/@/views/sys/login/useLogin';
-  import ThirdModal from '/@/views/sys/login/ThirdModal.vue';
   import MiniForgotpad from './MiniForgotpad.vue';
   import MiniRegister from './MiniRegister.vue';
   import MiniCodelogin from './MiniCodelogin.vue';
@@ -168,14 +127,7 @@
   import { useLocaleStore } from '/@/store/modules/locale';
   import { useDesign } from "/@/hooks/web/useDesign";
   import { useAppInject } from "/@/hooks/web/useAppInject";
-  import { GithubFilled, WechatFilled, DingtalkCircleFilled, createFromIconfontCN } from '@ant-design/icons-vue';
-  import CaptchaModal from '@/components/jeecg/captcha/CaptchaModal.vue';
-  import { useModal } from "@/components/Modal";
-  import { ExceptionEnum } from "@/enums/exceptionEnum";
 
-  const IconFont = createFromIconfontCN({
-    scriptUrl: '//at.alicdn.com/t/font_2316098_umqusozousr.js',
-  });
   const { prefixCls } = useDesign('mini-login');
   const { notification, createMessage } = useMessage();
   const userStore = useUserStore();
@@ -183,8 +135,6 @@
   const localeStore = useLocaleStore();
   const showLocale = localeStore.getShowPicker;
   const randCodeData = reactive<any>({
-    randCodeImage: '',
-    requestCodeSuccess: false,
     checkKey: null,
   });
   const rememberMe = ref<string>('0');
@@ -203,8 +153,6 @@
     smscode: '',
   });
   const loginRef = ref();
-  //第三方登录弹窗
-  const thirdModalRef = ref();
   //扫码登录
   const codeRef = ref();
   //是否显示获取验证码
@@ -219,26 +167,13 @@
   const registerRef = ref();
   const loginLoading = ref<boolean>(false);
   const { getIsMobile } = useAppInject();
-  const [captchaRegisterModal, { openModal: openCaptchaModal }] = useModal();
   defineProps({
     sessionTimeout: {
       type: Boolean,
     },
   });
 
-  /**
-   * 获取验证码
-   */
-  function handleChangeCheckCode() {
-    formData.inputCode = '';
-    //update-begin---author:chenrui ---date:2025/1/7  for：[QQYUN-10775]验证码可以复用 #7674------------
-    randCodeData.checkKey = new Date().getTime() + Math.random().toString(36).slice(-4); // 1629428467008;
-    //update-end---author:chenrui ---date:2025/1/7  for：[QQYUN-10775]验证码可以复用 #7674------------
-    getCodeInfo(randCodeData.checkKey).then((res) => {
-      randCodeData.randCodeImage = res;
-      randCodeData.requestCodeSuccess = true;
-    });
-  }
+  
 
   /**
    * 切换登录方式
@@ -274,8 +209,6 @@
         toRaw({
           password: formData.password,
           username: formData.username,
-          captcha: formData.inputCode,
-          checkKey: randCodeData.checkKey,
           mode: 'none', //不要默认的错误提示
         })
       );
@@ -292,7 +225,7 @@
         description: error.message || t('sys.login.networkExceptionMsg'),
         duration: 3,
       });
-      handleChangeCheckCode();
+      
     } finally {
       loginLoading.value = false;
     }
@@ -345,12 +278,7 @@
     }
     //update-begin---author:wangshuai---date:2024-04-18---for:【QQYUN-9005】同一个IP，1分钟超过5次短信，则提示需要验证码---
     //update-begin---author:wangshuai---date:2025-07-15---for:【issues/8567】严重：修改密码存在水平越权问题：登录应该用登录模板不应该用忘记密码的模板---
-    const result = await getCaptcha({ mobile: phoneFormData.mobile, smsmode: SmsEnum.LOGIN }).catch((res) =>{
-    //update-end---author:wangshuai---date:2025-07-15---for:【issues/8567】严重：修改密码存在水平越权问题：登录应该用登录模板不应该用忘记密码的模板---
-      if(res.code === ExceptionEnum.PHONE_SMS_FAIL_CODE){
-        openCaptchaModal(true, {});
-      }
-    });
+    const result = await getCaptcha({ mobile: phoneFormData.mobile, smsmode: SmsEnum.LOGIN }).catch(() =>{});
     //update-end---author:wangshuai---date:2024-04-18---for:【QQYUN-9005】同一个IP，1分钟超过5次短信，则提示需要验证码---
     if (result) {
       const TIME_COUNT = 60;
@@ -374,9 +302,7 @@
    * 第三方登录
    * @param type
    */
-  function onThirdLogin(type) {
-    thirdModalRef.value.onThirdLogin(type);
-  }
+  
 
   /**
    * 忘记密码
@@ -405,7 +331,7 @@
     Object.assign(phoneFormData, { mobile: "", smscode: "" });
     type.value = 'login';
     activeIndex.value = 'accountLogin';
-    handleChangeCheckCode();
+    
   }
 
   /**
@@ -428,10 +354,7 @@
     }, 300);
   }
 
-  onMounted(() => {
-    //加载验证码
-    handleChangeCheckCode();
-  });
+  onMounted(() => {});
 </script>
 
 <style lang="less" scoped>

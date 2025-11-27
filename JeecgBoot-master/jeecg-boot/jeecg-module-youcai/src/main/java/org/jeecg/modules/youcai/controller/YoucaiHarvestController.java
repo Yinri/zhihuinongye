@@ -132,7 +132,7 @@ public class YoucaiHarvestController extends JeecgController<YoucaiHarvest, IYou
      */
     @Operation(summary = "收获管理-统计数据")
     @GetMapping(value = "/stats")
-    public Result<HarvestStatsDTO> stats(@RequestParam(name = "baseId", required = false) Integer baseId) {
+    public Result<HarvestStatsDTO> stats(@RequestParam(name = "baseId", required = false) String baseId) {
         HarvestStatsDTO dto = harvestService.getHarvestStats(baseId);
         return Result.OK(dto);
     }
@@ -142,7 +142,7 @@ public class YoucaiHarvestController extends JeecgController<YoucaiHarvest, IYou
      */
     @Operation(summary = "收获管理-农机状态")
     @GetMapping(value = "/harvesterStatus")
-    public Result<java.util.List<HarvesterStatusDTO>> harvesterStatus(@RequestParam(name = "baseId", required = false) Integer baseId) {
+    public Result<java.util.List<HarvesterStatusDTO>> harvesterStatus(@RequestParam(name = "baseId", required = false) String baseId) {
         java.util.List<HarvesterStatusDTO> list = harvestService.getHarvesterStatus(baseId);
         return Result.OK(list);
     }
@@ -152,7 +152,7 @@ public class YoucaiHarvestController extends JeecgController<YoucaiHarvest, IYou
      */
     @Operation(summary = "收获管理-今日产量对比")
     @GetMapping(value = "/yieldChart")
-    public Result<java.util.List<YieldChartBarDTO>> yieldChart(@RequestParam(name = "baseId", required = false) Integer baseId) {
+    public Result<java.util.List<YieldChartBarDTO>> yieldChart(@RequestParam(name = "baseId", required = false) String baseId) {
         java.util.List<YieldChartBarDTO> list = harvestService.getYieldChart(baseId);
         return Result.OK(list);
     }
@@ -162,7 +162,7 @@ public class YoucaiHarvestController extends JeecgController<YoucaiHarvest, IYou
      */
     @Operation(summary = "收获管理-地块收割汇总视图")
     @GetMapping(value = "/plotSummary")
-    public Result<java.util.List<PlotHarvestSummaryDTO>> plotSummary(@RequestParam(name = "baseId", required = false) Integer baseId) {
+    public Result<java.util.List<PlotHarvestSummaryDTO>> plotSummary(@RequestParam(name = "baseId", required = false) String baseId) {
         java.util.List<PlotHarvestSummaryDTO> list = harvestService.getPlotHarvestSummary(baseId);
         return Result.OK(list);
     }

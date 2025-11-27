@@ -117,20 +117,14 @@ const [registerTable, { reload, getForm }] = useTable({
     dataIndex: 'action',
     fixed: 'right',
   },
-  // 添加搜索信息，包含基地ID
-  searchInfo: computed(() => {
-    const baseId = selectStore.selectedBase.baseId;
-    return baseId ? { baseId } : {};
-  }),
 });
 
 // 监听基地ID变化，重新加载数据
 watch(
-  () => selectStore.selectedBase.baseId,
-  (newBaseId) => {
-    if (newBaseId) {
-      reload();
-    }
+  () => selectStore.selectedBase?.baseId,
+  () => {
+    // 无论 baseId 是否存在，都重新加载数据
+    reload();
   },
   { immediate: true }
 );

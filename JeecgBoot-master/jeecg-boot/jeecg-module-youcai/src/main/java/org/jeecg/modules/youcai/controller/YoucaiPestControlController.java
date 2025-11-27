@@ -198,11 +198,11 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 				.onErrorReturn(Result.error("Failed to retrieve pest images"));
 	}
 	@PostMapping("findControl")
-	public Result<?> findControl(@RequestBody Map<String, Object> params) {
-		Integer plotId = (Integer) params.get("plotId");
-		String start = (String) params.get("start_date");
-		String end = (String) params.get("end_date");
-		List<YoucaiPestControl> list = youcaiPestControlService.findControl(plotId, start, end);
-		return Result.OK(list);
-	}
+    public Result<?> findControl(@RequestBody Map<String, Object> params) {
+        String plotId = (String) params.get("plotId");
+        String start = (String) params.get("start_date");
+        String end = (String) params.get("end_date");
+        List<YoucaiPestControl> list = youcaiPestControlService.findControl(plotId, start, end);
+        return Result.OK(list);
+    }
 }

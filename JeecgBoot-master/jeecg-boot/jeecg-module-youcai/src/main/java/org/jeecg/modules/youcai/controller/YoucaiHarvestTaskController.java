@@ -58,7 +58,7 @@ public class YoucaiHarvestTaskController extends JeecgController<YoucaiHarvestTa
     @AutoLog("收获计划-通过id删除")
     @Operation(summary = "收获计划-通过id删除")
     @DeleteMapping("/delete")
-    public Result<String> delete(@RequestParam(name = "id") Long id) {
+    public Result<String> delete(@RequestParam(name = "id") String id) {
         taskService.removeById(id);
         return Result.OK("删除成功！");
     }
@@ -73,7 +73,7 @@ public class YoucaiHarvestTaskController extends JeecgController<YoucaiHarvestTa
 
     @Operation(summary = "收获计划-通过id查询")
     @GetMapping("/queryById")
-    public Result<YoucaiHarvestTask> queryById(@RequestParam(name = "id") Long id) {
+    public Result<YoucaiHarvestTask> queryById(@RequestParam(name = "id") String id) {
         YoucaiHarvestTask task = taskService.getById(id);
         return task == null ? Result.error("未找到对应数据") : Result.OK(task);
     }

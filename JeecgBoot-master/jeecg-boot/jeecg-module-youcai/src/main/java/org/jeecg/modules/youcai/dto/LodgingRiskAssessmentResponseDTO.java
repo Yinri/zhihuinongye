@@ -25,7 +25,7 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
     /**
      * 地块ID
      */
-    private Integer plotId;
+    private String plotId;
 
      /**
      * 地块名称
@@ -185,7 +185,7 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer plotId;
+        private String plotId;
 
         private List<DailyRiskDTO> dailyRisks;
 
@@ -291,7 +291,7 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
         /**
          * 基地ID
          */
-        private Integer baseId;
+        private String baseId;
         
         /**
          * 基地名称
@@ -358,7 +358,7 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
         /**
          * 最高风险地块ID
          */
-        private Integer highestRiskPlotId;
+        private String highestRiskPlotId;
         
         /**
          * 最高风险评分

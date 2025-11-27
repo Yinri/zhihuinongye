@@ -1,11 +1,9 @@
 package org.jeecg.modules.youcai.entity;
 
-import java.io.Serializable;
+import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.math.BigDecimal;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import org.jeecg.common.constant.ProvinceCityArea;
@@ -30,17 +28,13 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = false)
 @Schema(description="农药投入表")
-public class YoucaiPesticideInputs implements Serializable {
+public class YoucaiPesticideInputs extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-	/**农药ID*/
-	@TableId(type = IdType.ASSIGN_ID)
-    @Schema(description = "农药ID")
-    private java.lang.Integer id;
 	/**生产计划ID*/
 	@Excel(name = "生产计划ID", width = 15)
     @Schema(description = "生产计划ID")
-    private java.lang.Integer planId;
+    private java.lang.String planId;
 	/**农药名称*/
 	@Excel(name = "农药名称", width = 15)
     @Schema(description = "农药名称")
@@ -71,22 +65,6 @@ public class YoucaiPesticideInputs implements Serializable {
 	@Excel(name = "施药方式", width = 15)
     @Schema(description = "施药方式")
     private java.lang.String applicationMethod;
-	/**创建人*/
-    @Schema(description = "创建人")
-    private java.lang.String createBy;
-	/**创建时间*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "创建时间")
-    private java.util.Date createTime;
-	/**更新人*/
-    @Schema(description = "更新人")
-    private java.lang.String updateBy;
-	/**更新时间*/
-	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @Schema(description = "更新时间")
-    private java.util.Date updateTime;
 	/**所属部门*/
     @Schema(description = "所属部门")
     private java.lang.String sysOrgCode;

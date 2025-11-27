@@ -43,11 +43,11 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
     @AutoLog(value = "倒伏风险预警表-获取倒伏风险数据")
     @Operation(summary="倒伏风险预警表-获取倒伏风险数据")
     @GetMapping(value = "/riskData/{plotId}")
-	public Result<LodgingRiskAssessmentResponseDTO> riskAssessment(@PathVariable Integer plotId) {
+    public Result<LodgingRiskAssessmentResponseDTO> riskAssessment(@PathVariable String plotId) {
         LodgingRiskAssessmentResponseDTO riskData = youcaiLodgingRiskWarningService.riskAssessmentById(plotId);
         log.info("riskData={}", riskData);
-		return Result.OK(riskData);
-	}
+        return Result.OK(riskData);
+    }
 	
 	/**
 	 * 批量获取基地下所有地块的倒伏风险数据
@@ -55,12 +55,12 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
 	@AutoLog(value = "倒伏风险预警表-批量获取基地下所有地块的倒伏风险数据")
 	@Operation(summary="倒伏风险预警表-批量获取基地下所有地块的倒伏风险数据")
 	@GetMapping(value = "/batchRiskData/{baseId}")
-	public Result<LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO> batchRiskAssessment(@PathVariable Integer baseId) {
-		LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchRiskData = 
-			youcaiLodgingRiskWarningService.batchRiskAssessmentByBaseId(baseId);
-		log.info("batchRiskData={}", batchRiskData);
-		return Result.OK(batchRiskData);
-	}
+    public Result<LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO> batchRiskAssessment(@PathVariable String baseId) {
+        LodgingRiskAssessmentResponseDTO.BatchLodgingRiskAssessmentResponseDTO batchRiskData = 
+            youcaiLodgingRiskWarningService.batchRiskAssessmentByBaseId(baseId);
+        log.info("batchRiskData={}", batchRiskData);
+        return Result.OK(batchRiskData);
+    }
 
 
 

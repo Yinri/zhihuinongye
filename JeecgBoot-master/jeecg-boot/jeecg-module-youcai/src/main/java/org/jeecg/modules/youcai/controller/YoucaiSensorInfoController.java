@@ -142,13 +142,13 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
 	//@AutoLog(value = "传感器信息表-通过id查询")
 	@Operation(summary="传感器信息表-通过id查询", description="传感器信息表-通过id查询")
 	@GetMapping(value = "/queryById")
-	public Result<YoucaiSensorInfo> queryById(@Parameter(name="id", description="主键") @RequestParam(name="id") Integer id) {
-		YoucaiSensorInfo youcaiSensorInfo = youcaiSensorInfoService.getById(id);
-		if(youcaiSensorInfo==null) {
-			return Result.error("未找到对应数据");
-		}
-		return Result.OK(youcaiSensorInfo);
-	}
+    public Result<YoucaiSensorInfo> queryById(@Parameter(name="id", description="主键") @RequestParam(name="id") String id) {
+        YoucaiSensorInfo youcaiSensorInfo = youcaiSensorInfoService.getById(id);
+        if(youcaiSensorInfo==null) {
+            return Result.error("未找到对应数据");
+        }
+        return Result.OK(youcaiSensorInfo);
+    }
 
     /**
     * 导出excel
