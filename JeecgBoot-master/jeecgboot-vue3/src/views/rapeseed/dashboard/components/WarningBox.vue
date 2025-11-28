@@ -70,6 +70,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { getWarningList, updateWarningStatus, type FarmingWarning } from '../api/warning.api';
 import dayjs from 'dayjs';
@@ -94,6 +95,9 @@ const getStatusText = (status: string) => {
 // 预警数据
 const warningList = ref<FarmingWarning[]>([]);
 const loading = ref(false);
+
+// 路由实例
+const router = useRouter();
 
 // 加载预警数据
 const loadWarnings = async () => {
@@ -168,8 +172,12 @@ const handleWarning = async (item: FarmingWarning, action: string) => {
 
 // 跳转到预警详情页
 const goToDetail = (item: FarmingWarning) => {
-  // 暂时只显示提示信息，不实现跳转
-  message.info(`点击了"去处理"按钮，预警ID: ${item.id}, 地块ID: ${item.plotId}`);
+  // 跳转到地块风险详情页面，传递地块ID
+  if (item.plotId) {
+    router.push(`/rapeseed/plot-risk-detail/${item.plotId}`);
+  } else {
+    message.error('无法获取地块信息，无法跳转到详情页');
+  }
 };
 
 // 组件挂载时加载数据

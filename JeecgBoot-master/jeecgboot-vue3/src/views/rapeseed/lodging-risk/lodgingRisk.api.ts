@@ -58,7 +58,7 @@ export const importLodgingRisk = (params: any) => {
 };
 
 // 获取倒伏风险预警数据
-export const getLodgingRiskDataById = (plotId: number) => {
+export const getLodgingRiskDataById = (plotId: string) => {
   return defHttp.get({ url:`${Api.RiskData}/${plotId}` });
 };
 

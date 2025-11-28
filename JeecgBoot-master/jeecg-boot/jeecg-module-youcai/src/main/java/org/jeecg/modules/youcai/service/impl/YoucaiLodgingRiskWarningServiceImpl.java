@@ -83,6 +83,14 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     
     @Override
     public LodgingRiskAssessmentResponseDTO riskAssessmentById(String plotId) {
+
+        // 查询地块信息
+        YoucaiPlots plot = youcaiPlotsMapper.selectById(plotId);
+        if (plot == null) {
+            log.warn("地块不存在，地块ID: {}", plotId);
+            return null;
+        }
+
         log.info("开始评估地块倒伏风险，地块ID: {}", plotId);
         long startTime = System.currentTimeMillis();
         
@@ -124,6 +132,8 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             
             // 3. 调用Python服务进行风险评估
             LodgingRiskAssessmentResponseDTO response = callPythonService(requestDTO);
+        response.setPlotId(plotId);
+        response.setPlotName(plot.getPlotName());
             
             long endTime = System.currentTimeMillis();
             log.info("倒伏风险评估完成，地块ID: {}, 耗时: {}ms", plotId, endTime - startTime);
