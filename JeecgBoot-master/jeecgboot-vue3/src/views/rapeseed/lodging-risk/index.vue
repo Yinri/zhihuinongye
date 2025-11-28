@@ -902,7 +902,7 @@ async function submitGrowthForm() {
     await addGrowthMonitoring(formData);
     
     // 移除提交提示
-    createMessage.destroyAll();
+    createMessage.destroy();
     
     // 显示成功消息
     createMessage.success('生长监测数据已成功提交，系统将重新计算倒伏风险');
@@ -923,7 +923,7 @@ async function submitGrowthForm() {
     }
   } catch (error) {
     // 移除提交提示
-    createMessage.destroyAll();
+    createMessage.destroy();
     console.error('提交生长监测数据失败:', error);
     createMessage.error('提交失败，请检查网络连接或稍后重试');
   }
@@ -1322,7 +1322,7 @@ const loadWeatherSensorData = async () => {
     console.log('气象传感器数据加载成功:', weatherData);
     
     // 移除加载提示
-    createMessage.destroyAll();
+    createMessage.destroy();
     
     if (weatherData) {
       // 更新气象数据
@@ -1333,7 +1333,7 @@ const loadWeatherSensorData = async () => {
     }
   } catch (error) {
     // 移除加载提示
-    createMessage.destroyAll();
+    createMessage.destroy();
     console.error('加载气象传感器数据失败:', error);
     createMessage.error('无法获取气象传感器数据，请检查网络连接或稍后重试');
     // 不再使用模拟数据作为后备

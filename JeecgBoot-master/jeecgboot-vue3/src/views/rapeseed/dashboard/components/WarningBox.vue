@@ -7,94 +7,196 @@
         <span class="header-title">农事预警信息</span>
         <span class="warning-count">{{ warningList.length }} 条预警</span>
       </div>
-      <button class="refresh-btn" @click="handleRefresh">
-        <span class="refresh-icon">↻</span>
-        <span class="refresh-text">刷新</span>
+      <button class="refresh-btn" @click="handleRefresh" :disabled="loading">
+        <span class="refresh-icon" :class="{ rotating: loading }">↻</span>
+        <span class="refresh-text">{{ loading ? '加载中' : '刷新' }}</span>
       </button>
     </div>
 
     <!-- 预警内容区（带滚动条） -->
     <div class="warning-content">
+      <!-- 空状态 -->
+      <div v-if="!loading && warningList.length === 0" class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-text">暂无预警信息</div>
+      </div>
+
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-state">
+        <div class="loading-spinner">⏳</div>
+        <div class="loading-text">加载中...</div>
+      </div>
+
+      <!-- 预警列表 -->
       <div
+        v-for="item in warningList"
+        :key="item.id"
         class="warning-item"
         :class="{ 'high-risk': item.level === 'high' }"
-        v-for="(item, index) in warningList"
-        :key="index"
       >
         <!-- 风险等级标识 -->
         <div class="risk-level" :class="item.level">
-          {{ item.level === 'high' ? '高危' : '中危' }}
+          {{ levelText[item.level] }}
         </div>
 
         <!-- 预警信息 -->
         <div class="warning-info">
-          <div class="info-title">{{ item.title }}</div>
-          <div class="info-desc">{{ item.desc }}</div>
-          <div class="info-time">{{ item.time }}</div>
+          <div class="info-header">
+            <div class="info-title" :title="item.title">
+              {{ item.title }}
+            </div>
+            <span v-if="item.plotName" class="plot-tag">{{ item.plotName }}</span>
+          </div>
+          <div class="info-desc" :title="item.description">{{ item.description }}</div>
+          <div class="info-meta">
+            <!-- 状态标签 -->
+            <span class="warning-status" :class="item.warningStatus">
+              {{ getStatusText(item.warningStatus) }}
+            </span>
+            <span class="info-time">{{ formatTime(item.warningDate) }}</span>
+          </div>
         </div>
 
         <!-- 操作按钮 -->
-        <button class="handle-btn">处理</button>
+        <div class="action-btns">
+          <button class="handle-btn" @click="goToDetail(item)">
+            去处理
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { message } from 'ant-design-vue';
+import { getWarningList, updateWarningStatus, type FarmingWarning } from '../api/warning.api';
+import dayjs from 'dayjs';
 
-// 预警数据结构定义
-interface WarningItem {
-  level: 'high' | 'medium'; // 风险等级：高危/中危
-  title: string; // 预警标题
-  desc: string; // 预警详情
-  time: string; // 发生时间
-}
+// 预警等级文本映射
+const levelText = {
+  high: '高危',
+  medium: '中危',
+  low: '低危',
+};
 
-// 模拟预警数据
-const warningList = ref<WarningItem[]>([
-  {
-    level: 'high',
-    title: '地块A需水量缺口',
-    desc: '蕾薹期需水量缺口20%，当前土壤湿度18%，低于阈值25%',
-    time: '2025-10-28 08:30:45'
-  },
-  {
-    level: 'medium',
-    title: '地块B病害风险',
-    desc: '苗期霜霉病风险中等，近3日平均湿度85%，需加强通风',
-    time: '2025-10-28 07:15:22'
-  },
-  {
-    level: 'high',
-    title: '地块C施肥预警',
-    desc: '氮元素含量超标30%，可能导致作物徒长，建议暂停氮肥施用',
-    time: '2025-10-27 16:42:10'
-  },
-  {
-    level: 'medium',
-    title: '气象灾害提示',
-    desc: '未来24小时有小雨，需检查排水系统，防止地块积水',
-    time: '2025-10-27 14:20:05'
+// 预警状态文本映射
+const getStatusText = (status: string) => {
+  const statusMap = {
+    pending: '待处理',
+    processing: '处理中',
+    resolved: '已处理',
+  };
+  return statusMap[status] || status;
+};
+
+// 预警数据
+const warningList = ref<FarmingWarning[]>([]);
+const loading = ref(false);
+
+// 加载预警数据
+const loadWarnings = async () => {
+  loading.value = true;
+  try {
+    // 查询待处理和处理中的预警
+    const pendingData = await getWarningList({
+      warningStatus: 'pending', // 查询待处理的预警
+      onlyValid: true, // 只查询未过期的预警
+      limit: 10,
+    });
+    
+    const processingData = await getWarningList({
+      warningStatus: 'processing', // 查询处理中的预警
+      onlyValid: true, // 只查询未过期的预警
+      limit: 10,
+    });
+    
+    const resolvedData = await getWarningList({
+      warningStatus: 'resolved', // 查询已处理的预警
+      onlyValid: true, // 只查询未过期的预警
+      limit: 5,
+    });
+    
+    // 合并三个列表，待处理的在前，处理中的次之，已处理的最后
+    warningList.value = [...(pendingData || []), ...(processingData || []), ...(resolvedData || [])];
+  } catch (error) {
+    console.error('加载预警失败:', error);
+    message.error('加载预警信息失败');
+  } finally {
+    loading.value = false;
   }
-]);
+};
 
 // 刷新预警数据
 const handleRefresh = () => {
-  // 实际项目中可调用接口刷新数据
-  console.log('刷新预警信息');
+  loadWarnings();
 };
+
+// 格式化时间
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return '';
+  return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss');
+};
+
+// 处理预警
+const handleWarning = async (item: FarmingWarning, action: string) => {
+  try {
+    await updateWarningStatus(item.id, action, undefined, undefined);
+    message.success('操作成功');
+
+    // 更新本地数据状态
+    const index = warningList.value.findIndex((w) => w.id === item.id);
+    if (index !== -1) {
+      // 根据不同的操作更新状态
+      if (action === 'resolved') {
+        // 已处理状态，保留在列表中
+        warningList.value[index].warningStatus = 'resolved';
+      } else if (action === 'processing') {
+        // 处理中状态，保留在列表中
+        warningList.value[index].warningStatus = 'processing';
+      } else if (action === 'pending') {
+        // 待处理状态，保留在列表中
+        warningList.value[index].warningStatus = 'pending';
+      }
+    }
+  } catch (error) {
+    console.error('处理预警失败:', error);
+    message.error('操作失败');
+  }
+};
+
+// 跳转到预警详情页
+const goToDetail = (item: FarmingWarning) => {
+  // 暂时只显示提示信息，不实现跳转
+  message.info(`点击了"去处理"按钮，预警ID: ${item.id}, 地块ID: ${item.plotId}`);
+};
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadWarnings();
+});
+
+// 可选：设置定时刷新（每5分钟）
+// setInterval(() => {
+//   loadWarnings();
+// }, 5 * 60 * 1000);
 </script>
 
 <style scoped>
 .warning-container {
   width: 30%;
   border-radius: 8px;
-  border: 1px solid #f5e6c8;
-  background-color: #fffbf0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e8e8e8;
+  background-color: #ffffff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   margin-top: 5px;
+  transition: box-shadow 0.3s ease;
+}
+
+.warning-container:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* 标题栏样式 */
@@ -102,9 +204,9 @@ const handleRefresh = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
-  border-bottom: 1px solid #f5e6c8;
-  background-color: #fff7e6;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
 }
 
 .header-left {
@@ -146,47 +248,118 @@ const handleRefresh = () => {
   transition: all 0.2s;
 }
 
-.refresh-btn:hover {
+.refresh-btn:hover:not(:disabled) {
   background-color: #fff0d9;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .refresh-icon {
   font-size: 12px;
 }
 
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 内容区样式（带滚动条） */
 .warning-content {
-  max-height: 100%; /* 限制高度，超出滚动 */
+  max-height: 500px; /* 增加最大高度 */
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 12px 0;
+  min-height: 200px;
+  background: linear-gradient(to bottom, #ffffff, #fafafa);
+}
+
+/* 空状态样式 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #c9a56a;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: #9c6b1c;
+}
+
+/* 加载状态样式 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner {
+  font-size: 36px;
+  margin-bottom: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #9c6b1c;
 }
 
 /* 自定义滚动条 */
 .warning-content::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .warning-content::-webkit-scrollbar-track {
-  background: #fff7e6;
-  border-radius: 3px;
+  background: #f0f0f0;
+  border-radius: 2px;
 }
 
 .warning-content::-webkit-scrollbar-thumb {
-  background: #f5d6a3;
-  border-radius: 3px;
+  background: #bfbfbf;
+  border-radius: 2px;
 }
 
 .warning-content::-webkit-scrollbar-thumb:hover {
-  background: #e6b879;
+  background: #8c8c8c;
 }
 
 /* 预警项样式 */
 .warning-item {
   display: flex;
   align-items: stretch;
-  padding: 10px 16px;
-  border-bottom: 1px dashed #f5e6c8;
-  transition: background-color 0.2s;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s;
+  background-color: #ffffff;
 }
 
 .warning-item:last-child {
@@ -194,7 +367,8 @@ const handleRefresh = () => {
 }
 
 .warning-item:hover {
-  background-color: rgba(255, 248, 230, 0.8);
+  background-color: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* 风险等级标识 */
@@ -203,23 +377,32 @@ const handleRefresh = () => {
   height: 24px;
   line-height: 24px;
   text-align: center;
-  border-radius: 4px;
+  border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
   margin-right: 12px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .risk-level.high {
-  background-color: #ffe3e3;
-  color: #d93025;
-  border: 1px solid #ffcdd2;
+  background-color: #fff2f0;
+  color: #ff4d4f;
+  border: 1px solid #ffccc7;
 }
 
 .risk-level.medium {
-  background-color: #fff3cd;
-  color: #e6a700;
-  border: 1px solid #ffeeba;
+  background-color: #fffbe6;
+  color: #faad14;
+  border: 1px solid #ffe58f;
+}
+
+.risk-level.low {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
 }
 
 /* 预警信息区 */
@@ -228,25 +411,50 @@ const handleRefresh = () => {
   min-width: 0; /* 解决文字溢出问题 */
 }
 
+.info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
 .info-title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: #854d0e;
-  margin-bottom: 4px;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.plot-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border-radius: 4px;
+  font-weight: normal;
+  flex-shrink: 0;
 }
 
 .info-desc {
   font-size: 12px;
   color: #9c6b1c;
   line-height: 1.4;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.info-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .info-time {
@@ -254,28 +462,131 @@ const handleRefresh = () => {
   color: #c9a56a;
 }
 
-/* 处理按钮 */
-.handle-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  color: #e67700;
-  background-color: transparent;
-  border: 1px solid #f5d6a3;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
+/* 操作按钮组 */
+.action-btns {
+  display: flex;
+  gap: 6px;
   margin-left: 12px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  max-width: 180px;
+}
+
+.handle-btn,
+.resolve-btn,
+.processing-status,
+.pause-btn,
+.reopen-btn,
+.resolved-status {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.handle-btn {
+  color: #e67700;
+  background-color: #fff7e6;
+  border-color: #ffd591;
 }
 
 .handle-btn:hover {
-  background-color: #fff0d9;
+  background-color: #ffe7ba;
   color: #c25c00;
+  border-color: #ffab00;
+}
+
+.resolve-btn {
+  color: #52c41a;
+  background-color: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.resolve-btn:hover {
+  background-color: #d9f7be;
+  color: #389e0d;
+  border-color: #95de64;
+}
+
+.processing-status {
+  color: #0958d9;
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+  cursor: default;
+}
+
+.pause-btn {
+  color: #722ed1;
+  background-color: #f9f0ff;
+  border-color: #d3adf7;
+}
+
+.pause-btn:hover {
+  background-color: #efdbff;
+  color: #531dab;
+  border-color: #b37feb;
+}
+
+.reopen-btn {
+  color: #1890ff;
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+}
+
+.reopen-btn:hover {
+  background-color: #bae7ff;
+  color: #0958d9;
+  border-color: #69c0ff;
+}
+
+.resolved-status {
+  color: #389e0d;
+  background-color: #f6ffed;
+  border-color: #b7eb8f;
+  cursor: default;
+}
+
+/* 状态标签样式 */
+.warning-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.warning-status.pending {
+  background-color: #fff7e6;
+  color: #d46b08;
+  border: 1px solid #ffd591;
+}
+
+.warning-status.processing {
+  background-color: #e6f7ff;
+  color: #0958d9;
+  border: 1px solid #91d5ff;
+}
+
+.warning-status.resolved {
+  background-color: #f6ffed;
+  color: #389e0d;
+  border: 1px solid #b7eb8f;
 }
 
 /* 高危项特殊样式 */
 .high-risk {
   border-left: 3px solid #ff4d4f;
   margin-left: 3px;
+  background-color: #fff2f0;
+}
+
+.high-risk:hover {
+  background-color: #ffebe8;
 }
 </style>
