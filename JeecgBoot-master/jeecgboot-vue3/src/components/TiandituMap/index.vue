@@ -71,6 +71,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed, watchEffect } from 'vue';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
+import { useRoute, useRouter } from 'vue-router';
 import { Icon } from '/@/components/Icon';
 import PlotInfoModal from '../../views/rapeseed/plot-info/PlotInfoModal.vue';
 import { getPlotInfoList, savePlotInfo } from '../../views/rapeseed/plot-info/plotInfo.api';
@@ -159,6 +160,10 @@ const selectedBaseId = computed(() => selectedBase.value.baseId);
 const hasBaseCenter = computed(() => !!(selectedBase.value.longitude && selectedBase.value.latitude));
 
 const { createMessage } = useMessage();
+
+// 路由相关
+const route = useRoute();
+const router = useRouter();
 
 // 地图相关变量
 const mapContainer = ref<HTMLDivElement | null>(null);
@@ -678,9 +683,18 @@ const showPlotInfo = async (plot, event) => {
         showFooter: false, // 只读模式，不显示底部按钮
       });
     } else if (props.showLodgingRiskBelow) {
-      // 如果需要在页面下方显示倒伏风险弹窗结构，只传递地块ID给父组件
-      const plotId = fullPlotData.plotId || fullPlotData.id;
-      emit('plot-click', plotId);
+      // 检查当前是否在倒伏风险页面
+      const isLodgingRiskPage = route.path.includes('/lodging-risk');
+      
+      if (isLodgingRiskPage) {
+        // 在倒伏风险页面，点击地块时跳转到地块风险详情页
+        const plotId = fullPlotData.plotId || fullPlotData.id;
+        router.push(`/rapeseed/plot-risk-detail/${plotId}`);
+      } else {
+        // 在其他页面，只传递地块ID给父组件
+        const plotId = fullPlotData.plotId || fullPlotData.id;
+        emit('plot-click', plotId);
+      }
     } else {
       // 使用原来的弹窗方式
       selectedPlot.value = fullPlotData;
