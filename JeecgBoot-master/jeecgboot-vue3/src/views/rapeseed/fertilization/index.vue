@@ -212,6 +212,8 @@ import { getFertilizationList, deleteFertilization, exportFertilization, importF
 import FertilizationModal from './FertilizationModal.vue';
 import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
 import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
+import { useSelectStore } from '/@/store/selectStore';
+import { getBaseList, getPlotsByBaseId } from '/@/views/rapeseed/production-plan/plot-production-plan/base.api';
 import { Tag } from 'ant-design-vue';
 import { useECharts } from '/@/hooks/web/useECharts';
 
@@ -247,6 +249,107 @@ const [registerTable, { reload }] = useTable({
 // 选择相关
 const selectedBaseId = ref<string | number | undefined>(undefined);
 const selectedPlotId = ref<string | number | undefined>(undefined);
+
+// 全局状态管理
+const selectStore = useSelectStore();
+
+// 基地和地块数据列表
+const baseList = ref<any[]>([]);
+const plotList = ref<any[]>([]);
+
+// 下拉框展开状态
+const isDropdownOpen = ref(false);
+
+// 切换下拉框展开/收起状态
+function toggleDropdown() {
+  isDropdownOpen.value = !isDropdownOpen.value;
+}
+
+// 选择基地或地块项
+async function selectItem(item: any, type: 'base' | 'plot') {
+  if (type === 'base') {
+    // 选择基地
+    selectedBaseId.value = item.id || item.baseId;
+    selectStore.setSelectedBase(item);
+    
+    // 清空地块选择
+    selectedPlotId.value = undefined;
+    selectStore.setSelectedPlot(null);
+    
+    // 加载对应的地块数据
+    if (selectedBaseId.value) {
+      await fetchPlotListByBaseId(selectedBaseId.value as string);
+    }
+    
+    // 触发原有变更逻辑
+    onBaseChange(selectedBaseId.value);
+  } else {
+    // 选择地块
+    selectedPlotId.value = item.id || item.plotId;
+    selectStore.setSelectedPlot(item);
+    
+    // 触发原有变更逻辑
+    onPlotChange(selectedPlotId.value);
+  }
+}
+
+// 从数据库获取基地列表
+async function fetchBaseListData() {
+  try {
+    const res = await getBaseList({});
+    // 兼容不同返回格式
+    const baseDataList = (res && Array.isArray(res.records)) 
+      ? res.records 
+      : (Array.isArray(res) ? res : (res?.result || []));
+    
+    baseList.value = baseDataList.map((item: any) => ({
+      ...item,
+      id: item.id || item.baseId,
+      baseName: item.baseName || item.name || '未命名基地'
+    }));
+    
+    // 如果有基地数据且当前未选择基地，默认选择第一个
+    if (baseList.value.length > 0 && !selectedBaseId.value) {
+      const firstBase = baseList.value[0];
+      selectedBaseId.value = firstBase.id;
+      selectStore.setSelectedBase(firstBase);
+      
+      // 加载第一个基地的地块数据
+      await fetchPlotListByBaseId(firstBase.id as string);
+    }
+  } catch (error) {
+    console.error('获取基地列表失败:', error);
+  }
+}
+
+// 根据基地ID从数据库获取地块列表
+async function fetchPlotListByBaseId(baseId: string) {
+  if (!baseId) return;
+  
+  try {
+    const res = await getPlotsByBaseId(baseId);
+    // 兼容不同返回格式
+    const plotDataList = (res && Array.isArray(res.records)) 
+      ? res.records 
+      : (Array.isArray(res) ? res : (res?.result || []));
+    
+    plotList.value = plotDataList.map((item: any) => ({
+      ...item,
+      id: item.id || item.plotId,
+      plotName: item.plotName || item.name || '未命名地块'
+    }));
+    
+    // 如果有地块数据且当前未选择地块，默认选择第一个
+    if (plotList.value.length > 0 && !selectedPlotId.value) {
+      const firstPlot = plotList.value[0];
+      selectedPlotId.value = firstPlot.id;
+      selectStore.setSelectedPlot(firstPlot);
+      onPlotChange(firstPlot.id);
+    }
+  } catch (error) {
+    console.error('获取地块列表失败:', error);
+  }
+}
 const selectedPlotName = ref<string>('');
 const plotSelectRef = ref<any>(null);
 
@@ -766,7 +869,10 @@ function scrollToCharts() {
   }
 }
 
-onMounted(() => {});
+onMounted(() => {
+  // 初始化加载基地数据
+  fetchBaseListData();
+});
 
 function handleCreate() {
   openModal(true, {

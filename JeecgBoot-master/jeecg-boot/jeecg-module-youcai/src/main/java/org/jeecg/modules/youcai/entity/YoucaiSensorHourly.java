@@ -4,6 +4,7 @@ import org.jeecg.common.system.base.entity.JeecgEntity;
 import java.math.BigDecimal;
 import java.util.Date;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
@@ -17,6 +18,8 @@ import lombok.experimental.Accessors;
 public class YoucaiSensorHourly extends JeecgEntity {
     private String deviceCode;
     private String plotId;
+    @TableField("base_id")
+    private String baseId;
     private Date hourTs;
     private BigDecimal airTempC;
     private BigDecimal relHumidityPct;

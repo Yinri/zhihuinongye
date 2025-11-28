@@ -9,6 +9,8 @@ import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiSensorHourlyMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiGrowthMonitoringMapper;
 import org.jeecg.modules.youcai.service.IIrrigationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +21,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+//zrt 灌溉监控服务实现类
 @Service
 public class IrrigationServiceImpl implements IIrrigationService {
+    // 新增日志对象
+    private static final Logger log = LoggerFactory.getLogger(IrrigationServiceImpl.class);
+
     @Autowired
     private YoucaiSensorHourlyMapper sensorHourlyMapper;
     @Autowired
@@ -29,13 +35,30 @@ public class IrrigationServiceImpl implements IIrrigationService {
     private YoucaiGrowthMonitoringMapper growthMonitoringMapper;
 
     public Map<String, Object> getPlotStatus(String plotId) {
+        log.info("开始查询地块{}的传感器状态数据", plotId);
         Map<String, Object> r = new HashMap<>();
+        
+        // 先查询地块信息，获取baseId（兼容plot_id为空的情况）
+        YoucaiPlots plot = plotsMapper.selectById(plotId);
+        if (plot == null) {
+            log.warn("地块{}不存在，返回空数据", plotId);
+            r.put("soilMoisturePercent", BigDecimal.ZERO);
+            r.put("soilMoistureTrend", "稳定");
+            r.put("currentStageId", "");
+            r.put("lastUpdated", null);
+            return r;
+        }
+
         QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
-        qw.lambda().eq(YoucaiSensorHourly::getPlotId, plotId)
-                .eq(YoucaiSensorHourly::getDelFlag, 0)
-                .orderByDesc(YoucaiSensorHourly::getHourTs)
+        qw.lambda().eq(YoucaiSensorHourly::getDelFlag, 0)
+                .eq(YoucaiSensorHourly::getPlotId, plotId);
+        
+        qw.lambda().orderByDesc(YoucaiSensorHourly::getHourTs)
                 .last("limit 24");
+        
         List<YoucaiSensorHourly> rows = sensorHourlyMapper.selectList(qw);
+        log.info("地块{}（基地{}）查询到{}条传感器数据", plotId, plot.getBaseId(), rows.size());
+
         BigDecimal latest = rows.stream().map(YoucaiSensorHourly::getSoilMoisturePct).filter(Objects::nonNull).findFirst().orElse(BigDecimal.ZERO);
         List<BigDecimal> series = rows.stream().map(YoucaiSensorHourly::getSoilMoisturePct).filter(Objects::nonNull).collect(Collectors.toList());
         String trend = "稳定";
@@ -43,9 +66,10 @@ public class IrrigationServiceImpl implements IIrrigationService {
             BigDecimal d = series.get(0).subtract(series.get(series.size() - 1));
             trend = d.signum() > 0 ? "上升" : d.signum() < 0 ? "下降" : "稳定";
         }
-        YoucaiPlots plot = plotsMapper.selectById(plotId);
+
         r.put("soilMoisturePercent", latest);
         r.put("soilMoistureTrend", trend);
+        
         YoucaiGrowthMonitoring latestMonitor = growthMonitoringMapper.selectOne(
                 new LambdaQueryWrapper<YoucaiGrowthMonitoring>()
                         .eq(YoucaiGrowthMonitoring::getPlotId, plotId)
@@ -56,12 +80,33 @@ public class IrrigationServiceImpl implements IIrrigationService {
         );
         r.put("currentStageId", latestMonitor != null ? (latestMonitor.getGrowthStage() == null ? "" : latestMonitor.getGrowthStage()) : "");
         r.put("lastUpdated", rows.stream().map(YoucaiSensorHourly::getHourTs).findFirst().orElse(null));
+        
+        log.info("地块{}状态查询完成，最新含水率：{}%，趋势：{}", plotId, latest, trend);
         return r;
     }
 
     public Map<String, Object> getPenmanPredict(String plotId) {
+        log.info("开始计算地块{}的Penman灌溉建议", plotId);
         Map<String, Object> r = new HashMap<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        
+        // 先校验地块是否存在
+        YoucaiPlots plot = plotsMapper.selectById(plotId);
+        if (plot == null) {
+            log.warn("地块{}不存在，返回空的Penman建议", plotId);
+            r.put("chartDates", new ArrayList<>());
+            r.put("et0Forecast", new ArrayList<>());
+            r.put("soilMoistureSeriesPct", new ArrayList<>());
+            r.put("penmanInputs", new HashMap<>());
+            r.put("needIrrigation", false);
+            r.put("recommendedTime", "");
+            r.put("method", "");
+            r.put("reason", "");
+            r.put("recommendedVolumeMm", BigDecimal.ZERO);
+            r.put("flowRateM3PerHour", BigDecimal.ZERO);
+            return r;
+        }
+
         List<Map<String, Object>> days = aggregateDaily(plotId, 7);
         List<String> dates = days.stream().map(m -> (String) m.get("date")).collect(Collectors.toList());
         List<BigDecimal> et0 = days.stream().map(m -> (BigDecimal) m.get("et0Mm")).collect(Collectors.toList());
@@ -72,6 +117,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
         String method = need ? "滴灌" : "";
         String reason = need ? "土壤含水率偏低且蒸散量较高" : "";
         BigDecimal vol = need ? recommendedVolume(latestMoisture) : BigDecimal.ZERO;
+        
         Map<String, Object> inputs = new HashMap<>();
         inputs.put("dates", dates);
         inputs.put("temp", days.stream().map(m -> (BigDecimal) m.get("tempC")).collect(Collectors.toList()));
@@ -79,6 +125,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
         inputs.put("wind", days.stream().map(m -> (BigDecimal) m.get("windMs")).collect(Collectors.toList()));
         inputs.put("solar", days.stream().map(m -> (BigDecimal) m.get("solarMj")).collect(Collectors.toList()));
         inputs.put("precip", days.stream().map(m -> (BigDecimal) m.get("precipMm")).collect(Collectors.toList()));
+        
         r.put("chartDates", dates);
         r.put("et0Forecast", et0);
         r.put("soilMoistureSeriesPct", soilSeries);
@@ -89,49 +136,86 @@ public class IrrigationServiceImpl implements IIrrigationService {
         r.put("reason", reason);
         r.put("recommendedVolumeMm", vol);
         r.put("flowRateM3PerHour", BigDecimal.ZERO);
+        
+        log.info("地块{}Penman建议计算完成：是否需要灌溉={}，推荐灌水量={}mm", plotId, need, vol);
         return r;
     }
 
     public Map<String, Object> getInterventionComparison(String plotId) {
+        log.info("开始生成地块{}的灌溉干预对比数据", plotId);
         Map<String, Object> r = new HashMap<>();
+        
+        // 先校验地块是否存在
+        YoucaiPlots plot = plotsMapper.selectById(plotId);
+        if (plot == null) {
+            log.warn("地块{}不存在，返回空的对比数据", plotId);
+            r.put("dates", new ArrayList<>());
+            r.put("withIrrigation", new ArrayList<>());
+            r.put("withoutIrrigation", new ArrayList<>());
+            return r;
+        }
+
         List<Map<String, Object>> days = aggregateDaily(plotId, 7);
         List<String> dates = days.stream().map(m -> (String) m.get("date")).collect(Collectors.toList());
         List<BigDecimal> moisture = days.stream().map(m -> (BigDecimal) m.get("soilPct")).collect(Collectors.toList());
         List<BigDecimal> et0 = days.stream().map(m -> (BigDecimal) m.get("et0Mm")).collect(Collectors.toList());
+        
         List<BigDecimal> without = new ArrayList<>();
         for (int i = 0; i < moisture.size(); i++) {
             BigDecimal v = moisture.get(i).subtract(et0.get(i));
             if (v.compareTo(BigDecimal.ZERO) < 0) v = BigDecimal.ZERO;
             without.add(v);
         }
+        
         r.put("dates", dates);
         r.put("withIrrigation", moisture);
         r.put("withoutIrrigation", without);
+        
+        log.info("地块{}干预对比数据生成完成，数据天数={}", plotId, dates.size());
         return r;
     }
 
     private BigDecimal latestSoilMoisture(String plotId) {
+        // 兼容逻辑：优先plotId，无数据则用baseId
+        YoucaiPlots plot = plotsMapper.selectById(plotId);
+        if (plot == null) {
+            return BigDecimal.ZERO;
+        }
+        
         QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
-        qw.lambda().eq(YoucaiSensorHourly::getPlotId, plotId)
-                .eq(YoucaiSensorHourly::getDelFlag, 0)
-                .orderByDesc(YoucaiSensorHourly::getHourTs)
+        qw.lambda().eq(YoucaiSensorHourly::getDelFlag, 0)
+                .eq(YoucaiSensorHourly::getPlotId, plotId);
+        
+        qw.lambda().orderByDesc(YoucaiSensorHourly::getHourTs)
                 .last("limit 1");
+        
         YoucaiSensorHourly row = sensorHourlyMapper.selectOne(qw);
         return row != null && row.getSoilMoisturePct() != null ? row.getSoilMoisturePct() : BigDecimal.ZERO;
     }
 
     private List<Map<String, Object>> aggregateDaily(String plotId, int days) {
+        // 兼容逻辑：优先plotId，无数据则用baseId
+        YoucaiPlots plot = plotsMapper.selectById(plotId);
+        if (plot == null) {
+            return new ArrayList<>();
+        }
+        
         QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
-        qw.lambda().eq(YoucaiSensorHourly::getPlotId, plotId)
-                .eq(YoucaiSensorHourly::getDelFlag, 0)
-                .orderByDesc(YoucaiSensorHourly::getHourTs)
+        qw.lambda().eq(YoucaiSensorHourly::getDelFlag, 0)
+                .eq(YoucaiSensorHourly::getPlotId, plotId);
+        
+        qw.lambda().orderByDesc(YoucaiSensorHourly::getHourTs)
                 .last("limit " + (24 * days));
+        
         List<YoucaiSensorHourly> rows = sensorHourlyMapper.selectList(qw);
+        log.debug("地块{}聚合日数据：查询到{}小时数据", plotId, rows.size());
+
         Map<String, List<YoucaiSensorHourly>> byDay = new LinkedHashMap<>();
         rows.forEach(r -> {
             String d = r.getHourTs().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString();
             byDay.computeIfAbsent(d, k -> new ArrayList<>()).add(r);
         });
+
         List<Map<String, Object>> list = new ArrayList<>();
         for (Map.Entry<String, List<YoucaiSensorHourly>> e : byDay.entrySet()) {
             List<YoucaiSensorHourly> hs = e.getValue();
@@ -143,6 +227,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
             BigDecimal precip = sum(hs.stream().map(YoucaiSensorHourly::getPrecipMm).collect(Collectors.toList()));
             BigDecimal et0 = sum(hs.stream().map(this::hourlyEt0).collect(Collectors.toList()));
             BigDecimal soil = avg(hs.stream().map(YoucaiSensorHourly::getSoilMoisturePct).collect(Collectors.toList()));
+            
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("date", e.getKey());
             m.put("tempC", temp);
@@ -154,8 +239,11 @@ public class IrrigationServiceImpl implements IIrrigationService {
             m.put("soilPct", soil);
             list.add(m);
         }
+
         List<Map<String, Object>> last = list.stream().sorted(Comparator.comparing(m -> (String) m.get("date"))).collect(Collectors.toList());
         if (last.size() > days) last = last.subList(last.size() - days, last.size());
+        
+        log.debug("地块{}聚合日数据：生成{}天数据", plotId, last.size());
         return last;
     }
 
@@ -165,19 +253,24 @@ public class IrrigationServiceImpl implements IIrrigationService {
         BigDecimal u2 = nz(r.getWindSpeedMs());
         BigDecimal rsWm2 = nz(r.getSolarRadiationWm2());
         BigDecimal rs = rsWm2.multiply(new BigDecimal("0.0036"));
+        
         BigDecimal es = saturationVaporPressure(t);
         BigDecimal ea = es.multiply(rh.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP));
         BigDecimal delta = slopeVaporPressureCurve(t);
         BigDecimal gamma = psychrometricConstant();
+        
         BigDecimal rns = rs.multiply(new BigDecimal("0.77"));
         BigDecimal rnl = longwaveApprox(t, ea);
         BigDecimal rn = rns.subtract(rnl);
         BigDecimal g = BigDecimal.ZERO;
+        
         BigDecimal numRad = delta.multiply(rn).multiply(new BigDecimal("3600")).divide(new BigDecimal("2.45e6"), 8, RoundingMode.HALF_UP);
         BigDecimal numAer = gamma.multiply(new BigDecimal("900")).divide(t.add(new BigDecimal("273")), 8, RoundingMode.HALF_UP).multiply(u2).multiply(es.subtract(ea));
         BigDecimal denom = delta.add(gamma.multiply(new BigDecimal("1"))).max(new BigDecimal("1e-6"));
+        
         BigDecimal et0 = numRad.add(numAer).divide(denom, 6, RoundingMode.HALF_UP);
         if (et0.compareTo(BigDecimal.ZERO) < 0) et0 = BigDecimal.ZERO;
+        
         return et0.setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -218,7 +311,9 @@ public class IrrigationServiceImpl implements IIrrigationService {
         return s.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal nz(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }
+    private BigDecimal nz(BigDecimal v) { 
+        return v == null ? BigDecimal.ZERO : v; 
+    }
 
     private String nextMorning() {
         Calendar c = Calendar.getInstance();

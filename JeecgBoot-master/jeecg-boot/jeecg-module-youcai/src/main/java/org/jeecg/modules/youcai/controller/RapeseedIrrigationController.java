@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
-
+//zrt 灌溉监控控制器
 @Tag(name="智慧灌溉(Penman)")
 @RestController
 @RequestMapping("/rapeseed/irrigation")

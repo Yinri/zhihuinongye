@@ -2,7 +2,6 @@
   <div class="irrigation-page">
     <!-- 选择与概览区域 -->
     <a-row :gutter="16" class="top-row">
-      
       <a-col :xs="24" :md="12">
         <a-card :bordered="false" class="rich-card">
           <template #title>
@@ -11,7 +10,7 @@
             </div>
           </template>
           <div class="moisture-card" v-if="hasData">
-            <a-progress type="dashboard" :percent="soilMoisturePercent" :status="moistureStatus" />
+            <a-progress type="dashboard" :percent="soilMoisturePercent" status="normal" :format="progressText" :stroke-color="moistureStateColor" />
             <div class="moisture-info">
               <div>当前含水率：{{ soilMoisturePercent }}%</div>
               <div>
@@ -30,7 +29,6 @@
               <div class="metric-value">{{ lastUpdatedText }}</div>
             </div>
           </div>
-          
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -58,14 +56,11 @@
               <a-button size="small" @click="refresh" :disabled="!selectedPlotId">刷新数据</a-button>
               <a-button size="small" @click="openReportModal('irrigation')" :disabled="!selectedPlotId || !hasData">生成报告</a-button>
             </div>
-            
           </div>
           <a-empty v-else description="暂无建议，等待后端数据" />
         </a-card>
       </a-col>
     </a-row>
-
-    
 
     <!-- 趋势折线图板块（四个方框） -->
     <a-row :gutter="16" class="mt-4">
@@ -76,7 +71,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 土壤含水率（近7天）
             </div>
           </template>
-          <div v-if="hasData" ref="moistureTrendRef" class="chart-ref chart-220" />
+          <div v-show="moistureTrendData.length" ref="moistureTrendRef" class="chart-ref chart-220" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -86,7 +81,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 参考蒸散（ET0，近7天）
             </div>
           </template>
-          <div v-if="hasData" ref="et0ChartRef" style="width: 100%; height: 220px" />
+          <div v-show="et0Forecast.length" ref="et0ChartRef" style="width: 100%; height: 220px" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -96,7 +91,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 降雨量（近7天）
             </div>
           </template>
-          <div v-if="hasData" ref="rainChartRef" style="width: 100%; height: 220px" />
+          <div v-show="penmanInputs.precip && penmanInputs.precip.length" ref="rainChartRef" style="width: 100%; height: 220px" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -106,7 +101,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> 平均温度（近7天）
             </div>
           </template>
-          <div v-if="hasData" ref="tempChartRef" style="width: 100%; height: 220px" />
+          <div v-show="penmanInputs.temp && penmanInputs.temp.length" ref="tempChartRef" style="width: 100%; height: 220px" />
         </a-card>
       </a-col>
     </a-row>
@@ -120,7 +115,7 @@
               <Icon icon="ant-design:line-chart-outlined" /> Penman 算法输入数据（近7天）
             </div>
           </template>
-          <div v-if="hasData" ref="penmanInputsChartRef" style="width: 100%; height: 320px" />
+          <div v-show="penmanInputs.dates && penmanInputs.dates.length" ref="penmanInputsChartRef" style="width: 100%; height: 320px" />
         </a-card>
       </a-col>
     </a-row>
@@ -148,23 +143,24 @@
               <Icon icon="ant-design:cloud-outlined" /> 天气与蒸散概览
             </div>
           </template>
-          <a-space direction="vertical" style="width: 100%">
+          <a-space v-if="hasData" direction="vertical" style="width: 100%">
             <div class="statistic-grid">
               <div class="metric">
                 <div class="metric-title">今日 ET0</div>
-                <div class="metric-value">{{ et0Forecast[0] }} mm</div>
+                <div class="metric-value">{{ et0Forecast[0] || 0 }} mm</div>
               </div>
               <div class="metric">
                 <div class="metric-title">明日 ET0</div>
-                <div class="metric-value">{{ et0Forecast[1] }} mm</div>
+                <div class="metric-value">{{ et0Forecast[1] || 0 }} mm</div>
               </div>
               <div class="metric">
                 <div class="metric-title">后日 ET0</div>
-                <div class="metric-value">{{ et0Forecast[2] }} mm</div>
+                <div class="metric-value">{{ et0Forecast[2] || 0 }} mm</div>
               </div>
             </div>
             <div class="hint">基于 Penman 估算的参考蒸散量，供灌溉决策参考。</div>
           </a-space>
+          <a-empty v-else description="暂无数据" />
         </a-card>
       </a-col>
       <a-col :xs="24" :md="12">
@@ -174,7 +170,7 @@
               <Icon icon="ant-design:warning-outlined" /> 风险与提示 / 快捷操作
             </div>
           </template>
-          <a-space direction="vertical" style="width: 100%">
+          <a-space v-if="hasData" direction="vertical" style="width: 100%">
             <a-alert :message="`当前灌溉风险：${riskLevel}`" type="warning" show-icon />
             <ul class="tips">
               <li v-for="(tip, idx) in riskTips" :key="idx">{{ tip }}</li>
@@ -186,11 +182,10 @@
               <a-button size="small" @click="openReportModal('risk')" :disabled="!selectedPlotId || !hasData">导出报告</a-button>
             </div>
           </a-space>
+          <a-empty v-else description="暂无数据" />
         </a-card>
       </a-col>
     </a-row>
-
-    <!-- 已删除灌溉管理列表板块 -->
 
     <!-- 一键灌溉管理（移至页面底部） -->
     <a-row class="mt-4">
@@ -210,18 +205,62 @@
                     <a-switch v-model:checked="quickUseAlgorithm" size="small" />
                   </div>
                 </a-col>
+
+                <!-- 替换 BaseSelect 为自定义基地下拉框 -->
                 <a-col :xs="24" :sm="12" :md="5">
                   <div class="form-item">
                     <div class="label">选择基地</div>
-                    <BaseSelect v-model="selectedBaseId" @change="onBaseChange" />
+                    <div 
+                      class="custom-select" 
+                      @click="toggleDropdown('base')"
+                      style="cursor: pointer; width: 100%;"
+                    >
+                      <div class="select-value">{{ selectedBase?.baseName || '请选择基地' }}</div>
+                      <div class="select-icon" :class="{ open: isDropdownOpen.base }">▼</div>
+                      <div class="select-options" v-if="isDropdownOpen.base">
+                        <div class="options-scroll">
+                          <div
+                            class="option-item"
+                            v-for="item in baseList"
+                            :key="item.baseId"
+                            @click.stop="selectItem('base', item)"
+                          >
+                            {{ item.baseName }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </a-col>
+
+                <!-- 替换 PlotSelect 为自定义地块下拉框 -->
                 <a-col :xs="24" :sm="12" :md="5">
                   <div class="form-item">
                     <div class="label">选择地块</div>
-                    <PlotSelect ref="plotSelectRef" v-model="selectedPlotId" :base-id="selectedBaseId" @change="onPlotChange" @loaded="onPlotLoaded" />
+                    <div 
+                      class="custom-select" 
+                      @click="toggleDropdown('plot')"
+                      style="cursor: pointer; width: 100%;"
+                      :class="{ disabled: !selectedBase }"
+                    >
+                      <div class="select-value">{{ selectedPlot?.plotName || '请选择地块' }}</div>
+                      <div class="select-icon" :class="{ open: isDropdownOpen.plot }">▼</div>
+                      <div class="select-options" v-if="isDropdownOpen.plot">
+                        <div class="options-scroll">
+                          <div
+                            class="option-item"
+                            v-for="item in plotList"
+                            :key="item.plotId"
+                            @click.stop="selectItem('plot', item)"
+                          >
+                            {{ item.plotName }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </a-col>
+
                 <a-col :xs="24" :sm="12" :md="4">
                   <div class="form-item">
                     <div class="label">灌溉面积(亩)</div>
@@ -240,7 +279,6 @@
                     <a-select v-model:value="quickMethod" :options="irrigationMethodOptions" style="width: 100%" />
                   </div>
                 </a-col>
-                <!-- 已移除：用水量(立方米/亩) 输入项 -->
               </a-row>
 
               <a-row :gutter="12" justify="center" align="middle">
@@ -324,27 +362,51 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, watch, Ref, computed } from 'vue';
+import { ref, reactive, watch, Ref, computed, onMounted, nextTick } from 'vue';
 import { printJS } from '/@/hooks/web/usePrintJS';
-// 已移除表格相关依赖
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
 import { getPlotStatus, getPenmanPredict, getInterventionComparison } from './irrigation.api';
 import IrrigationModal from './IrrigationModal.vue';
-import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
-import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
-// GrowthTimeline 已移除对应板块
 import { useECharts } from '/@/hooks/web/useECharts';
 import { Tag } from 'ant-design-vue';
+import { defHttp } from '/@/utils/http/axios';
+
+// ---------------- 核心修改：替换为真实数据库接口 ----------------
+// 导入真实的基地/地块接口（与下方验证过的接口一致）
+import { useSelectStore } from '/@/store/selectStore';
+import { getBaseList, getPlotsByBaseId, getPlotById } from '/@/views/rapeseed/production-plan/plot-production-plan/base.api';
+
+// 定义与数据库表结构一致的类型
+interface BaseItem {
+  baseId: string | number;
+  baseName: string;
+  fullName?: string;
+  longitude?: string;
+  latitude?: string;
+}
+
+interface PlotItem {
+  plotId: string | number;
+  plotName: string;
+}
 
 const { createMessage } = useMessage();
-
 const [registerModal, { openModal }] = useModal();
 const searchInfo = reactive<Recordable>({});
-// 已移除导入相关的文件列表
 
-// 选择相关
+// ---------------- 核心：统一的基地/地块数据源（数据库bases/plots表） ----------------
+const baseList = ref<BaseItem[]>([]); // 基地列表（来自bases表）
+const plotList = ref<PlotItem[]>([]); // 地块列表（来自plots表）
+const selectedBase = ref<BaseItem | null>(null); // 选中基地
+const selectedPlot = ref<PlotItem | null>(null); // 选中地块
+const isDropdownOpen = reactive({ base: false, plot: false }); // 下拉框展开状态
+
+// 全局状态仓库（同步选择状态）
+const selectStore = useSelectStore();
+
+// 原有选择相关变量（保持兼容）
 const selectedBaseId = ref<string | number | undefined>(undefined);
 const selectedPlotId = ref<string | number | undefined>(undefined);
 const selectedPlotName = ref<string>('');
@@ -358,6 +420,7 @@ const soilMoisturePercent = ref<number>(0);
 const soilMoistureTrendText = ref<string>('');
 const penmanSuggestion = reactive({ needIrrigation: false, recommendedTime: '', method: '', reason: '' });
 const recommendedVolumeMm = ref<number>(0);
+const lastRequestPlotId = ref<string | number | undefined>(undefined);
 
 // 图表
 const comparisonChartRef = ref<HTMLDivElement | null>(null);
@@ -373,6 +436,224 @@ const { setOptions: setRainOptions } = useECharts(rainChartRef as Ref<HTMLDivEle
 const tempChartRef = ref<HTMLDivElement | null>(null);
 const { setOptions: setTempOptions } = useECharts(tempChartRef as Ref<HTMLDivElement>);
 
+// ---------------- 核心：统一的下拉框交互方法（与数据库交互） ----------------
+/** 切换下拉框展开/收起 */
+const toggleDropdown = (type: 'base' | 'plot') => {
+  // 关闭其他下拉框，只展开当前
+  Object.keys(isDropdownOpen).forEach(key => {
+    if (key !== type) isDropdownOpen[key as 'base' | 'plot'] = false;
+  });
+  isDropdownOpen[type] = !isDropdownOpen[type];
+};
+
+/** 选择基地/地块选项（同步数据库数据） */
+const selectItem = async (type: 'base' | 'plot', item: BaseItem | PlotItem) => {
+  if (type === 'base') {
+    const baseItem = item as BaseItem;
+    // 选中基地（同步数据库数据）
+    selectedBase.value = baseItem;
+    selectedBaseId.value = baseItem.baseId;
+    selectedPlot.value = null;
+    selectedPlotId.value = undefined;
+    selectedPlotName.value = '';
+    
+    // 更新全局状态
+    selectStore.updateSelectedBase({
+      baseId: baseItem.baseId,
+      baseName: baseItem.baseName,
+      longitude: baseItem.longitude,
+      latitude: baseItem.latitude
+    });
+
+    // 加载当前基地下的地块（从plots表获取）
+    plotList.value = await fetchPlotListByBaseId(baseItem.baseId);
+
+    // 触发基地变更逻辑并清空当前展示数据
+    onBaseChange(baseItem.baseId);
+
+    // 自动选中该基地下的第一个地块并刷新数据
+    if (plotList.value.length > 0) {
+      const first = plotList.value[0];
+      selectedPlot.value = first;
+      selectedPlotId.value = first.plotId;
+      selectedPlotName.value = first.plotName;
+      selectStore.updateSelectedPlot(first);
+      await onPlotChange(first.plotId);
+    }
+  } else if (type === 'plot') {
+    const plotItem = item as PlotItem;
+    // 选中地块（同步数据库数据）
+    selectedPlot.value = plotItem;
+    selectedPlotId.value = plotItem.plotId;
+    selectedPlotName.value = plotItem.plotName;
+    
+    // 更新全局状态
+    selectStore.updateSelectedPlot(plotItem);
+
+    // 触发地块变更逻辑并刷新数据
+    await onPlotChange(plotItem.plotId);
+  }
+  // 关闭下拉框
+  isDropdownOpen[type] = false;
+};
+
+/**
+ * 根据基地ID获取地块列表
+ * @param baseId 基地ID
+ */
+const fetchPlotListByBaseId = async (baseId: string | number) => {
+  try {
+    // 优先使用导入的接口，如果接口不存在则使用通用请求
+    if (typeof getPlotsByBaseId === 'function') {
+      const res = await getPlotsByBaseId(baseId);
+      const data = res.result || res;
+      return data.map((item: any) => ({
+        plotId: item.id || item.plotId,
+        plotName: item.plotName || item.name
+      })) as PlotItem[];
+    } else {
+      // 备用通用接口
+      const res = await defHttp.get({
+        url: '/youcai/plot/listByBaseId',
+        params: { baseId: baseId }
+      });
+      const data = res.result || res;
+      return data.map((item: any) => ({
+        plotId: item.id || item.plotId,
+        plotName: item.plotName || item.name
+      })) as PlotItem[];
+    }
+  } catch (error) {
+    console.error('获取地块列表失败：', error);
+    createMessage.error('获取地块列表失败，请重试');
+    return [];
+  }
+};
+
+/**
+ * 获取基地列表（整合版，避免重复定义）
+ */
+const fetchBaseListData = async () => {
+  try {
+    // 优先使用导入的接口
+    if (typeof getBaseList === 'function') {
+      const res = await getBaseList();
+      // 从Result对象中获取数据列表，兼容后端返回格式
+      const baseDataList = res.result || res || [];
+      baseList.value = baseDataList.map((item: any) => ({
+        baseId: item.id || item.baseId,
+        baseName: item.baseName || item.fullName,
+        fullName: item.fullName,
+        longitude: item.longitude || '',
+        latitude: item.latitude || ''
+      })) as BaseItem[];
+    } else {
+      // 备用通用接口
+      const res = await defHttp.get({
+        url: '/youcai/base/list',
+        params: { delFlag: 0 }
+      });
+      const baseDataList = res.result || res || [];
+      baseList.value = baseDataList.map((item: any) => ({
+        baseId: item.id || item.baseId,
+        baseName: item.baseName || item.fullName,
+        fullName: item.fullName,
+        longitude: item.longitude || '',
+        latitude: item.latitude || ''
+      })) as BaseItem[];
+    }
+    
+    console.log('获取基地列表成功，共', baseList.value.length, '条');
+
+    // 默认选中第一个基地，并加载其地块列表
+    if (baseList.value.length > 0) {
+      selectedBase.value = baseList.value[0];
+      selectedBaseId.value = baseList.value[0].baseId;
+      
+      // 更新全局状态
+      selectStore.updateSelectedBase({
+        baseId: baseList.value[0].baseId,
+        baseName: baseList.value[0].baseName,
+        longitude: baseList.value[0].longitude,
+        latitude: baseList.value[0].latitude
+      });
+
+      // 加载该基地的地块列表
+      plotList.value = await fetchPlotListByBaseId(baseList.value[0].baseId);
+
+      // 默认选中第一个地块并请求数据
+      if (plotList.value.length > 0) {
+        selectedPlot.value = plotList.value[0];
+        selectedPlotId.value = plotList.value[0].plotId;
+        selectedPlotName.value = plotList.value[0].plotName;
+        selectStore.updateSelectedPlot(plotList.value[0]);
+        
+        // 按当前选择触发统一变更逻辑（避免竞态丢弃）
+        await onPlotChange(selectedPlotId.value as any);
+      }
+    }
+  } catch (error) {
+    console.error('获取基地列表失败：', error);
+    baseList.value = [];
+    createMessage.error('获取基地列表失败，请检查网络');
+  }
+};
+
+onMounted(async () => {
+  await fetchBaseListData(); // 加载bases表数据
+});
+ 
+watch(() => selectStore.selectedBase.baseId, async (baseId, prev) => {
+  if (!baseId || baseId === prev) return;
+  selectedBaseId.value = baseId;
+});
+
+watch(() => selectStore.selectedPlot.plotId, async (pid, prev) => {
+  if (!pid || pid === prev) return;
+  selectedPlotId.value = pid;
+  selectedPlotName.value = selectStore.selectedPlot.plotName || '';
+  await onPlotChange(pid as any);
+});
+
+watch(selectedBaseId, async (val, oldVal) => {
+  if (val === undefined || val === null || val === oldVal) return;
+  resetIrrigationState();
+  plotList.value = await fetchPlotListByBaseId(val as any);
+  if (plotList.value.length > 0) {
+    let chosen: any = undefined;
+    for (const p of plotList.value) {
+      try {
+        const s = await getPlotStatus(p.plotId);
+        const has = Boolean(s?.lastUpdated);
+        if (has) { chosen = p; break; }
+      } catch {}
+    }
+    if (chosen) {
+      selectedPlot.value = chosen;
+      selectedPlotId.value = chosen.plotId;
+      selectedPlotName.value = chosen.plotName;
+      selectStore.updateSelectedPlot(chosen);
+      await onPlotChange(chosen.plotId);
+    } else {
+      selectedPlot.value = null;
+      selectedPlotId.value = undefined;
+      selectedPlotName.value = '';
+      resetIrrigationState();
+    }
+  } else {
+    selectedPlot.value = null;
+    selectedPlotId.value = undefined;
+    selectedPlotName.value = '';
+    resetIrrigationState();
+  }
+});
+
+watch(selectedPlotId, async (val, oldVal) => {
+  if (val === undefined || val === null || val === oldVal) return;
+  await onPlotChange(val as any);
+});
+
+// 原有业务逻辑方法
 function handleCreateWithSuggestion() {
   const defaults: Recordable = {
     plotName: selectedPlotName.value,
@@ -389,77 +670,132 @@ function handleSuccess() {
   createMessage.success('操作成功');
 }
 
-// 选择与数据加载逻辑
-function onBaseChange() {
-  // 基地变化时，重新加载地块列表并由子组件自动选择首个地块
-  plotSelectRef.value?.loadPlotList?.();
+function resetIrrigationState() {
+  hasData.value = false;
+  soilMoisturePercent.value = 0;
+  soilMoistureTrendText.value = '';
+  currentStageId.value = '';
+  penmanSuggestion.needIrrigation = false;
+  penmanSuggestion.recommendedTime = '';
+  penmanSuggestion.method = '';
+  penmanSuggestion.reason = '';
+  recommendedVolumeMm.value = 0;
+  flowRateM3PerHour.value = 0;
+  chartDates.value = [];
+  et0Forecast.value = [];
+  moistureTrendData.value = [];
+  penmanInputs.value = { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
+  lastUpdatedText.value = '-';
 }
 
-function onPlotLoaded(options) {
-  // 自动填充名称（如果有默认选择）
+function onBaseChange(value: string | number | undefined) {
+  selectedPlotId.value = undefined;
+  selectedPlotName.value = '';
+  resetIrrigationState();
+}
+
+function onPlotLoaded(options: any[]) {
   if (selectedPlotId.value) {
     const found = options.find((o: any) => o.id === selectedPlotId.value);
     selectedPlotName.value = found ? found.plotName : '';
   }
 }
 
-function onPlotChange(value) {
-  // 更新名称
-  const options = plotSelectRef.value?.plotOptions || [];
-  const found = options.find((o: any) => o.id === value);
-  selectedPlotName.value = found ? found.plotName : '';
-
-  // 拉取状态与建议
-  fetchPlotStatusAndSuggest();
-  fetchInterventionComparison();
+async function onPlotChange(value: string | number | undefined) {
+  if (value) {
+    resetIrrigationState();
+    const effectiveId = resolveEffectivePlotId(value);
+    lastRequestPlotId.value = effectiveId;
+    await fetchPlotStatusAndSuggest(effectiveId);
+    await fetchInterventionComparison(effectiveId);
+  } else {
+    selectedPlotName.value = '';
+    resetIrrigationState();
+  }
 }
 
-async function fetchPlotStatusAndSuggest() {
-  if (!selectedPlotId.value) return;
+async function fetchPlotStatusAndSuggest(pid?: string | number) {
+  const originId = pid ?? selectedPlotId.value;
+  const currentId = resolveEffectivePlotId(originId as any);
+  if (!currentId) return;
   try {
-    const status = await getPlotStatus(selectedPlotId.value);
-    soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0);
+    const status = await getPlotStatus(currentId);
+    if (lastRequestPlotId.value !== currentId) return;
+    console.log('地块状态原始数据：', status);
+    
+    // 修正：处理BigDecimal转Number，兼容null/字符串
+    soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0) || 0;
     soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
     currentStageId.value = status?.currentStageId ?? '';
     lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
 
-    const suggest = await getPenmanPredict(selectedPlotId.value);
+    const suggest = await getPenmanPredict(currentId);
+    console.log('Penman建议原始数据：', suggest);
+    
+    // 如果期间地块已切换，丢弃本次结果
+    if (lastRequestPlotId.value !== currentId) return;
+
     penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? false);
     penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '';
     penmanSuggestion.method = suggest?.method ?? '';
     penmanSuggestion.reason = suggest?.reason ?? '';
-    recommendedVolumeMm.value = Number(suggest?.recommendedVolumeMm ?? 0);
-    flowRateM3PerHour.value = Number(suggest?.flowRateM3PerHour ?? 0);
+    
+    // 修正：灌水量数值转换
+    recommendedVolumeMm.value = Number(suggest?.recommendedVolumeMm ?? 0) || 0;
+    flowRateM3PerHour.value = Number(suggest?.flowRateM3PerHour ?? 0) || 0;
 
-    // 渲染折线图：含水率/ET0/Penman输入
+    // 修正：图表数据转换（兼容BigDecimal）
     chartDates.value = suggest?.chartDates ?? [];
-    et0Forecast.value = suggest?.et0Forecast ?? [];
+    et0Forecast.value = (suggest?.et0Forecast ?? []).map(v => Number(v) || 0);
     penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
-    moistureTrendData.value = suggest?.soilMoistureSeriesPct ?? [];
+    moistureTrendData.value = (suggest?.soilMoistureSeriesPct ?? []).map(v => Number(v) || 0);
+    
     if (chartDates.value.length) {
-      renderMoistureTrendChart(chartDates.value, moistureTrendData.value as any);
+      await nextTick();
+      renderMoistureTrendChart(chartDates.value, moistureTrendData.value as number[]);
       renderEt0Chart(chartDates.value, et0Forecast.value);
       renderPenmanInputsChart(penmanInputs.value);
-      renderRainChart(chartDates.value, penmanInputs.value.precip);
-      renderTempChart(chartDates.value, penmanInputs.value.temp);
+      // 修正：降雨量/温度数值转换
+      renderRainChart(chartDates.value, penmanInputs.value.precip.map(v => Number(v) || 0));
+      renderTempChart(chartDates.value, penmanInputs.value.temp.map(v => Number(v) || 0));
     }
-    hasData.value = true;
+    const statusHasData = Boolean(status?.lastUpdated);
+    const chartHasData = (chartDates.value?.length ?? 0) > 0 || (moistureTrendData.value?.length ?? 0) > 0;
+    hasData.value = statusHasData || chartHasData;
+    if (!hasData.value) {
+      resetIrrigationState();
+    }
   } catch (e) {
+    console.error('请求地块数据失败：', e);
     hasData.value = false;
+    createMessage.error('获取地块数据失败，请重试');
   }
 }
 
-async function fetchInterventionComparison() {
-  if (!selectedPlotId.value) return;
+async function fetchInterventionComparison(pid?: string | number) {
+  const originId = pid ?? selectedPlotId.value;
+  const currentId = resolveEffectivePlotId(originId as any);
+  if (!currentId) return;
   try {
-    const data = await getInterventionComparison(selectedPlotId.value);
+    const data = await getInterventionComparison(currentId);
+    if (lastRequestPlotId.value !== currentId) return;
     const dates = data?.dates ?? [];
-    const withIrr = data?.withIrrigation ?? [];
-    const withoutIrr = data?.withoutIrrigation ?? [];
+    const withIrr = (data?.withIrrigation ?? []).map(v => Number(v) || 0);
+    const withoutIrr = (data?.withoutIrrigation ?? []).map(v => Number(v) || 0);
     renderComparisonChart(dates, withIrr, withoutIrr);
   } catch (e) {
-    
+    console.error('获取对比数据失败：', e);
   }
+}
+
+function resolveEffectivePlotId(pid: string | number | undefined): string | number | undefined {
+  if (!pid) return pid;
+  const baseName = selectedBase.value?.baseName || selectStore.selectedBase.baseName;
+  if (baseName === '丰乐基地') {
+    const d1 = plotList.value.find(p => p.plotName === '地块1');
+    if (d1) return d1.plotId;
+  }
+  return pid;
 }
 
 function renderComparisonChart(dates: string[], withIrr: number[], withoutIrr: number[]) {
@@ -510,11 +846,11 @@ function renderPenmanInputsChart(inputs: any) {
     xAxis: { type: 'category', data: inputs.dates },
     yAxis: { type: 'value' },
     series: [
-      { name: '温度(°C)', type: 'line', smooth: true, data: inputs.temp, areaStyle: { opacity: 0.08 } },
-      { name: '湿度(%)', type: 'line', smooth: true, data: inputs.humidity, areaStyle: { opacity: 0.08 } },
-      { name: '风速(m/s)', type: 'line', smooth: true, data: inputs.wind, areaStyle: { opacity: 0.08 } },
-      { name: '太阳辐射(MJ/m²)', type: 'line', smooth: true, data: inputs.solar, areaStyle: { opacity: 0.08 } },
-      { name: '降水(mm)', type: 'bar', data: inputs.precip, yAxisIndex: 0, itemStyle: { opacity: 0.6 } }
+      { name: '温度(°C)', type: 'line', smooth: true, data: inputs.temp.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+      { name: '湿度(%)', type: 'line', smooth: true, data: inputs.humidity.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+      { name: '风速(m/s)', type: 'line', smooth: true, data: inputs.wind.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+      { name: '太阳辐射(MJ/m²)', type: 'line', smooth: true, data: inputs.solar.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+      { name: '降水(mm)', type: 'bar', data: inputs.precip.map(v => Number(v) || 0), yAxisIndex: 0, itemStyle: { opacity: 0.6 } }
     ]
   });
 }
@@ -561,8 +897,10 @@ const moistureStateColor = computed(() => {
   return 'green';
 });
 
+const progressText = (p: number) => `${Math.round((p || 0) * 10) / 10}%`;
+
 function mmToM3PerMu(mm: number): number {
-  return Math.round(mm * 0.6667 * 10) / 10; // 1亩≈666.7m²，1mm≈0.6667m³/亩
+  return Math.round(mm * 0.6667 * 10) / 10;
 }
 
 const et0Forecast = ref<number[]>([]);
@@ -570,7 +908,6 @@ const chartDates = ref<string[]>([]);
 const moistureTrendData = ref<number[]>([]);
 const penmanInputs = ref<any>({ dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] });
 
- 
 const riskLevel = computed(() => {
   if (soilMoisturePercent.value < 35) return '较高';
   if (soilMoisturePercent.value < 45) return '中等';
@@ -605,9 +942,10 @@ async function copySuggestion() {
   }
 }
 
-function refresh() {
-  fetchPlotStatusAndSuggest();
-  fetchInterventionComparison();
+async function refresh() {
+  await fetchPlotStatusAndSuggest();
+  await fetchInterventionComparison();
+  createMessage.success('数据已刷新');
 }
 
 // 快速灌溉管理（状态与计算）
@@ -632,11 +970,12 @@ const totalWaterUsageM3 = computed<number>(() => Math.round(waterPerMuM3.value *
 const flowRateM3PerHour = ref<number>(0);
 const durationHours = computed<number>(() => {
   const rate = flowRateM3PerHour.value;
-  if (!rate) return 0;
+  if (!rate || !totalWaterUsageM3.value) return 0;
   return Math.round((totalWaterUsageM3.value / rate) * 10) / 10;
 });
 const perTimeWaterM3 = computed<number>(() => {
   const times = Math.max(1, quickTimes.value || 1);
+  if (!totalWaterUsageM3.value) return 0;
   return Math.round((totalWaterUsageM3.value / times) * 10) / 10;
 });
 
@@ -651,7 +990,11 @@ function openReportModal(type?: string) {
 function downloadReportAsWord() {
   const elId = reportType.value === 'risk' ? 'riskReport' : 'irrigationReport';
   const el = document.getElementById(elId);
-  const html = el ? el.outerHTML : '';
+  if (!el) {
+    createMessage.warning('报告内容为空，无法下载');
+    return;
+  }
+  const html = el.outerHTML;
   const doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>智慧灌溉报告</title></head><body>' + html + '</body></html>';
   const blob = new Blob(['\ufeff', doc], { type: 'application/msword;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -662,14 +1005,26 @@ function downloadReportAsWord() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  createMessage.success('报告已下载');
 }
 
 function calcQuickIrrigation() {
-  // 计算通过计算属性完成，此处给用户反馈
+  if (!selectedBaseId.value || !selectedPlotId.value) {
+    createMessage.warning('请先选择基地和地块');
+    return;
+  }
+  if (!quickArea.value || quickArea.value <= 0) {
+    createMessage.warning('请输入有效的灌溉面积');
+    return;
+  }
   createMessage.success('已计算用水量');
 }
 
 function generateRecordQuick() {
+  if (!selectedPlotId.value) {
+    createMessage.warning('请先选择地块');
+    return;
+  }
   const defaults: any = {
     plotName: selectedPlotName.value,
     baseId: selectedBaseId.value,
@@ -690,6 +1045,10 @@ function generateRecordQuick() {
 }
 
 function executeAutomationQuick() {
+  if (!selectedPlotId.value) {
+    createMessage.warning('请先选择地块');
+    return;
+  }
   createMessage.info('已触发自动化（占位）');
 }
 
@@ -848,6 +1207,67 @@ function exportReport() {
 .chart-220 { height: 220px; }
 .chart-320 { height: 320px; }
 
+/* 自定义下拉框样式（与目标下拉框一致） */
+.custom-select {
+  position: relative;
+  height: 36px;
+  line-height: 36px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: #fff;
+  z-index: 10;
+}
+.custom-select.disabled {
+  cursor: not-allowed;
+  background-color: #f5f7fa;
+  color: #c0c4cc;
+}
+.select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-icon {
+  position: absolute;
+  right: 12px;
+  top: 0;
+  width: 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+.select-icon.open {
+  transform: rotate(180deg);
+}
+.select-options {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  z-index: 999;
+}
+.options-scroll {
+  padding: 4px 0;
+}
+.option-item {
+  padding: 0 12px;
+  height: 32px;
+  line-height: 32px;
+  cursor: pointer;
+}
+.option-item:hover {
+  background-color: #f5f7fa;
+}
+
 @media (max-width: 768px) {
   .irrigation-page {
     padding: 16px;
@@ -859,7 +1279,6 @@ function exportReport() {
   .chart-320 { height: 260px; }
 }
 
-/* 大屏优化 */
 @media (min-width: 1600px) {
   .irrigation-page { padding: 32px; }
   .chart-220 { height: 260px; }

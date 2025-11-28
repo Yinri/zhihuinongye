@@ -149,17 +149,4 @@ public class YoucaiIrrigationMonitoringController extends JeecgController<Youcai
         return super.exportXls(request, youcaiIrrigationMonitoring, YoucaiIrrigationMonitoring.class, "灌溉监控表");
     }
 
-    /**
-      * 通过excel导入数据
-    *
-    * @param request
-    * @param response
-    * @return
-    */
-    @RequiresPermissions("youcai:youcai_irrigation_monitoring:importExcel")
-    @RequestMapping(value = "/importExcel", method = RequestMethod.POST)
-    public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
-        return super.importExcel(request, response, YoucaiIrrigationMonitoring.class);
-    }
-
 }
