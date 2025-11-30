@@ -1,30 +1,22 @@
 import { defHttp } from '/@/utils/http/axios';  
+import { useGlobSetting } from '/@/hooks/setting';
 import { AxiosRequestConfig } from 'axios';
 
 // 枚举API地址
 enum Api {
-  // 列表
   List = '/rapeseed/irrigation/list',
-  // 保存
   Save = '/rapeseed/irrigation/save',
-  // 编辑
   Edit = '/rapeseed/irrigation/edit',
-  // 删除
   Delete = '/rapeseed/irrigation/delete',
-  // 批量删除
   BatchDelete = '/rapeseed/irrigation/batchDelete',
-  // 详情
   Detail = '/rapeseed/irrigation/queryById',
-  // 导出
   Export = '/rapeseed/irrigation/export',
-  // 导入
   Import = '/rapeseed/irrigation/importExcel',
-  // 地块生长与土壤水分状态
   PlotStatus = '/rapeseed/irrigation/plotStatus',
-  // Penman 预测与灌溉建议
+  PlotStatusByBase = '/rapeseed/irrigation/plotStatusByBase',
   PenmanPredict = '/rapeseed/irrigation/penmanPredict',
-  // 干预/不干预对比数据
   InterventionComparison = '/rapeseed/irrigation/interventionComparison',
+  FarmingAdd = '/youcai/farmingRecords/add',
 }
 
 // 获取智慧灌溉列表
@@ -34,12 +26,21 @@ export const getIrrigationList = (params?: AxiosRequestConfig) => {
 
 // 保存智慧灌溉
 export const saveIrrigation = (params: any) => {
-  return defHttp.post({ url: Api.Save, params });
+  return defHttp.post({ url: Api.Save, data: params });
 };
 
 // 编辑智慧灌溉
 export const editIrrigation = (params: any) => {
-  return defHttp.put({ url: Api.Edit, params });
+  return defHttp.request({ url: Api.Edit, method: 'PUT', data: params });
+};
+
+export const saveFarmingRecord = (params: any) => {
+  return defHttp.post({ url: Api.FarmingAdd, data: params });
+};
+
+export const saveIrrigationDirect = (params: any) => {
+  const { domainUrl } = useGlobSetting();
+  return defHttp.post({ url: `${domainUrl}/rapeseed/irrigation/save`, data: params });
 };
 
 // 删除智慧灌溉
@@ -49,7 +50,7 @@ export const deleteIrrigation = (id: string, params?: AxiosRequestConfig) => {
 
 // 批量删除智慧灌溉
 export const batchDeleteIrrigation = (ids: string[], params?: AxiosRequestConfig) => {
-  return defHttp.delete({ url: Api.BatchDelete, data: { ids } });
+  return defHttp.delete({ url: Api.BatchDelete, data: ids, params });
 };
 
 // 获取智慧灌溉详情
@@ -72,12 +73,22 @@ export const getPlotStatus = (plotId: string | number) => {
   return defHttp.get({ url: `${Api.PlotStatus}/${plotId}` });
 };
 
+export const getPlotStatusByBase = (baseId: string | number) => {
+  return defHttp.get({ url: `${Api.PlotStatusByBase}/${baseId}` });
+};
+
 // 基于 Penman 算法的灌溉建议（是否需要、时间、方式等）
-export const getPenmanPredict = (plotId: string | number) => {
-  return defHttp.get({ url: `${Api.PenmanPredict}` , params: { plotId } });
+export const getPenmanPredict = (plotId?: string | number, baseId?: string | number) => {
+  const params: any = {};
+  if (plotId != null) params.plotId = plotId;
+  if (baseId != null) params.baseId = baseId;
+  return defHttp.get({ url: `${Api.PenmanPredict}` , params });
 };
 
 // 干预灌溉 vs 不干预灌溉 对比数据（用于图表）
-export const getInterventionComparison = (plotId: string | number) => {
-  return defHttp.get({ url: `${Api.InterventionComparison}`, params: { plotId } });
+export const getInterventionComparison = (plotId?: string | number, baseId?: string | number) => {
+  const params: any = {};
+  if (plotId != null) params.plotId = plotId;
+  if (baseId != null) params.baseId = baseId;
+  return defHttp.get({ url: `${Api.InterventionComparison}`, params });
 };
