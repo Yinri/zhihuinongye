@@ -868,7 +868,7 @@ async function fetchInterventionComparison(pid?: string | number) {
   } catch (e) {
     console.error('获取对比数据失败：', e);
     // 显示具体的错误信息给用户
-    createMessage.error(`获取干预对比数据失败：${e.message || '未知错误'}`);
+    createMessage.error(`获取干预对比数据失败：${(e as Error).message || '未知错误'}`);
   }
 }
 
@@ -878,9 +878,13 @@ function resolveEffectivePlotId(pid: string | number | undefined): string | numb
 
 function toHourLabels(dates: string[]): string[] {
   return (dates || []).map((s) => {
-    const part = (s || '').split(' ')[1] || s;
-    const hh = part.length >= 2 ? part.slice(-2) : part;
-    return `${hh}:00`;
+    const str = String(s || '');
+    const parts = str.split(' ');
+    const time = parts.length > 1 ? parts[1] : parts[0];
+    const hm = time.split(':');
+    const hh = hm[0] || time;
+    const mm = hm[1] || '00';
+    return `${hh}:${mm}`;
   });
 }
 

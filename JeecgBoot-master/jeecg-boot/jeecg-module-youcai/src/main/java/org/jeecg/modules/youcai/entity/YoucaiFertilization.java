@@ -69,13 +69,13 @@ public class YoucaiFertilization extends JeecgEntity {
     private String remark;
 
     @Schema(description = "N百分比")
-    private Integer nPercent; 
+    private BigDecimal nPercent;
 
     @Schema(description = "P百分比")
-    private Integer pPercent; 
+    private BigDecimal pPercent;
 
     @Schema(description = "K百分比")
-    private Integer kPercent; 
+    private BigDecimal kPercent;
 
     @Schema(description = "目标产量(公斤/亩)")
     private BigDecimal targetYieldKgPerMu;

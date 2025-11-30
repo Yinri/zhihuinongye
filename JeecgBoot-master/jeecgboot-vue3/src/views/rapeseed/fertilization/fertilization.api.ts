@@ -25,10 +25,14 @@ enum Api {
   Recommend = '/rapeseed/fertilization/recommend',
   // 天气与预报
   Forecast = '/rapeseed/fertilization/forecast',
-  // 一键施肥执行（占位）
-  QuickApply = '/rapeseed/fertilization/quickApply',
-  // 一键施肥计划（占位）
-  QuickPlan = '/rapeseed/fertilization/quickPlan',
+  // 土壤历史趋势
+  SoilSeries = '/rapeseed/fertilization/soilSeries',
+  // 施肥记录折线
+  FertSeries = '/rapeseed/fertilization/fertSeries',
+  // 基地土壤七天趋势
+  BaseSoilSeries = '/rapeseed/fertilization/baseSoilSeries',
+  // 基地QUEFTS推荐
+  BaseRecommend = '/rapeseed/fertilization/baseRecommend',
 }
 
 // 获取施肥管理列表
@@ -86,12 +90,22 @@ export const getWeatherForecast = (plotId: string | number) => {
   return defHttp.get({ url: `${Api.Forecast}/${plotId}` });
 };
 
-// 执行一键施肥（占位：后端接入后替换真实逻辑）
-export const executeQuickFertilization = (params: any) => {
-  return defHttp.post({ url: Api.QuickApply, params });
+// 获取土壤历史趋势（N/P/K随检测日期变化）
+export const getSoilHistorySeries = (plotId: string | number) => {
+  return defHttp.get({ url: `${Api.SoilSeries}/${plotId}` });
 };
 
-// 计划一键施肥（占位：后端接入后替换真实逻辑）
-export const planQuickFertilization = (params: any) => {
-  return defHttp.post({ url: Api.QuickPlan, params });
+// 获取施肥记录折线（每亩与总量按日期）
+export const getFertilizationRecordSeries = (plotId: string | number) => {
+  return defHttp.get({ url: `${Api.FertSeries}/${plotId}` });
+};
+
+// 基地七天土壤趋势（每日平均N/P/K）
+export const getBaseSoilSeries = (baseId: string | number) => {
+  return defHttp.get({ url: `${Api.BaseSoilSeries}/${baseId}` });
+};
+
+// 基地QUEFTS推荐（基于该基地最新土壤数据）
+export const getBaseRecommendation = (baseId: string | number) => {
+  return defHttp.get({ url: `${Api.BaseRecommend}/${baseId}` });
 };

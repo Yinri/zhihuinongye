@@ -197,12 +197,12 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
      * 地块养分状态查询（返回数据库真实土壤数据 + 真实目标产量）
      */
     @GetMapping("/plotStatus/{plotId}")
-    public Result<Map<String, Object>> plotStatus(@PathVariable String plotId) {
+  public Result<Map<String, Object>> plotStatus(@PathVariable String plotId) {
         try {
             Assert.notNull(plotId, "地块ID不能为空");
             // 1. 查询该地块最新的真实土壤肥力数据（仅选取必要列，规避不必要的id映射）
             com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<YoucaiSoilFertility> soilWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-            soilWrapper.select("nitrogen", "phosphorus", "potassium")
+            soilWrapper.select("nitrogen", "phosphorus", "potassium", "ph_value", "organic_matter")
                     .eq("plot_id", plotId)
                     .orderByDesc("test_date")
                     .last("LIMIT 1");
@@ -226,6 +226,20 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
                 data.put("nPercent", new BigDecimal(soilMap.get("nitrogen").toString()));
                 data.put("pPercent", new BigDecimal(soilMap.get("phosphorus").toString()));
                 data.put("kPercent", new BigDecimal(soilMap.get("potassium").toString()));
+                Object phObj = soilMap.get("ph_value");
+                Object omObj = soilMap.get("organic_matter");
+                if (phObj != null) {
+                    BigDecimal ph = new BigDecimal(phObj.toString());
+                    if (ph.compareTo(BigDecimal.ZERO) > 0) {
+                        data.put("ph", ph);
+                    }
+                }
+                if (omObj != null) {
+                    BigDecimal om = new BigDecimal(omObj.toString());
+                    if (om.compareTo(BigDecimal.ZERO) > 0) {
+                        data.put("om", om);
+                    }
+                }
             } else {
                 LambdaQueryWrapper<YoucaiFertilization> statusWrapper = new LambdaQueryWrapper<>();
                 statusWrapper.eq(YoucaiFertilization::getPlotId, plotId)
@@ -233,9 +247,9 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
                         .orderByDesc(YoucaiFertilization::getUpdateTime)
                         .last("LIMIT 1");
                 YoucaiFertilization latestStatus = fertilizationService.getOne(statusWrapper);
-                data.put("nPercent", latestStatus != null && latestStatus.getNPercent() != null ? new BigDecimal(latestStatus.getNPercent()) : new BigDecimal("0.00"));
-                data.put("pPercent", latestStatus != null && latestStatus.getPPercent() != null ? new BigDecimal(latestStatus.getPPercent()) : new BigDecimal("0.00"));
-                data.put("kPercent", latestStatus != null && latestStatus.getKPercent() != null ? new BigDecimal(latestStatus.getKPercent()) : new BigDecimal("0.00"));
+                data.put("nPercent", latestStatus != null && latestStatus.getNPercent() != null ? latestStatus.getNPercent() : new BigDecimal("0.00"));
+                data.put("pPercent", latestStatus != null && latestStatus.getPPercent() != null ? latestStatus.getPPercent() : new BigDecimal("0.00"));
+                data.put("kPercent", latestStatus != null && latestStatus.getKPercent() != null ? latestStatus.getKPercent() : new BigDecimal("0.00"));
                 if (latestFert == null) {
                     latestFert = latestStatus;
                 }
@@ -302,9 +316,9 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
                 if (latestStatus == null) {
                     return Result.error("未查询到该地块的土壤或状态数据，无法生成施肥推荐");
                 }
-                nVal = latestStatus.getNPercent() != null ? new BigDecimal(latestStatus.getNPercent()) : new BigDecimal("0.00");
-                pVal = latestStatus.getPPercent() != null ? new BigDecimal(latestStatus.getPPercent()) : new BigDecimal("0.00");
-                kVal = latestStatus.getKPercent() != null ? new BigDecimal(latestStatus.getKPercent()) : new BigDecimal("0.00");
+                nVal = latestStatus.getNPercent() != null ? latestStatus.getNPercent() : new BigDecimal("0.00");
+                pVal = latestStatus.getPPercent() != null ? latestStatus.getPPercent() : new BigDecimal("0.00");
+                kVal = latestStatus.getKPercent() != null ? latestStatus.getKPercent() : new BigDecimal("0.00");
                 if (params.get("targetYield") == null && latestStatus.getTargetYieldKgPerMu() != null) {
                     targetYield = latestStatus.getTargetYieldKgPerMu();
                 }
@@ -350,8 +364,8 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
     /**
      * 一周天气与养分趋势（读取数据库真实天气数据 + 真实养分变化计算）
      */
-    @GetMapping("/forecast/{plotId}")
-    public Result<Map<String, Object>> forecast(@PathVariable String plotId) {
+  @GetMapping("/forecast/{plotId}")
+  public Result<Map<String, Object>> forecast(@PathVariable String plotId) {
         try {
             Assert.notNull(plotId, "地块ID不能为空");
             com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<YoucaiSoilFertility> soilWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
@@ -364,7 +378,10 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
                 java.util.List<java.util.Map<String, Object>> soilMaps = soilFertilityService.listMaps(soilWrapper);
                 if (soilMaps != null && !soilMaps.isEmpty()) {
                     soilMap = soilMaps.get(0);
-                }
+  }
+
+ 
+
             } catch (Exception ignore) {}
             List<Map<String, Object>> days = new ArrayList<>();
             if (soilMap != null) {
@@ -395,9 +412,9 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
                 ObjectMapper mapper = new ObjectMapper();
                 days = mapper.readValue(latestStatus.getForecastJson(), new TypeReference<List<Map<String, Object>>>(){});
             }
-            Map<String, Object> res = new HashMap<>();
-            res.put("days", days);
-            return Result.OK(res);
+        Map<String, Object> res = new HashMap<>();
+        res.put("days", days);
+        return Result.OK(res);
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         } catch (Exception ex) {
@@ -406,146 +423,187 @@ public class RapeseedFertilizationController extends JeecgController<YoucaiFerti
         }
     }
 
-    /**
-     * 一键施肥执行（基于真实推荐值和计划，生成真实施肥记录）
-     */
-    @PostMapping("/quickApply")
-    public Result<String> quickApply(@RequestBody Map<String, Object> params) {
-        try {
-            // 解析真实请求参数
-            String plotId = params.get("plotId").toString();
-            String formula = (String) params.get("formula"); // 真实肥料配方（如15-15-15）
-            BigDecimal areaMu = new BigDecimal(params.get("areaMu").toString()); // 真实施肥面积
-            Integer splitTimes = (Integer) params.get("splitTimes"); // 真实分施次数
-            String method = (String) params.get("method"); // 真实施肥方式
-            String planDate = (String) params.get("planDate"); // 真实计划日期
-            String remark = (String) params.get("remark"); // 备注
 
-            // 校验参数
-            Assert.notNull(plotId, "地块ID不能为空");
-            Assert.notNull(formula, "肥料配方不能为空");
-            Assert.isTrue(areaMu.compareTo(BigDecimal.ZERO) > 0, "施肥面积必须大于0");
-            Assert.notNull(splitTimes, "分施次数不能为空");
-            Assert.notNull(method, "施肥方式不能为空");
-            Assert.notNull(planDate, "计划日期不能为空");
-
-            // 查询真实地块名称（从数据库施肥记录中获取）
-            YoucaiFertilization latestFert = fertilizationService.getOne(
-                new LambdaQueryWrapper<YoucaiFertilization>()
-                    .eq(YoucaiFertilization::getPlotId, plotId)
-                    .last("LIMIT 1")
-            );
-            String plotName = latestFert != null ? latestFert.getPlotName() : "未知地块";
-
-            // 生成真实的施肥记录（分施多次则生成多条真实记录）
-            Date planDateObj = new SimpleDateFormat("yyyy-MM-dd").parse(planDate);
-            for (int i = 0; i < splitTimes; i++) {
-                YoucaiFertilization entity = new YoucaiFertilization();
-                entity.setPlotId(plotId);
-                entity.setPlotName(plotName);
-                entity.setRecordType("quick_apply");
-                // 生成唯一施肥编号（包含分施标识）
-                String dateStr = new SimpleDateFormat("yyyyMMdd").format(new Date());
-                String randomStr = String.format("%06d", new Random().nextInt(1000000));
-                entity.setFertilizationNo("F-QUICK-" + dateStr + "-" + randomStr + "-" + (i + 1));
-                entity.setFertilizationType("追肥");
-                entity.setFertilizerName("复合肥(" + formula + ")");
-                // 真实每亩用量（从请求参数获取，基于推荐值计算）
-                BigDecimal perMu = new BigDecimal(params.get("perMuWeightKg").toString());
-                entity.setFertilizerAmountKgPerMu(perMu);
-                entity.setFertilizationAreaMu(areaMu);
-                // 分施日期（间隔1-2天，真实时间逻辑）
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(planDateObj);
-                cal.add(Calendar.DATE, i * 2);
-                entity.setFertilizationDate(cal.getTime());
-                entity.setFertilizationMethod(method);
-                entity.setResponsiblePerson(params.get("responsiblePerson") != null ? (String) params.get("responsiblePerson") : "系统自动生成");
-                entity.setRemark(remark + "（一键施肥，分施第" + (i + 1) + "次）");
-                // 真实目标产量（从地块最新记录获取）
-                entity.setTargetYieldKgPerMu(latestFert != null ? latestFert.getTargetYieldKgPerMu() : new BigDecimal("180.00"));
-                
-                // 保存真实施肥记录到数据库
-                fertilizationService.save(entity);
-            }
-
-            return Result.OK("一键施肥执行成功，已生成" + splitTimes + "条真实施肥记录");
-        } catch (IllegalArgumentException e) {
-            return Result.error(e.getMessage());
-        } catch (Exception ex) {
-            log.error("一键施肥执行失败", ex);
-            return Result.error("执行失败：" + ex.getMessage());
-        }
+  @GetMapping("/fertSeries/{plotId}")
+  public Result<Map<String, Object>> fertSeries(@PathVariable String plotId) {
+    try {
+      Assert.notNull(plotId, "地块ID不能为空");
+      LambdaQueryWrapper<YoucaiFertilization> w = new LambdaQueryWrapper<>();
+      w.eq(YoucaiFertilization::getPlotId, plotId).orderByAsc(YoucaiFertilization::getFertilizationDate).last("LIMIT 12");
+      List<YoucaiFertilization> list = fertilizationService.list(w);
+      List<Map<String, Object>> items = new ArrayList<>();
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+      for (YoucaiFertilization f : list) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("date", f.getFertilizationDate() != null ? sdf.format(f.getFertilizationDate()) : "");
+        BigDecimal perMu = f.getFertilizerAmountKgPerMu() != null ? f.getFertilizerAmountKgPerMu() : BigDecimal.ZERO;
+        BigDecimal area = f.getFertilizationAreaMu() != null ? f.getFertilizationAreaMu() : BigDecimal.ZERO;
+        BigDecimal total = perMu.multiply(area).setScale(2, RoundingMode.HALF_UP);
+        m.put("perMuKg", perMu);
+        m.put("totalKg", total);
+        m.put("type", f.getFertilizationType());
+        items.add(m);
+      }
+      Map<String, Object> res = new HashMap<>();
+      res.put("items", items);
+      return Result.OK(res);
+    } catch (IllegalArgumentException e) {
+      return Result.error(e.getMessage());
+    } catch (Exception ex) {
+      log.error("获取施肥记录折线失败", ex);
+      return Result.error("获取失败：" + ex.getMessage());
     }
+  }
 
-    /**
-     * 一键施肥计划（基于真实推荐值、天气数据生成真实计划）
-     */
-    @PostMapping("/quickPlan")
-    public Result<Map<String, Object>> quickPlan(@RequestBody Map<String, Object> params) {
-        try {
-            String plotId = params.get("plotId").toString();
-            String risk = (String) params.get("risk");
-            BigDecimal areaMu = new BigDecimal(params.get("areaMu").toString());
-            Assert.notNull(plotId, "地块ID不能为空");
-            Assert.notNull(risk, "淋溶风险等级不能为空");
-            Assert.isTrue(areaMu.compareTo(BigDecimal.ZERO) > 0, "施肥面积必须大于0");
-            YoucaiSoilFertility latestSoil = soilFertilityService.getOne(
-                new LambdaQueryWrapper<YoucaiSoilFertility>()
-                    .eq(YoucaiSoilFertility::getPlotId, plotId)
-                    .orderByDesc(YoucaiSoilFertility::getTestDate)
-                    .last("LIMIT 1")
-            );
-            if (latestSoil == null) {
-                return Result.error("未查询到该地块的土壤数据");
-            }
-            BigDecimal targetYield = new BigDecimal("180.00");
-            YoucaiFertilization recommendation = QueftsAlgorithm.calculateRecommendation(targetYield, latestSoil);
-            List<Map<String, Object>> formulaOptions = Arrays.asList(
-                Map.of("label", "15-15-15", "value", "15-15-15", "nRatio", 15, "pRatio", 15, "kRatio", 15),
-                Map.of("label", "20-10-10", "value", "20-10-10", "nRatio", 20, "pRatio", 10, "kRatio", 10),
-                Map.of("label", "12-24-12", "value", "12-24-12", "nRatio", 12, "pRatio", 24, "kRatio", 12),
-                Map.of("label", "17-17-17", "value", "17-17-17", "nRatio", 17, "pRatio", 17, "kRatio", 17),
-                Map.of("label", "0-20-20", "value", "0-20-20", "nRatio", 0, "pRatio", 20, "kRatio", 20)
-            );
-            Map<String, Object> bestFormula = formulaOptions.stream()
-                .map(formula -> {
-                    int nRatio = (int) formula.get("nRatio");
-                    int pRatio = (int) formula.get("pRatio");
-                    int kRatio = (int) formula.get("kRatio");
-                    BigDecimal wN = nRatio > 0 ? recommendation.getNRecommendKgPerMu().divide(new BigDecimal(nRatio).divide(new BigDecimal(100)), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
-                    BigDecimal wP = pRatio > 0 ? recommendation.getP2o5RecommendKgPerMu().divide(new BigDecimal(pRatio).divide(new BigDecimal(100)), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
-                    BigDecimal wK = kRatio > 0 ? recommendation.getK2oRecommendKgPerMu().divide(new BigDecimal(kRatio).divide(new BigDecimal(100)), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
-                    BigDecimal perMuWeight = Collections.max(Arrays.asList(wN, wP, wK));
-                    formula.put("perMuWeight", perMuWeight);
-                    return formula;
-                })
-                .filter(formula -> ((BigDecimal) formula.get("perMuWeight")).compareTo(BigDecimal.ZERO) > 0)
-                .min(Comparator.comparing(formula -> (BigDecimal) formula.get("perMuWeight")))
-                .orElse(formulaOptions.get(0));
-            int splitTimes = "高".equals(risk) ? 3 : "中".equals(risk) ? 2 : 1;
-            String method = "高".equals(risk) ? "滴灌施肥" : "条施";
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-            Calendar c = Calendar.getInstance();
-            c.add(Calendar.DATE, 1);
-            String planDateStr = sdf.format(c.getTime());
-            BigDecimal perMuWeight = (BigDecimal) bestFormula.get("perMuWeight");
-            BigDecimal totalWeight = perMuWeight.multiply(areaMu).setScale(2, RoundingMode.HALF_UP);
-            Map<String, Object> plan = new HashMap<>();
-            plan.put("formula", bestFormula.get("value"));
-            plan.put("splitTimes", splitTimes);
-            plan.put("method", method);
-            plan.put("planDate", planDateStr);
-            plan.put("perMuWeightKg", perMuWeight);
-            plan.put("totalWeightKg", totalWeight);
-            return Result.OK(plan);
-        } catch (IllegalArgumentException e) {
-            return Result.error(e.getMessage());
-        } catch (Exception ex) {
-            log.error("生成施肥计划失败", ex);
-            return Result.error("生成计划失败：" + ex.getMessage());
+  @GetMapping("/soilSeries/{plotId}")
+  public Result<Map<String, Object>> soilSeries(@PathVariable String plotId) {
+    try {
+      Assert.notNull(plotId, "地块ID不能为空");
+      QueryWrapper<YoucaiSoilFertility> wrapper = new QueryWrapper<>();
+      java.util.Date sevenDaysAgo = new java.util.Date(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000);
+      wrapper.eq("plot_id", plotId).eq("del_flag", 0).ge("test_date", sevenDaysAgo).orderByAsc("test_date");
+      List<YoucaiSoilFertility> list = soilFertilityService.list(wrapper);
+      if (list == null || list.isEmpty()) {
+        QueryWrapper<YoucaiSoilFertility> fallback = new QueryWrapper<>();
+        fallback.eq("plot_id", plotId).eq("del_flag", 0).orderByDesc("test_date").last("LIMIT 7");
+        List<YoucaiSoilFertility> latest = soilFertilityService.list(fallback);
+        Collections.reverse(latest);
+        list = latest;
+      }
+      if (list == null || list.isEmpty()) {
+        LambdaQueryWrapper<YoucaiFertilization> statusWrapper = new LambdaQueryWrapper<>();
+        statusWrapper.eq(YoucaiFertilization::getPlotId, plotId)
+            .eq(YoucaiFertilization::getRecordType, "status")
+            .orderByDesc(YoucaiFertilization::getUpdateTime)
+            .last("LIMIT 1");
+        YoucaiFertilization latestStatus = fertilizationService.getOne(statusWrapper);
+        if (latestStatus != null && latestStatus.getForecastJson() != null) {
+          ObjectMapper mapper = new ObjectMapper();
+          List<Map<String, Object>> days = mapper.readValue(latestStatus.getForecastJson(), new TypeReference<List<Map<String, Object>>>(){});
+          List<Map<String, Object>> items = new ArrayList<>();
+          for (int i = 0; i < days.size(); i++) {
+            Map<String, Object> d = days.get(i);
+            Map<String, Object> m = new HashMap<>();
+            m.put("date", String.valueOf(d.getOrDefault("day", i + 1)));
+            m.put("n", d.get("n"));
+            m.put("p", d.get("p"));
+            m.put("k", d.get("k"));
+            m.put("ph", null);
+            m.put("om", null);
+            items.add(m);
+          }
+          Map<String, Object> res = new HashMap<>();
+          res.put("items", items);
+          return Result.OK(res);
         }
+      }
+      if (list != null && list.size() > 7) {
+        list = list.subList(list.size() - 7, list.size());
+      }
+      List<Map<String, Object>> items = new ArrayList<>();
+      for (YoucaiSoilFertility s : list) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("date", new SimpleDateFormat("yyyy-MM-dd").format(s.getTestDate()));
+        m.put("n", s.getNitrogen());
+        m.put("p", s.getPhosphorus());
+        m.put("k", s.getPotassium());
+        m.put("ph", s.getPhValue());
+        m.put("om", s.getOrganicMatter());
+        items.add(m);
+      }
+      Map<String, Object> res = new HashMap<>();
+      res.put("items", items);
+      return Result.OK(res);
+    } catch (IllegalArgumentException e) {
+      return Result.error(e.getMessage());
+    } catch (Exception ex) {
+      log.error("获取土壤历史趋势失败", ex);
+      return Result.error("获取失败：" + ex.getMessage());
     }
+  }
+
+  @GetMapping("/soilSeries")
+  public Result<Map<String, Object>> soilSeriesQuery(@RequestParam("plotId") String plotId) {
+    return soilSeries(plotId);
+  }
+
+  @GetMapping("/baseSoilSeries/{baseId}")
+  public Result<Map<String, Object>> baseSoilSeries(@PathVariable String baseId) {
+    try {
+      Assert.notNull(baseId, "基地ID不能为空");
+      QueryWrapper<YoucaiSoilFertility> w = new QueryWrapper<>();
+      w.eq("base_id", baseId).orderByAsc("test_date").last("LIMIT 50");
+      List<YoucaiSoilFertility> list = soilFertilityService.list(w);
+      Map<String, List<YoucaiSoilFertility>> byDate = new LinkedHashMap<>();
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+      for (YoucaiSoilFertility s : list) {
+        String d = sdf.format(s.getTestDate());
+        byDate.computeIfAbsent(d, k -> new ArrayList<>()).add(s);
+      }
+      List<Map<String, Object>> items = new ArrayList<>();
+      for (Map.Entry<String, List<YoucaiSoilFertility>> e : byDate.entrySet()) {
+        List<YoucaiSoilFertility> day = e.getValue();
+        BigDecimal avgN = day.stream().map(YoucaiSoilFertility::getNitrogen).filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal avgP = day.stream().map(YoucaiSoilFertility::getPhosphorus).filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal avgK = day.stream().map(YoucaiSoilFertility::getPotassium).filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int cnt = day.size();
+        Map<String, Object> m = new HashMap<>();
+        m.put("date", e.getKey());
+        m.put("n", cnt > 0 ? avgN.divide(new BigDecimal(cnt), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        m.put("p", cnt > 0 ? avgP.divide(new BigDecimal(cnt), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        m.put("k", cnt > 0 ? avgK.divide(new BigDecimal(cnt), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        items.add(m);
+      }
+      if (items.size() > 7) {
+        items = items.subList(items.size() - 7, items.size());
+      }
+      Map<String, Object> res = new HashMap<>();
+      res.put("items", items);
+      return Result.OK(res);
+    } catch (IllegalArgumentException e) {
+      return Result.error(e.getMessage());
+    } catch (Exception ex) {
+      log.error("获取基地土壤趋势失败", ex);
+      return Result.error("获取失败：" + ex.getMessage());
+    }
+  }
+
+  @GetMapping("/baseRecommend/{baseId}")
+  public Result<Map<String, Object>> baseRecommend(@PathVariable String baseId) {
+    try {
+      Assert.notNull(baseId, "基地ID不能为空");
+      YoucaiSoilFertility latest = soilFertilityService.getOne(
+          new LambdaQueryWrapper<YoucaiSoilFertility>()
+              .eq(YoucaiSoilFertility::getBaseId, baseId)
+              .orderByDesc(YoucaiSoilFertility::getTestDate)
+              .last("LIMIT 1"));
+      if (latest == null) {
+        return Result.error("未查询到该基地的土壤数据");
+      }
+      BigDecimal targetYield = new BigDecimal("180.00");
+      YoucaiFertilization rec = QueftsAlgorithm.calculateRecommendation(targetYield, latest);
+      Map<String, Object> res = new HashMap<>();
+      boolean need = rec.getNRecommendKgPerMu().compareTo(BigDecimal.ZERO) > 0
+          || rec.getP2o5RecommendKgPerMu().compareTo(BigDecimal.ZERO) > 0
+          || rec.getK2oRecommendKgPerMu().compareTo(BigDecimal.ZERO) > 0;
+      res.put("needFertilization", need);
+      res.put("recommendedTime", rec.getRecommendedTime());
+      res.put("method", rec.getMethodRecommend());
+      res.put("recommendN", rec.getNRecommendKgPerMu());
+      res.put("recommendP2O5", rec.getP2o5RecommendKgPerMu());
+      res.put("recommendK2O", rec.getK2oRecommendKgPerMu());
+      res.put("reason", rec.getReason());
+      return Result.OK(res);
+    } catch (IllegalArgumentException e) {
+      return Result.error(e.getMessage());
+    } catch (Exception ex) {
+      log.error("生成基地施肥推荐失败", ex);
+      return Result.error("生成失败：" + ex.getMessage());
+    }
+  }
 
     // 导出/导入接口保持原样（如需实现真实导出/导入，可补充JeecgController模板逻辑）
     @PostMapping("/export")

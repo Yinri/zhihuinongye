@@ -26,6 +26,16 @@
               <a-progress type="line" :percent="kPercent" :status="kStatus" :stroke-color="kColor" />
               <Tag :color="kTagColor">{{ kStateLabel }}</Tag>
             </div>
+            <div class="nutrient-item">
+              <span class="label">pH：</span>
+              <div class="value-text">{{ phValueText }}</div>
+              <Tag :color="phTagColor">{{ phStateLabel }}</Tag>
+            </div>
+            <div class="nutrient-item">
+              <span class="label">有机质：</span>
+              <div class="value-text">{{ omValueText }}</div>
+              <Tag :color="omTagColor">{{ omStateLabel }}</Tag>
+            </div>
           </div>
           <div class="statistic-grid">
             <div class="metric">
@@ -73,128 +83,33 @@
               </div>
             </div>
             <div class="suggestion-reason">{{ suggestion.reason }}</div>
-            <a-space>
-              <a-button type="primary" @click="oneClickCreate">一键生成施肥记录</a-button>
-              <a-button @click="scrollToCharts">查看趋势与输入</a-button>
-            </a-space>
           </div>
         </a-card>
       </a-col>
     </a-row>
 
-    <!-- 趋势折线图区域：四个方框 -->
-    <a-card :bordered="false" class="chart-card" ref="chartsAnchorRef">
+    
+
+    <!-- QUEFTS 推荐施肥比：保留并置于底部，增加数字比例 -->
+    <a-card :bordered="false" class="chart-card">
       <template #title>
         <div class="table-title">
-          <Icon icon="ant-design:line-chart" /> 趋势折线图
+          <Icon icon="ant-design:area-chart" /> QUEFTS 推荐施肥比
         </div>
       </template>
-      <a-row :gutter="16" class="chart-grid">
-        <a-col :xs="24" :md="12">
-          <div class="chart-box">
-            <div class="chart-title">近七天氮含量趋势</div>
-            <div ref="nTrendRef" class="chart-ref"></div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <div class="chart-box">
-            <div class="chart-title">近七天磷含量趋势</div>
-            <div ref="pTrendRef" class="chart-ref"></div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <div class="chart-box">
-            <div class="chart-title">近七天钾含量趋势</div>
-            <div ref="kTrendRef" class="chart-ref"></div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <div class="chart-box">
-            <div class="chart-title">一周平均温度</div>
-            <div ref="tempTrendRef" class="chart-ref"></div>
-          </div>
-        </a-col>
-      </a-row>
+      <div class="chart-box">
+        <div class="chart-title">推荐用量柱状图</div>
+        <div ref="recommendBarsRef" class="chart-ref"></div>
+      </div>
+      <div class="ratio-summary">
+        <div class="ratio-line">百分比：N {{ ratio.percN }}% / P₂O₅ {{ ratio.percP }}% / K₂O {{ ratio.percK }}%</div>
+        <div class="ratio-line">配比：{{ ratioBaseLabel }} {{ ratio.rN }} : {{ ratio.rP }} : {{ ratio.rK }}</div>
+      </div>
     </a-card>
+
 
     <!-- 施肥管理列表区域（已删除） -->
 
-    <!-- 一键施肥管理 -->
-    <a-card :bordered="false" class="quick-card">
-      <template #title>
-        <div class="table-title">
-          <Icon icon="ant-design:tool-outlined" /> 一键施肥管理
-        </div>
-      </template>
-      <a-space direction="vertical" style="width: 100%">
-        <div class="form-item">
-          <a-switch v-model:checked="useAlgorithm" checked-children="算法推荐" un-checked-children="手动参数" />
-        </div>
-        <a-row :gutter="6" justify="center" align="middle">
-          <a-col :xs="24" :sm="12" :md="4">
-            <div class="form-item">
-              <div class="label">肥料配方</div>
-              <a-select v-model:value="fertilizerFormula" :options="formulaOptions" :disabled="useAlgorithm" />
-            </div>
-          </a-col>
-          <!-- 新增：选择基地 -->
-          <a-col :xs="24" :sm="12" :md="4">
-            <div class="form-item">
-              <div class="label">选择基地</div>
-              <BaseSelect v-model="selectedBaseId" @change="onBaseChange" />
-            </div>
-          </a-col>
-          <!-- 新增：选择地块 -->
-          <a-col :xs="24" :sm="12" :md="4">
-            <div class="form-item">
-              <div class="label">选择地块</div>
-              <PlotSelect ref="plotSelectRef" v-model="selectedPlotId" :base-id="selectedBaseId" @change="onPlotChange" />
-            </div>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="4">
-            <div class="form-item">
-              <div class="label">施肥面积(亩)</div>
-              <a-input-number v-model:value="quickArea" :min="0" :precision="2" style="width:100%" />
-            </div>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="4">
-            <div class="form-item">
-              <div class="label">分施次数</div>
-              <a-select v-model:value="splitTimes" :options="splitOptions" :disabled="useAlgorithm" />
-            </div>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="4">
-            <div class="form-item">
-              <div class="label">施肥方式</div>
-              <a-select v-model:value="quickMethod" :options="methodOptions" :disabled="useAlgorithm" />
-            </div>
-          </a-col>
-        </a-row>
-        <a-row :gutter="12">
-          <a-col :xs="24" :md="8">
-            <div class="form-item">
-              <div class="label">计划日期</div>
-              <a-date-picker v-model:value="quickDate" value-format="YYYY-MM-DD HH:mm:ss" :show-time="true" style="width:100%" :disabled="useAlgorithm" />
-            </div>
-          </a-col>
-          <a-col :xs="24" :md="16">
-            <div class="form-item">
-              <div class="label">备注</div>
-              <a-input v-model:value="quickRemark" placeholder="备注（可选）" />
-            </div>
-          </a-col>
-        </a-row>
-        <div class="calc-result">{{ calcResultText }}</div>
-        <div class="quick-actions">
-          <a-space :size="8" align="center">
-            <a-button type="default" v-if="useAlgorithm" @click="refreshQuickPlan">刷新推荐</a-button>
-            <a-button type="default" v-else @click="calcProductUsage">计算用量</a-button>
-            <a-button type="primary" @click="quickGenerateRecord">生成记录</a-button>
-            <a-button @click="quickExecute">执行自动化（占位）</a-button>
-          </a-space>
-        </div>
-      </a-space>
-    </a-card>
 
     <!-- 表单弹窗 -->
     <FertilizationModal @register="registerModal" @success="handleSuccess" />
@@ -202,13 +117,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './fertilization.data';
-import { getFertilizationList, deleteFertilization, exportFertilization, importFertilization, getPlotNutrientStatus, getFertilizationRecommendation, getWeatherForecast, executeQuickFertilization, planQuickFertilization } from './fertilization.api';
+import { getFertilizationList, deleteFertilization, exportFertilization, importFertilization, getPlotNutrientStatus, getFertilizationRecommendation, getSoilHistorySeries } from './fertilization.api';
 import FertilizationModal from './FertilizationModal.vue';
 import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
 import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
@@ -270,11 +185,11 @@ async function selectItem(item: any, type: 'base' | 'plot') {
   if (type === 'base') {
     // 选择基地
     selectedBaseId.value = item.id || item.baseId;
-    selectStore.setSelectedBase(item);
+    selectStore.updateSelectedBase({ baseId: item.id || item.baseId, baseName: item.baseName || item.name || '未命名基地' });
     
     // 清空地块选择
     selectedPlotId.value = undefined;
-    selectStore.setSelectedPlot(null);
+    selectStore.updateSelectedPlot(null);
     
     // 加载对应的地块数据
     if (selectedBaseId.value) {
@@ -286,7 +201,7 @@ async function selectItem(item: any, type: 'base' | 'plot') {
   } else {
     // 选择地块
     selectedPlotId.value = item.id || item.plotId;
-    selectStore.setSelectedPlot(item);
+    selectStore.updateSelectedPlot({ plotId: item.id || item.plotId, plotName: item.plotName || item.name || '' });
     
     // 触发原有变更逻辑
     onPlotChange(selectedPlotId.value);
@@ -312,7 +227,7 @@ async function fetchBaseListData() {
     if (baseList.value.length > 0 && !selectedBaseId.value) {
       const firstBase = baseList.value[0];
       selectedBaseId.value = firstBase.id;
-      selectStore.setSelectedBase(firstBase);
+      selectStore.updateSelectedBase({ baseId: firstBase.id, baseName: firstBase.baseName });
       
       // 加载第一个基地的地块数据
       await fetchPlotListByBaseId(firstBase.id as string);
@@ -343,7 +258,7 @@ async function fetchPlotListByBaseId(baseId: string) {
     if (plotList.value.length > 0 && !selectedPlotId.value) {
       const firstPlot = plotList.value[0];
       selectedPlotId.value = firstPlot.id;
-      selectStore.setSelectedPlot(firstPlot);
+      selectStore.updateSelectedPlot({ plotId: firstPlot.id, plotName: firstPlot.plotName });
       onPlotChange(firstPlot.id);
     }
   } catch (error) {
@@ -378,6 +293,15 @@ const leachingRiskLabel = ref<string>('—');
 const leachingRiskColor = ref<string>('default');
 const targetYieldText = ref<string>('—');
 
+const phValue = ref<number | null>(null);
+const omValue = ref<number | null>(null);
+const phStateLabel = ref<string>('—');
+const omStateLabel = ref<string>('—');
+const phTagColor = ref<string>('default');
+const omTagColor = ref<string>('default');
+const phValueText = ref<string>('—');
+const omValueText = ref<string>('—');
+
 // 建议（QUEFTS）
 const suggestion = reactive({
   needFertilization: false,
@@ -390,18 +314,9 @@ const suggestion = reactive({
 });
 
 // 图表 refs
-const chartsAnchorRef = ref<any>(null);
-const nTrendRef = ref<HTMLDivElement | null>(null);
-const pTrendRef = ref<HTMLDivElement | null>(null);
-const rainTrendRef = ref<HTMLDivElement | null>(null);
-const tempTrendRef = ref<HTMLDivElement | null>(null);
-const kTrendRef = ref<HTMLDivElement | null>(null);
+const recommendBarsRef = ref<HTMLDivElement | null>(null);
 
-const { setOptions: setNOptions } = useECharts(nTrendRef);
-const { setOptions: setPOptions } = useECharts(pTrendRef);
-const { setOptions: setRainOptions } = useECharts(rainTrendRef);
-const { setOptions: setTempOptions } = useECharts(tempTrendRef);
-const { setOptions: setKOptions } = useECharts(kTrendRef);
+const { setOptions: setRecommendBarsOptions } = useECharts(recommendBarsRef as any);
 
 function onBaseChange(baseId) {
   selectedBaseId.value = baseId;
@@ -427,6 +342,8 @@ async function loadFertilizationOverview() {
     nPercent.value = status?.nPercent ?? 0;
     pPercent.value = status?.pPercent ?? 0;
     kPercent.value = status?.kPercent ?? 0;
+    phValue.value = status?.ph != null ? Number(status.ph) : null;
+    omValue.value = status?.om != null ? Number(status.om) : null;
 
     // 状态与标签
     const toState = (pct: number) => (pct < 40 ? '偏低' : pct > 70 ? '偏高' : '适中');
@@ -443,6 +360,8 @@ async function loadFertilizationOverview() {
     pStatus.value = toStatus(pPercent.value) as any;
     kStatus.value = toStatus(kPercent.value) as any;
 
+    applyPHOMStates();
+
     targetYieldText.value = status?.targetYield ? `${status.targetYield} kg/亩` : '—';
 
     // 建议
@@ -455,329 +374,59 @@ async function loadFertilizationOverview() {
     suggestion.recommendK2O = rec?.recommendK2O ?? 0;
     suggestion.reason = rec?.reason ?? '';
 
-    // 天气数据与趋势
-    const forecast = await getWeatherForecast(selectedPlotId.value as any);
-    const days = forecast?.days ?? [];
-    lastForecastDays.value = days;
-    trendSummary.value = summarizeTrend(days);
-    leachingRiskLabel.value = calcLeachingRisk(days);
-    leachingRiskColor.value = leachingRiskLabel.value === '高' ? 'red' : leachingRiskLabel.value === '中' ? 'orange' : leachingRiskLabel.value === '低' ? 'green' : 'default';
-
-    renderNTrendChart(days);
-    renderPTrendChart(days);
-    renderKTrendChart(days);
-    renderTempChart(days);
-    // 加载完成后刷新算法推荐
-    refreshQuickPlan();
+    const series = await getSoilHistorySeries(selectedPlotId.value as any);
+    const items = series?.items ?? [];
+    leachingRiskLabel.value = '—';
+    leachingRiskColor.value = 'default';
+    renderRecommendBars();
   } catch (e) {
-    const days: any[] = [];
-    renderNTrendChart(days);
-    renderPTrendChart(days);
-    renderKTrendChart(days);
-    renderTempChart(days);
-    lastForecastDays.value = days;
+    const items: any[] = [];
     trendSummary.value = '—';
     leachingRiskLabel.value = '—';
     leachingRiskColor.value = 'default';
-    refreshQuickPlan();
+    phValue.value = null;
+    omValue.value = null;
+    applyPHOMStates();
+    renderRecommendBars();
   } finally {
     loading.value = false;
   }
 }
 
-function summarizeTrend(days: any[]) {
-  if (!days || days.length === 0) return '—';
-  const dn = days.map((d) => d.n);
-  const dp = days.map((d) => d.p);
-  const trendN = dn[6] - dn[0];
-  const trendP = dp[6] - dp[0];
-  const tN = trendN > 2 ? '上升' : trendN < -2 ? '下降' : '稳定';
-  const tP = trendP > 2 ? '上升' : trendP < -2 ? '下降' : '稳定';
-  return `N${tN} / P${tP}`;
-}
 
-function calcLeachingRisk(days: any[]) {
-  if (!days || days.length === 0) return '—';
-  const totalRain = days.reduce((acc, d) => acc + (d.rain ?? 0), 0);
-  if (totalRain > 70) return '高';
-  if (totalRain > 30) return '中';
-  return '低';
-}
 
-function renderNTrendChart(days: any[]) {
-  setNOptions({
+
+// 历史与记录板块已删除
+
+function renderRecommendBars() {
+  setRecommendBarsOptions({
     grid: { left: 48, right: 16, bottom: 32, top: 32 },
-    xAxis: { type: 'category', data: days.map((d) => d.day) },
-    yAxis: { type: 'value', name: 'N (mg/kg)' },
     tooltip: { trigger: 'axis' },
-    series: [{ type: 'line', data: days.map((d) => d.n), smooth: true, color: '#1890ff' }],
+    xAxis: { type: 'category', data: ['N', 'P₂O₅', 'K₂O'] },
+    yAxis: { type: 'value', name: 'kg/亩' },
+    series: [
+      { type: 'bar', data: [suggestion.recommendN, suggestion.recommendP2O5, suggestion.recommendK2O], color: '#f5222d' },
+    ],
   });
 }
 
-function renderPTrendChart(days: any[]) {
-  setPOptions({
-    grid: { left: 48, right: 16, bottom: 32, top: 32 },
-    xAxis: { type: 'category', data: days.map((d) => d.day) },
-    yAxis: { type: 'value', name: 'P (mg/kg)' },
-    tooltip: { trigger: 'axis' },
-    series: [{ type: 'line', data: days.map((d) => d.p), smooth: true, color: '#faad14' }],
-  });
-}
-
-function renderKTrendChart(days: any[]) {
-  setKOptions({
-    grid: { left: 48, right: 16, bottom: 32, top: 32 },
-    xAxis: { type: 'category', data: days.map((d) => d.day) },
-    yAxis: { type: 'value', name: 'K (mg/kg)' },
-    tooltip: { trigger: 'axis' },
-    series: [{ type: 'line', data: days.map((d) => d.k), smooth: true, color: '#52c41a' }],
-  });
-}
-
-function renderRainChart(days: any[]) {
-  setRainOptions({
-    grid: { left: 48, right: 16, bottom: 32, top: 32 },
-    xAxis: { type: 'category', data: days.map((d) => d.day) },
-    yAxis: { type: 'value', name: '降雨量 (mm)' },
-    tooltip: { trigger: 'axis' },
-    series: [{ type: 'bar', data: days.map((d) => d.rain), color: '#69c0ff' }],
-  });
-}
-
-function renderTempChart(days: any[]) {
-  setTempOptions({
-    grid: { left: 48, right: 16, bottom: 32, top: 32 },
-    xAxis: { type: 'category', data: days.map((d) => d.day) },
-    yAxis: { type: 'value', name: '温度 (°C)' },
-    tooltip: { trigger: 'axis' },
-    series: [{ type: 'line', data: days.map((d) => d.temp), smooth: true, color: '#ff7875' }],
-  });
-}
-
-// 算法驱动一键施肥：开关与缓存
-const useAlgorithm = ref(true);
-const lastForecastDays = ref<any[]>([]);
-
-function formatDate(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
-}
-
-function applyPlanToUI(plan: any) {
-  if (!plan) return;
-  fertilizerFormula.value = plan.formula || fertilizerFormula.value;
-  splitTimes.value = plan.splitTimes || splitTimes.value;
-  quickMethod.value = plan.method || quickMethod.value;
-  quickDate.value = plan.planDate || quickDate.value;
-  const perMu = plan.perMuWeightKg ?? productWeightPerMu.value;
-  const total = plan.totalWeightKg ?? totalProductWeight.value;
-  productWeightPerMu.value = Number((perMu as number).toFixed ? (perMu as number).toFixed(2) : perMu);
-  totalProductWeight.value = Number((total as number).toFixed ? (total as number).toFixed(2) : total);
-  const perSplit = splitTimes.value > 0 ? Number((totalProductWeight.value / splitTimes.value).toFixed(2)) : totalProductWeight.value;
-  calcResultText.value = `算法推荐：配方 ${fertilizerFormula.value}，每亩约 ${productWeightPerMu.value} kg，总计 ${totalProductWeight.value} kg；分施 ${splitTimes.value} 次，每次约 ${perSplit} kg；方式 ${quickMethod.value}`;
-}
-
-function computePlanFallback() {
-  // 根据推荐 N/P/K 选择使每亩产品用量最小的配方
-  let bestFormula = fertilizerFormula.value;
-  let bestPerMu = Infinity;
-  for (const opt of formulaOptions) {
-    const fm = formulaMap[opt.value] || { N: 0, P: 0, K: 0 };
-    const wN = fm.N > 0 ? suggestion.recommendN / (fm.N / 100) : 0;
-    const wP = fm.P > 0 ? suggestion.recommendP2O5 / (fm.P / 100) : 0;
-    const wK = fm.K > 0 ? suggestion.recommendK2O / (fm.K / 100) : 0;
-    const perMuCandidate = Math.max(wN, wP, wK);
-    if (perMuCandidate > 0 && perMuCandidate < bestPerMu) {
-      bestPerMu = perMuCandidate;
-      bestFormula = opt.value;
-    }
-  }
-  const risk = leachingRiskLabel.value;
-  const splits = risk === '高' ? 3 : risk === '中' ? 2 : 1;
-  const method = risk === '高' ? '滴灌施肥' : '条施';
-  // 找到一个较小降雨的计划日期（否则明天）
-  let planD = new Date();
-  planD.setDate(planD.getDate() + 1);
-  try {
-    const candidate = (lastForecastDays.value || []).find((d) => (d?.rain ?? 0) <= 5);
-    if (candidate && typeof candidate.day === 'string') {
-      const [mm, dd] = (candidate.day as string).split('/');
-      const now = new Date();
-      planD = new Date(now.getFullYear(), Number(mm) - 1, Number(dd));
-    }
-  } catch {}
-  const perMu = bestPerMu === Infinity ? 0 : Number(bestPerMu.toFixed(2));
-  const total = Number((perMu * quickArea.value).toFixed(2));
-  return {
-    formula: bestFormula,
-    splitTimes: splits,
-    method,
-    planDate: formatDate(planD),
-    perMuWeightKg: perMu,
-    totalWeightKg: total,
-  };
-}
-
-async function refreshQuickPlan() {
-  if (!useAlgorithm.value) {
-    calcProductUsage();
-    return;
-  }
-  if (!selectedPlotId.value || !quickArea.value || Number(quickArea.value) <= 0) {
-    applyPlanToUI(computePlanFallback());
-    return;
-  }
-  try {
-    const res = await planQuickFertilization({
-      plotId: selectedPlotId.value,
-      recommend: {
-        nKgPerMu: suggestion.recommendN,
-        p2o5KgPerMu: suggestion.recommendP2O5,
-        k2oKgPerMu: suggestion.recommendK2O,
-      },
-      risk: leachingRiskLabel.value,
-      areaMu: quickArea.value,
-    });
-    const plan = (res && (res.plan || res)) || computePlanFallback();
-    applyPlanToUI(plan);
-  } catch (e) {
-    applyPlanToUI(computePlanFallback());
-  }
-}
-
-// 一键施肥管理：配方与参数
-const fertilizerFormula = ref<string>('15-15-15');
-const formulaOptions = [
-  { label: '15-15-15', value: '15-15-15' },
-  { label: '20-10-10', value: '20-10-10' },
-  { label: '12-24-12', value: '12-24-12' },
-  { label: '17-17-17', value: '17-17-17' },
-  { label: '0-20-20', value: '0-20-20' },
-];
-const formulaMap: Record<string, { N: number; P: number; K: number }> = {
-  '15-15-15': { N: 15, P: 15, K: 15 },
-  '20-10-10': { N: 20, P: 10, K: 10 },
-  '12-24-12': { N: 12, P: 24, K: 12 },
-  '17-17-17': { N: 17, P: 17, K: 17 },
-  '0-20-20': { N: 0, P: 20, K: 20 },
-};
-const quickArea = ref<number>(0);
-const splitTimes = ref<number>(2);
-const splitOptions = [
-  { label: '1次', value: 1 },
-  { label: '2次', value: 2 },
-  { label: '3次', value: 3 },
-];
-const methodOptions = [
-  { label: '条施', value: '条施' },
-  { label: '撒施', value: '撒施' },
-  { label: '滴灌施肥', value: '滴灌施肥' },
-];
-const quickMethod = ref<string>('条施');
-const quickDate = ref<string>('');
-const quickRemark = ref<string>('');
-const productWeightPerMu = ref<number>(0);
-const totalProductWeight = ref<number>(0);
-const calcResultText = ref<string>('');
-
-function calcProductUsage() {
-  const fm = formulaMap[fertilizerFormula.value] || { N: 0, P: 0, K: 0 };
-  const wN = fm.N > 0 ? suggestion.recommendN / (fm.N / 100) : 0;
-  const wP = fm.P > 0 ? suggestion.recommendP2O5 / (fm.P / 100) : 0;
-  const wK = fm.K > 0 ? suggestion.recommendK2O / (fm.K / 100) : 0;
-  const candidates = [wN, wP, wK].filter((x) => x > 0);
-  const perMu = candidates.length ? Math.max(...candidates) : 0;
-  productWeightPerMu.value = Number(perMu.toFixed(2));
-  totalProductWeight.value = Number((productWeightPerMu.value * quickArea.value).toFixed(2));
-  const perSplit = splitTimes.value > 0 ? Number((totalProductWeight.value / splitTimes.value).toFixed(2)) : totalProductWeight.value;
-  calcResultText.value = `配方 ${fertilizerFormula.value}，每亩约 ${productWeightPerMu.value} kg，总计 ${totalProductWeight.value} kg；分施 ${splitTimes.value} 次，每次约 ${perSplit} kg`;
-}
-
-async function quickGenerateRecord() {
-  if (!selectedPlotName.value) {
-    createMessage.warn('请先选择基地与地块');
-    return;
-  }
-  if (useAlgorithm.value) {
-    await refreshQuickPlan();
-  } else {
-    calcProductUsage();
-  }
-  const remark = `${quickRemark.value || ''}（建议：${suggestion.reason}；分施${splitTimes.value}次；配方${fertilizerFormula.value}）`;
-  openModal(true, {
-    isUpdate: false,
-    defaultValues: {
-      baseId: selectedBaseId.value,
-      plotId: selectedPlotId.value,
-      plotName: selectedPlotName.value,
-      fertilizationType: suggestion.needFertilization ? '追肥' : '基肥',
-      fertilizerName: `复合肥(${fertilizerFormula.value})`,
-      fertilizerAmountKgPerMu: productWeightPerMu.value,
-      fertilizationAreaMu: quickArea.value,
-      fertilizationDate: quickDate.value || undefined,
-      fertilizationMethod: quickMethod.value,
-      responsiblePerson: '',
-      remark,
-    },
-  });
-}
-
-async function quickExecute() {
-  if (!selectedPlotId.value) {
-    createMessage.warn('请先选择基地与地块');
-    return;
-  }
-  if (useAlgorithm.value) {
-    await refreshQuickPlan();
-  } else {
-    calcProductUsage();
-  }
-  try {
-    await executeQuickFertilization({
-      plotId: selectedPlotId.value,
-      formula: fertilizerFormula.value,
-      areaMu: quickArea.value,
-      splitTimes: splitTimes.value,
-      method: quickMethod.value,
-      planDate: quickDate.value || null,
-      totalWeightKg: totalProductWeight.value,
-      perMuWeightKg: productWeightPerMu.value,
-      recommend: {
-        nKgPerMu: suggestion.recommendN,
-        p2o5KgPerMu: suggestion.recommendP2O5,
-        k2oKgPerMu: suggestion.recommendK2O,
-      },
-      remark: quickRemark.value || '',
-    });
-    createMessage.success('已提交自动化执行（占位），待后端接入');
-  } catch (e) {
-    createMessage.error('执行失败（占位接口），请稍后重试');
-  }
-}
-
-// 监听推荐剂量/配方/面积/分施次数变化，自动计算用量
-watch([
-  () => suggestion.recommendN,
-  () => suggestion.recommendP2O5,
-  () => suggestion.recommendK2O,
-  fertilizerFormula,
-  quickArea,
-  splitTimes,
-], () => {
-  if (useAlgorithm.value) {
-    refreshQuickPlan();
-  } else {
-    calcProductUsage();
-  }
-}, { immediate: true });
-// 避免未选择地块时触发后端调用
-watch(() => selectedPlotId.value, (pid) => {
-  if (pid) {
-    refreshQuickPlan();
-  }
+// 数字比例（百分比与配比）
+const ratio = computed(() => {
+  const n = suggestion.recommendN || 0;
+  const p = suggestion.recommendP2O5 || 0;
+  const k = suggestion.recommendK2O || 0;
+  const sum = n + p + k;
+  const percN = sum ? Math.round((n / sum) * 100) : 0;
+  const percP = sum ? Math.round((p / sum) * 100) : 0;
+  const percK = sum ? Math.round((k / sum) * 100) : 0;
+  const base = n > 0 ? n : p > 0 ? p : k > 0 ? k : 1;
+  const rN = Number(((n || 0) / base).toFixed(2));
+  const rP = Number(((p || 0) / base).toFixed(2));
+  const rK = Number(((k || 0) / base).toFixed(2));
+  return { percN, percP, percK, rN, rP, rK, baseId: n > 0 ? 'N' : p > 0 ? 'P₂O₅' : 'K₂O' };
 });
+const ratioBaseLabel = computed(() => `${ratio.value.baseId}:`);
+
 
 // 根据当前 N/P/K 百分比更新状态与标签
 function applyNPKStates() {
@@ -796,71 +445,48 @@ function applyNPKStates() {
   kStatus.value = toStatus(kPercent.value) as any;
 }
 
-// 初始展示的预设数据（无后端亦可展示）
-function loadMockOverview() {
-  // 预设 N/P/K 百分比与目标产量
-  nPercent.value = 58;
-  pPercent.value = 47;
-  kPercent.value = 62;
-  targetYieldText.value = '185 kg/亩';
-  applyNPKStates();
-
-  // 预设建议（QUEFTS）
-  suggestion.needFertilization = true;
-  suggestion.recommendedTime = '本周晴后分次施肥';
-  suggestion.method = '条施/滴灌施肥';
-  suggestion.recommendN = 6.0;
-  suggestion.recommendP2O5 = 3.2;
-  suggestion.recommendK2O = 4.5;
-  suggestion.reason = '依据预设土壤供肥能力与近期天气，建议少量多次分施以降低淋溶风险。';
-
-  // 预设天气与趋势
-  const days = buildMockForecast();
-  lastForecastDays.value = days;
-  trendSummary.value = summarizeTrend(days);
-  leachingRiskLabel.value = calcLeachingRisk(days);
-  leachingRiskColor.value = leachingRiskLabel.value === '高' ? 'red' : leachingRiskLabel.value === '中' ? 'orange' : 'green';
-
-  renderNTrendChart(days);
-  renderPTrendChart(days);
-  renderKTrendChart(days);
-  renderTempChart(days);
-  // 算法推荐计划
-  refreshQuickPlan();
-}
-
-function oneClickCreate() {
-  if (!selectedPlotId.value) {
-    createMessage.warning('请先选择地块');
-    return;
-  }
-  if (!selectedPlotName.value) {
-    try {
-      const opt = plotSelectRef.value?.plotOptions?.find((p: any) => p.id === selectedPlotId.value);
-      selectedPlotName.value = opt ? opt.plotName : '';
-    } catch {}
-    if (!selectedPlotName.value) {
-      createMessage.warning('请先选择地块');
-      return;
+function applyPHOMStates() {
+  const ph = phValue.value;
+  if (ph == null || Number.isNaN(Number(ph)) || Number(ph) <= 0) {
+    phStateLabel.value = '—';
+    phTagColor.value = 'default';
+    phValueText.value = '—';
+  } else {
+    const v = Number(ph);
+    phValueText.value = v.toFixed(2);
+    if (v < 6.0) {
+      phStateLabel.value = '偏酸';
+      phTagColor.value = 'orange';
+    } else if (v > 7.5) {
+      phStateLabel.value = '偏碱';
+      phTagColor.value = 'red';
+    } else {
+      phStateLabel.value = '适中';
+      phTagColor.value = 'blue';
     }
   }
-  openModal(true, {
-    isUpdate: false,
-    defaultValues: {
-      baseId: selectedBaseId.value,
-      plotId: selectedPlotId.value,
-      plotName: selectedPlotName.value,
-      fertilizationType: suggestion.needFertilization ? '追肥' : '基肥',
-      fertilizerName: `复合肥(${fertilizerFormula.value})`,
-      fertilizerAmountKgPerMu: Number((suggestion.recommendN + suggestion.recommendP2O5 + suggestion.recommendK2O).toFixed(2)),
-      fertilizationAreaMu: quickArea.value,
-      fertilizationDate: quickDate.value || undefined,
-      fertilizationMethod: suggestion.method || '',
-      responsiblePerson: '',
-      remark: suggestion.reason || '',
-    },
-  });
+  const om = omValue.value;
+  if (om == null || Number.isNaN(Number(om)) || Number(om) <= 0) {
+    omStateLabel.value = '—';
+    omTagColor.value = 'default';
+    omValueText.value = '—';
+  } else {
+    const v = Number(om);
+    omValueText.value = v.toFixed(2);
+    if (v < 2) {
+      omStateLabel.value = '低';
+      omTagColor.value = 'orange';
+    } else if (v > 4) {
+      omStateLabel.value = '高';
+      omTagColor.value = 'green';
+    } else {
+      omStateLabel.value = '中';
+      omTagColor.value = 'blue';
+    }
+  }
 }
+
+// 已移除模拟展示与一键生成逻辑
 
 function scrollToCharts() {
   const el = chartsAnchorRef.value?.$el || chartsAnchorRef.value;
@@ -1030,6 +656,8 @@ async function handleImport() {
 .chart-card {
   margin-top: 16px;
 }
+.ratio-summary { margin-top: 8px; padding: 8px 12px; background: #fafafa; border-radius: 6px; }
+.ratio-line { color: #595959; font-size: 13px; }
 .quick-card {
   margin-top: 16px;
 }
