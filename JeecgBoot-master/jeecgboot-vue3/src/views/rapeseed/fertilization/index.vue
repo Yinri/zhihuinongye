@@ -117,13 +117,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { useModal } from '/@/components/Modal';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
 import { columns, searchFormSchema } from './fertilization.data';
-import { getFertilizationList, deleteFertilization, exportFertilization, importFertilization, getPlotNutrientStatus, getFertilizationRecommendation, getSoilHistorySeries } from './fertilization.api';
+import { getFertilizationList, deleteFertilization, exportFertilization, importFertilization, getPlotNutrientStatus, getFertilizationRecommendation, getSoilHistorySeries, getBaseSoilSeries, getBaseRecommendation } from './fertilization.api';
 import FertilizationModal from './FertilizationModal.vue';
 import BaseSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/BaseSelect.vue';
 import PlotSelect from '@/views/rapeseed/production-plan/plot-production-plan/components/PlotSelect.vue';
@@ -168,6 +168,29 @@ const selectedPlotId = ref<string | number | undefined>(undefined);
 // 全局状态管理
 const selectStore = useSelectStore();
 
+const BASE_ID_MAP: Record<string, string> = {
+  '丰乐基地': '1992821272807862273',
+  '胡集基地': '1992821484976730114',
+};
+
+function resolveSelectedBaseId(): string | number | undefined {
+  const { baseId, baseName } = selectStore.selectedBase as any;
+  let id = baseId as any;
+  if (!id && baseName) {
+    if (BASE_ID_MAP[baseName]) {
+      id = BASE_ID_MAP[baseName];
+    } else {
+      const fuzzyKey = Object.keys(BASE_ID_MAP).find((k) => baseName.includes(k));
+      if (fuzzyKey) id = BASE_ID_MAP[fuzzyKey];
+    }
+  }
+  if (!id && baseName) {
+    const found = baseList.value.find((b) => (b.baseName === baseName || b.name === baseName));
+    if (found) id = (found.id || found.baseId);
+  }
+  return id;
+}
+
 // 基地和地块数据列表
 const baseList = ref<any[]>([]);
 const plotList = ref<any[]>([]);
@@ -184,27 +207,12 @@ function toggleDropdown() {
 async function selectItem(item: any, type: 'base' | 'plot') {
   if (type === 'base') {
     // 选择基地
-    selectedBaseId.value = item.id || item.baseId;
     selectStore.updateSelectedBase({ baseId: item.id || item.baseId, baseName: item.baseName || item.name || '未命名基地' });
-    
     // 清空地块选择
-    selectedPlotId.value = undefined;
     selectStore.updateSelectedPlot(null);
-    
-    // 加载对应的地块数据
-    if (selectedBaseId.value) {
-      await fetchPlotListByBaseId(selectedBaseId.value as string);
-    }
-    
-    // 触发原有变更逻辑
-    onBaseChange(selectedBaseId.value);
   } else {
     // 选择地块
-    selectedPlotId.value = item.id || item.plotId;
     selectStore.updateSelectedPlot({ plotId: item.id || item.plotId, plotName: item.plotName || item.name || '' });
-    
-    // 触发原有变更逻辑
-    onPlotChange(selectedPlotId.value);
   }
 }
 
@@ -219,18 +227,14 @@ async function fetchBaseListData() {
     
     baseList.value = baseDataList.map((item: any) => ({
       ...item,
-      id: item.id || item.baseId,
+      id: item.baseId || item.id,
       baseName: item.baseName || item.name || '未命名基地'
     }));
     
     // 如果有基地数据且当前未选择基地，默认选择第一个
     if (baseList.value.length > 0 && !selectedBaseId.value) {
       const firstBase = baseList.value[0];
-      selectedBaseId.value = firstBase.id;
       selectStore.updateSelectedBase({ baseId: firstBase.id, baseName: firstBase.baseName });
-      
-      // 加载第一个基地的地块数据
-      await fetchPlotListByBaseId(firstBase.id as string);
     }
   } catch (error) {
     console.error('获取基地列表失败:', error);
@@ -254,19 +258,15 @@ async function fetchPlotListByBaseId(baseId: string) {
       plotName: item.plotName || item.name || '未命名地块'
     }));
     
-    // 如果有地块数据且当前未选择地块，默认选择第一个
-    if (plotList.value.length > 0 && !selectedPlotId.value) {
-      const firstPlot = plotList.value[0];
-      selectedPlotId.value = firstPlot.id;
-      selectStore.updateSelectedPlot({ plotId: firstPlot.id, plotName: firstPlot.plotName });
-      onPlotChange(firstPlot.id);
-    }
+    // 不进行默认选中地块，避免覆盖基地概览数据，等待用户主动选择
   } catch (error) {
     console.error('获取地块列表失败:', error);
   }
 }
 const selectedPlotName = ref<string>('');
 const plotSelectRef = ref<any>(null);
+let baseReqId = 0;
+let plotReqId = 0;
 
 // 土壤养分
 const nPercent = ref<number>(0);
@@ -322,6 +322,11 @@ function onBaseChange(baseId) {
   selectedBaseId.value = baseId;
   selectedPlotId.value = undefined;
   selectedPlotName.value = '';
+  resetFertilizationState();
+  if (baseId) {
+    const rid = ++baseReqId;
+    fetchBaseOverview(baseId, rid);
+  }
 }
 
 function onPlotChange(plotId) {
@@ -330,18 +335,25 @@ function onPlotChange(plotId) {
     const plot = plotSelectRef.value.plotOptions.find((p) => p.id === plotId);
     selectedPlotName.value = plot ? plot.plotName : '';
   }
-  loadFertilizationOverview();
+  const rid = ++plotReqId;
+  loadFertilizationOverview(rid);
 }
 
-async function loadFertilizationOverview() {
-  if (!selectedPlotId.value) return;
+async function loadFertilizationOverview(rid?: number) {
+  if (!selectedPlotId.value) {
+    if (selectedBaseId.value) {
+      const bid = ++baseReqId;
+      await fetchBaseOverview(selectedBaseId.value as any, bid);
+    }
+    return;
+  }
   try {
     loading.value = true;
     const status = await getPlotNutrientStatus(selectedPlotId.value as any);
-    // 养分百分比（0-100）
-    nPercent.value = status?.nPercent ?? 0;
-    pPercent.value = status?.pPercent ?? 0;
-    kPercent.value = status?.kPercent ?? 0;
+    if (rid && rid !== plotReqId) return;
+    nPercent.value = Number(status?.nPercent ?? 0) || 0;
+    pPercent.value = Number(status?.pPercent ?? 0) || 0;
+    kPercent.value = Number(status?.kPercent ?? 0) || 0;
     phValue.value = status?.ph != null ? Number(status.ph) : null;
     omValue.value = status?.om != null ? Number(status.om) : null;
 
@@ -362,34 +374,106 @@ async function loadFertilizationOverview() {
 
     applyPHOMStates();
 
-    targetYieldText.value = status?.targetYield ? `${status.targetYield} kg/亩` : '—';
+    targetYieldText.value = status?.targetYield ? `${Number(status.targetYield)} kg/亩` : '—';
 
     // 建议
     const rec = await getFertilizationRecommendation({ plotId: selectedPlotId.value });
-    suggestion.needFertilization = rec?.needFertilization ?? false;
+    if (rid && rid !== plotReqId) return;
+    suggestion.needFertilization = Boolean(rec?.needFertilization ?? false);
     suggestion.recommendedTime = rec?.recommendedTime ?? '';
     suggestion.method = rec?.method ?? '';
-    suggestion.recommendN = rec?.recommendN ?? 0;
-    suggestion.recommendP2O5 = rec?.recommendP2O5 ?? 0;
-    suggestion.recommendK2O = rec?.recommendK2O ?? 0;
+    suggestion.recommendN = Number(rec?.recommendN ?? 0) || 0;
+    suggestion.recommendP2O5 = Number(rec?.recommendP2O5 ?? 0) || 0;
+    suggestion.recommendK2O = Number(rec?.recommendK2O ?? 0) || 0;
     suggestion.reason = rec?.reason ?? '';
 
     const series = await getSoilHistorySeries(selectedPlotId.value as any);
+    if (rid && rid !== plotReqId) return;
     const items = series?.items ?? [];
     leachingRiskLabel.value = '—';
     leachingRiskColor.value = 'default';
     renderRecommendBars();
   } catch (e) {
-    const items: any[] = [];
-    trendSummary.value = '—';
-    leachingRiskLabel.value = '—';
-    leachingRiskColor.value = 'default';
+    if (!rid || rid === plotReqId) {
+      trendSummary.value = '—';
+      leachingRiskLabel.value = '—';
+      leachingRiskColor.value = 'default';
+      phValue.value = null;
+      omValue.value = null;
+      applyPHOMStates();
+      renderRecommendBars();
+    }
+  } finally {
+    if (!rid || rid === plotReqId) loading.value = false;
+  }
+}
+
+function resetFertilizationState() {
+  nPercent.value = 0;
+  pPercent.value = 0;
+  kPercent.value = 0;
+  nStatus.value = 'normal';
+  pStatus.value = 'normal';
+  kStatus.value = 'normal';
+  nStateLabel.value = '适中';
+  pStateLabel.value = '适中';
+  kStateLabel.value = '适中';
+  nTagColor.value = 'blue';
+  pTagColor.value = 'gold';
+  kTagColor.value = 'green';
+  phValue.value = null;
+  omValue.value = null;
+  phStateLabel.value = '—';
+  omStateLabel.value = '—';
+  phTagColor.value = 'default';
+  omTagColor.value = 'default';
+  phValueText.value = '—';
+  omValueText.value = '—';
+  trendSummary.value = '—';
+  leachingRiskLabel.value = '—';
+  leachingRiskColor.value = 'default';
+  targetYieldText.value = '—';
+  suggestion.needFertilization = false;
+  suggestion.recommendedTime = '';
+  suggestion.method = '';
+  suggestion.recommendN = 0;
+  suggestion.recommendP2O5 = 0;
+  suggestion.recommendK2O = 0;
+  suggestion.reason = '';
+}
+
+async function fetchBaseOverview(baseId: string | number, rid?: number) {
+  try {
+    loading.value = true;
+    const series = await getBaseSoilSeries(baseId as any);
+    if (rid && rid !== baseReqId) return;
+    const items = series?.items ?? [];
+    const last = items.length ? items[items.length - 1] : null;
+    nPercent.value = last ? Number(last.n ?? 0) || 0 : 0;
+    pPercent.value = last ? Number(last.p ?? 0) || 0 : 0;
+    kPercent.value = last ? Number(last.k ?? 0) || 0 : 0;
+    applyNPKStates();
     phValue.value = null;
     omValue.value = null;
     applyPHOMStates();
+    targetYieldText.value = '—';
+    const rec = await getBaseRecommendation(baseId as any);
+    if (rid && rid !== baseReqId) return;
+    suggestion.needFertilization = Boolean(rec?.needFertilization ?? false);
+    suggestion.recommendedTime = rec?.recommendedTime ?? '';
+    suggestion.method = rec?.method ?? '';
+    suggestion.recommendN = Number(rec?.recommendN ?? 0) || 0;
+    suggestion.recommendP2O5 = Number(rec?.recommendP2O5 ?? 0) || 0;
+    suggestion.recommendK2O = Number(rec?.recommendK2O ?? 0) || 0;
+    suggestion.reason = rec?.reason ?? '';
     renderRecommendBars();
+  } catch (e) {
+    if (!rid || rid === baseReqId) {
+      resetFertilizationState();
+      renderRecommendBars();
+    }
   } finally {
-    loading.value = false;
+    if (!rid || rid === baseReqId) loading.value = false;
   }
 }
 
@@ -498,6 +582,20 @@ function scrollToCharts() {
 onMounted(() => {
   // 初始化加载基地数据
   fetchBaseListData();
+});
+
+watch(() => [selectStore.selectedBase.baseId, selectStore.selectedBase.baseName], async (_, __) => {
+  const id = resolveSelectedBaseId();
+  if (!id || id === selectedBaseId.value) return;
+  selectedBaseId.value = id as any;
+  onBaseChange(id);
+  fetchPlotListByBaseId(String(id));
+});
+
+watch(() => selectStore.selectedPlot.plotId, async (pid, prev) => {
+  if (!pid || pid === prev) return;
+  selectedPlotId.value = pid;
+  onPlotChange(pid);
 });
 
 function handleCreate() {
