@@ -1,4 +1,3 @@
-// store/selectStore.ts
 import { defineStore } from 'pinia';
 
 // 保存下拉框选中的基地id和基地名，地块id和地块名
@@ -31,7 +30,6 @@ export const useSelectStore = defineStore('select', {
   }
 });
 
-
 // 保存选中的品种id和name
 export const useCropVarietyStore = defineStore('cropVariety', {
   // 状态：存储选中的品种信息
@@ -52,17 +50,23 @@ export const useCropVarietyStore = defineStore('cropVariety', {
       id: null // 参数记录ID（用于修改）
     },
     // 新增：种子参数缺失提示状态标记
-    seedParamWarned: false ,// 避免重复弹窗提示
+    seedParamWarned: false, // 避免重复弹窗提示
     // 新增：肥料计算参数（含安全系数，默认1.2）
     fertilizerParams: {
       safetyCoefficient: 1.2, // 安全系数默认值
-      // 后续计算肥料还需要利用率，提前加上（避免后续再改）
+      // 单位产量需肥量（新增核心字段）
+      nutrientDemand: {
+        n: 5.8, // N肥默认值（kg/100kg产量）
+        p: 2.5, // P₂O₅默认值
+        k: 4.3  // K₂O默认值
+      },
+      // 肥料利用率（提前加上，避免后续再改）
       utilizationRate: {
         n: 0.4, // N肥利用率40%（小数形式）
         p: 0.3, // P₂O₅利用率30%
         k: 0.45 // K₂O利用率45%
       }
-    }
+    },
   }),
 
   // 动作：修改状态的方法（推荐通过方法修改，便于追踪和扩展）
@@ -78,13 +82,20 @@ export const useCropVarietyStore = defineStore('cropVariety', {
       // 合并新数据，保留未传入的原有字段
       this.yieldCalcData = { ...this.yieldCalcData, ...data };
     },
-// 新增：更新种子参数
+    // 新增：更新种子参数
     updateSeedParams(params) {
       this.seedParams = { ...this.seedParams, ...params };
     },
-    // 新增：更新肥料参数（安全系数、利用率等）
+    // 新增：更新肥料参数（安全系数、利用率、需肥量等）
     updateFertilizerParams(params) {
       this.fertilizerParams = { ...this.fertilizerParams, ...params };
+    },
+    // 新增：单独更新单位产量需肥量（简化组件调用）
+    updateNutrientDemand(data) {
+      this.fertilizerParams.nutrientDemand = {
+        ...this.fertilizerParams.nutrientDemand,
+        ...data
+      };
     },
     // 新增：重置种子参数（品种切换时调用）
     resetSeedParams() {
@@ -95,6 +106,14 @@ export const useCropVarietyStore = defineStore('cropVariety', {
         id: null
       };
     },
+    // 新增：重置需肥量为默认值（品种切换为空时调用）
+    resetNutrientDemand() {
+      this.fertilizerParams.nutrientDemand = {
+        n: 5.8,
+        p: 2.5,
+        k: 4.3
+      };
+    },
     // 新增：更新种子参数提示状态
     setSeedParamWarned(status: boolean) {
       this.seedParamWarned = status;
@@ -103,6 +122,7 @@ export const useCropVarietyStore = defineStore('cropVariety', {
     clearSelected() {
       this.selected = { id: '', name: '' };
       this.resetSeedParams(); // 清空品种时同时重置种子参数
+      this.resetNutrientDemand(); // 清空品种时重置需肥量
     }
   },
 
@@ -118,7 +138,14 @@ export const useCropVarietyStore = defineStore('cropVariety', {
         state.seedParams.seedlingRate !== null &&
         state.seedParams.settingRate !== null
       );
+    },
+    // 新增：判断需肥量是否完整（可选，用于校验）
+    isNutrientDemandComplete: (state) => {
+      return (
+        state.fertilizerParams.nutrientDemand.n !== null &&
+        state.fertilizerParams.nutrientDemand.p !== null &&
+        state.fertilizerParams.nutrientDemand.k !== null
+      );
     }
   }
-})
-
+});

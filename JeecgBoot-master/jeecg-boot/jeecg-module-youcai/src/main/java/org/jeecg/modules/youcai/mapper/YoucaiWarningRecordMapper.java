@@ -10,4 +10,13 @@ import org.jeecg.modules.youcai.entity.YoucaiWarningRecord;
  */
 public interface YoucaiWarningRecordMapper extends BaseMapper<YoucaiWarningRecord> {
 
+    /**
+     * @Description: crop_nutrient_demand
+     * @Author: jeecg-boot
+     * @Date:   2025-12-02
+     * @Version: V1.0
+     */
+    interface CropNutrientDemandMapper extends BaseMapper<YoucaiWarningRecord.CropNutrientDemand> {
+
+    }
 }

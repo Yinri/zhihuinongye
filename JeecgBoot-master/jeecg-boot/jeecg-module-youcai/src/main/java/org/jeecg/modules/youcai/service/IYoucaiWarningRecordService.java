@@ -70,4 +70,14 @@ public interface IYoucaiWarningRecordService extends IService<YoucaiWarningRecor
      * @return 是否重复
      */
     boolean isDuplicateWarning(String plotId, String warningType, int withinHours);
+
+    /**
+     * @Description: crop_nutrient_demand
+     * @Author: jeecg-boot
+     * @Date:   2025-12-02
+     * @Version: V1.0
+     */
+    interface ICropNutrientDemandService extends IService<YoucaiWarningRecord.CropNutrientDemand> {
+
+    }
 }
