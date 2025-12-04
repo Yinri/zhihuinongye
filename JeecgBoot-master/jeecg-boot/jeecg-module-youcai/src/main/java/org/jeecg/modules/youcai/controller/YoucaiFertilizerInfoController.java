@@ -1,6 +1,7 @@
 package org.jeecg.modules.youcai.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
@@ -58,7 +59,26 @@ public class YoucaiFertilizerInfoController extends JeecgController<YoucaiFertil
 		IPage<YoucaiFertilizerInfo> pageList = youcaiFertilizerInfoService.page(page, queryWrapper);
 		return Result.OK(pageList);
 	}
-	
+	 /**
+	  * 查询所有肥料信息数据
+	  * @return 全部肥料信息列表
+	  */
+	 @Operation(summary="肥料信息表-查询所有数据")
+	 @GetMapping(value = "/queryAll")
+	 public Result<List<YoucaiFertilizerInfo>> queryAll() {
+		 // 1. 构建查询条件（无筛选，可选按更新时间降序排列）
+		 QueryWrapper<YoucaiFertilizerInfo> queryWrapper = new QueryWrapper<>();
+		 queryWrapper.orderByDesc("update_time"); // 可选：按更新时间降序，也可删除此句
+
+		 // 2. 查询所有数据
+		 List<YoucaiFertilizerInfo> list = youcaiFertilizerInfoService.list(queryWrapper);
+
+		 // 3. 结果处理
+		 if(list.isEmpty()) {
+			 return Result.error("暂无肥料信息数据");
+		 }
+		 return Result.OK(list);
+	 }
 	/**
 	 *   添加
 	 *

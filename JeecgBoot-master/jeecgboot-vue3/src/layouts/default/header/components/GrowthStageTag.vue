@@ -237,7 +237,10 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
     if (matchedPlot) {
       selectedPlot.value = matchedPlot;
       // 同步到全局状态
-      selectStore.updateSelectedPlot(matchedPlot);
+      selectStore.updateSelectedPlot({
+        plotId: String(matchedPlot.plotId), // 关键：转为字符串
+        plotName: matchedPlot.plotName
+      });
       // 获取地块生长阶段
       fetchPlotGrowthStage(matchedPlot.plotId);
     }

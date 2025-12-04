@@ -1,6 +1,7 @@
 package org.jeecg.modules.youcai.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
@@ -136,7 +137,51 @@ public class YoucaiSoilFertilityController extends JeecgController<YoucaiSoilFer
 		}
 		return Result.OK(youcaiSoilFertility);
 	}
+	 /**
+	  * 通过地块id查询土壤肥力数据
+	  *
+	  * @param plotId 地块id（根据你的实体类字段名调整，比如你的字段是plotId/landId等）
+	  * @return 该地块下的土壤肥力数据列表
+	  */
+	 @Operation(summary="土壤肥力表-通过地块id查询最新一条")
+	 @GetMapping(value = "/queryByPlotId")
+	 public Result<YoucaiSoilFertility> queryByPlotId(@RequestParam(name="plotId",required=true) String plotId) {
+		 // 1. 构建查询条件：按地块id筛选 + 按更新时间降序（或createTime） + 只取第一条
+		 QueryWrapper<YoucaiSoilFertility> queryWrapper = new QueryWrapper<>();
+		 queryWrapper.eq("plot_id", plotId)          // 匹配地块id
+				 .orderByDesc("update_time")     // 按更新时间降序（最新的排在前面）
+				 .last("LIMIT 1");               // 限制只查第一条（MySQL语法）
+		 // 若用Oracle/SQLServer，替换为：.last("FETCH FIRST 1 ROWS ONLY")
 
+		 // 2. 查询最新一条数据（注意：这里用getOne而非list）
+		 YoucaiSoilFertility latestData = youcaiSoilFertilityService.getOne(queryWrapper);
+
+		 // 3. 结果处理
+		 if(latestData == null) {
+			 return Result.error("该地块未查询到土壤肥力数据");
+		 }
+		 return Result.OK(latestData);
+	 }
+	 /**
+	  * 查询所有土壤肥力数据
+	  * @return 全部土壤肥力数据列表
+	  */
+	 @Operation(summary="土壤肥力表-查询所有数据")
+	 @GetMapping(value = "/queryAll")
+	 public Result<List<YoucaiSoilFertility>> queryAll() {
+		 // 1. 构建查询条件（无筛选，仅按更新时间降序）
+		 QueryWrapper<YoucaiSoilFertility> queryWrapper = new QueryWrapper<>();
+		 queryWrapper.orderByDesc("update_time"); // 可选：按更新时间降序排列
+
+		 // 2. 查询所有数据
+		 List<YoucaiSoilFertility> list = youcaiSoilFertilityService.list(queryWrapper);
+
+		 // 3. 结果处理
+		 if(list.isEmpty()) {
+			 return Result.error("暂无土壤肥力数据");
+		 }
+		 return Result.OK(list);
+	 }
     /**
     * 导出excel
     *

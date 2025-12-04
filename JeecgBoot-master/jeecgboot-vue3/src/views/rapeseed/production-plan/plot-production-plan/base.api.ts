@@ -35,6 +35,15 @@ enum Api {
   getFertilizerParamsByVarietyId = '/youcai/cropNutrientDemand/getByVarietyId',
   // 编辑单产需肥量（新增/更新一体）
   saveFertilizerParams = '/youcai/cropNutrientDemand/edit',
+  //根据地块id获取土壤肥力
+  getSoilFertilityByPlotId='/youcai/youcaiSoilFertility/queryByPlotId',
+  //根据地块、品种、肥料查询肥料利用率
+  getFertilizerUtilizationRate='/youcai/varietyPlotUtilization/getByVPF',
+  //通过肥料id查询肥料养分含量
+  getFertilizerContentByType='/youcai/youcaiFertilizerInfo/queryById',
+  //查询所有肥料信息
+  getFertilizerList='/youcai/youcaiFertilizerInfo/queryAll'
+
 }
 
 /**
@@ -246,5 +255,54 @@ export const saveFertilizerParams: Function = (data) => {
     headers: {
       'Content-Type': 'application/json'
     }
+  });
+};
+/**
+ * 通过地块ID获取最新的土壤肥力数据
+ * @param plotId 地块ID
+ * @returns 最新的土壤肥力详情（phValue/organicMatter等）
+ */
+export const getSoilFertilityByPlotId: Function = (plotId) => {
+  return defHttp.get({
+    url: Api.getSoilFertilityByPlotId,
+    params: { plotId: plotId + '' } // 强制转字符串，匹配后端参数类型
+  });
+};
+/**
+ * 根据地块、品种、肥料ID查询肥料利用率
+ * @param params 参数对象（包含plotId、varietyId、fertilizerId）
+ * @returns 肥料利用率数据
+ */
+export const getFertilizerUtilizationRate: Function = (params) => {
+  // 强制所有ID转字符串，匹配后端参数类型
+  const submitParams = {
+    ...params,
+    plotId: params.plotId + '',
+    varietyId: params.varietyId + '',
+    fertilizerId: params.fertilizerId + ''
+  };
+  return defHttp.get({
+    url: Api.getFertilizerUtilizationRate,
+    params: submitParams
+  });
+};
+/**
+ * 通过肥料ID查询肥料养分含量
+ * @param fertilizerId 肥料ID
+ * @returns 肥料详情（包含养分含量等字段）
+ */
+export const getFertilizerContentByType: Function = (fertilizerId) => {
+  return defHttp.get({
+    url: Api.getFertilizerContentByType,
+    params: { id: fertilizerId + '' } // 匹配后端@RequestParam(name="id")，强制转字符串
+  });
+};
+/**
+ * 查询所有肥料信息
+ * @returns 所有肥料信息列表（包含肥料名称、养分含量等字段）
+ */
+export const getFertilizerList: Function = () => {
+  return defHttp.get({
+    url: Api.getFertilizerList
   });
 };

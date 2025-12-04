@@ -24,9 +24,16 @@ export const useSelectStore = defineStore('select', {
       }; // 接收完整对象，同时更新ID、名称和经纬度
     },
     // 更新地块选中值
-    updateSelectedPlot(plotInfo: { plotId: string | number; plotName: string } | null) {
-      this.selectedPlot = plotInfo || { plotId: '', plotName: '' }; // 空值处理
-    }
+    updateSelectedPlot(plot: { plotId?: string | number; plotName?: string } | null) {
+      if (plot) {
+        this.selectedPlot = {
+          plotId: String(plot.plotId || ''), // 强制转为字符串，避免类型问题
+          plotName: plot.plotName || ''
+        };
+      } else {
+        this.selectedPlot = { plotId: '', plotName: '' };
+      }
+    },
   }
 });
 

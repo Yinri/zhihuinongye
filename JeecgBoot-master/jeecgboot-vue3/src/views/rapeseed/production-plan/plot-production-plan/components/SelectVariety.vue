@@ -77,6 +77,11 @@ export default {
   components: {
     aModal: Modal
   },
+  setup() {
+    // ========== 关键修复：在 setup 中一次性实例化 Store（全局共享） ==========
+    const cropStore = useCropVarietyStore();
+    return { cropStore }; // 暴露给组件内部使用
+  },
   data() {
     return {
       // 品种列表
@@ -112,8 +117,7 @@ export default {
       );
       if (selectedItem) {
         // 调用store方法更新状态
-        const cropStore = useCropVarietyStore();
-        cropStore.setSelectedVariety({
+        this.cropStore.setSelectedVariety({
           id: selectedItem.value,
           name: selectedItem.label
         });
@@ -123,8 +127,7 @@ export default {
     initStore() {
       if (this.displayedVarieties.length) {
         const firstVariety = this.displayedVarieties[0];
-        const cropStore = useCropVarietyStore();
-        cropStore.setSelectedVariety({
+        this.cropStore.setSelectedVariety({
           id: firstVariety.value,
           name: firstVariety.label
         });
