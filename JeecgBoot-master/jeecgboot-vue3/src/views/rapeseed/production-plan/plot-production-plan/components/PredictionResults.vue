@@ -385,33 +385,37 @@ export default {
       }
     },
     async fetchFertilizerByVariety(varietyId) {
-      console.log('📡 调用品种养分需求接口的参数：', varietyId); // 确认是 1993510300000000001
+      console.log('📡 调用品种养分需求接口的参数：', varietyId);
+
       try {
+        // ① 获取养分需求
         const nutrientDemandRes = await getFertilizerParamsByVarietyId(varietyId);
-        console.log('🔍 养分需求接口原始返回：', nutrientDemandRes);
-        const realNutrientData = nutrientDemandRes?.result || {};
-        console.log('🔍 解析后的原始养分值：', {
-          nDemand: realNutrientData.nDemand,
-          pDemand: realNutrientData.pDemand,
-          kDemand: realNutrientData.kDemand
-        });
+        const realNutrientData = nutrientDemandRes?.result || nutrientDemandRes || {};
 
-        // 修复1：仅当值为undefined/null时兜底，0不兜底（避免覆盖数据库真实配置）
         this.nutrientDemandData = {
-          nDemand: realNutrientData.nDemand === undefined ? this.defaultNutrientDemand.nDemand : Number(realNutrientData.nDemand),
-          pDemand: realNutrientData.pDemand === undefined ? this.defaultNutrientDemand.pDemand : Number(realNutrientData.pDemand),
-          kDemand: realNutrientData.kDemand === undefined ? this.defaultNutrientDemand.kDemand : Number(realNutrientData.kDemand)
+          nDemand: realNutrientData.nDemand == null ? this.defaultNutrientDemand.nDemand : Number(realNutrientData.nDemand),
+          pDemand: realNutrientData.pDemand == null ? this.defaultNutrientDemand.pDemand : Number(realNutrientData.pDemand),
+          kDemand: realNutrientData.kDemand == null ? this.defaultNutrientDemand.kDemand : Number(realNutrientData.kDemand)
         };
-        console.log('🔍 最终生效的养分需求（含兜底）：', this.nutrientDemandData);
 
-        const utilizationRes = await getFertilizerUtilizationRate(varietyId);
-        this.fertilizerUtilizationData = utilizationRes || { nRate: 35, pRate: 25, kRate: 35 };
+        console.log("✅ 最终生效的养分需求：", this.nutrientDemandData);
+
+        // ② 获取肥料利用率（允许失败）
+        try {
+          const utilizationRes = await getFertilizerUtilizationRate(varietyId);
+          this.fertilizerUtilizationData = utilizationRes || { nRate: 35, pRate: 25, kRate: 35 };
+        } catch (e2) {
+          console.warn("⚠️ 肥料利用率接口失败，使用默认值");
+          this.fertilizerUtilizationData = { nRate: 35, pRate: 25, kRate: 35 };
+        }
+
       } catch (error) {
-        this.missingFertilizerParam = '品种肥料数据加载失败';
-        this.nutrientDemandData = {...this.defaultNutrientDemand}; // 解构默认值
-        console.error('品种肥料数据接口失败：', error);
+        console.error("❌ 品种肥料需求接口失败：", error);
+        this.missingFertilizerParam = '品种肥料需求加载失败';
+        // ❗ 这里不能覆盖 nutrientDemandData ，保持旧值 or 默认值
       }
     },
+
     async fetchSoilFertilityByPlot(plotId) {
       try {
         this.missingFertilizerParam = '土壤肥力数据加载中...';
