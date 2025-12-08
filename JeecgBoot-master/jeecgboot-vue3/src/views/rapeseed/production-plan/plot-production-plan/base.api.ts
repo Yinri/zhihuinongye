@@ -42,8 +42,9 @@ enum Api {
   //通过肥料id查询肥料养分含量
   getFertilizerContentByType='/youcai/youcaiFertilizerInfo/queryById',
   //查询所有肥料信息
-  getFertilizerList='/youcai/youcaiFertilizerInfo/queryAll'
-
+  getFertilizerList='/youcai/youcaiFertilizerInfo/queryAll',
+  //查询所有农药信息
+  getPesticideList='/youcai/youcaiPesticideInfo/list',
 }
 
 /**
@@ -305,4 +306,41 @@ export const getFertilizerList: Function = () => {
   return defHttp.get({
     url: Api.getFertilizerList
   });
+};
+
+/**
+ * 获取所有农药信息（用于投入计划下拉框）
+ * 自动请求足够大的 pageSize，一次性取完
+ */
+export const getPesticideList = () => {
+  return defHttp
+    .get({
+      url: Api.getPesticideList,
+      params: { pageNo: 1, pageSize: 9999 },
+    })
+    .then((res) => {
+      console.log("农药接口返回：", res);
+
+      const list = res?.records || [];
+
+      return list.map((item) => {
+        let defaultDose = 0;
+        let unit = "";
+
+        if (item.dosageRange) {
+          const match = item.dosageRange.match(/(\d+)-(\d+)(.*)/);
+          if (match) {
+            defaultDose = Number(match[1]);
+            unit = match[3];
+          }
+        }
+
+        return {
+          id: item.id,
+          name: item.pesticideName,
+          defaultDose,
+          unit,
+        };
+      });
+    });
 };

@@ -197,7 +197,7 @@ export default {
 
 <style scoped>
 .input-tracking-container {
-  width: 50%;
+  width: 100%;
   float: right;
   border: 1px solid #d9d9d9;
   border-radius: 8px;

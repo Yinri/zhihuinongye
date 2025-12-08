@@ -139,29 +139,35 @@ export default {
         const response = await getAllVariety();
         const rawVarieties = response || [];
 
-        // 去重：根据 varietyName 去重
         const uniqueVarieties = Array.from(
           new Map(rawVarieties.map(item => [item.varietyName, item])).values()
         );
 
-        // 映射为 label/value 格式
         this.allVarieties = uniqueVarieties.map(item => ({
           label: item.varietyName,
           value: item.id.toString()
         }));
 
-        // 显示前3个品种
         this.displayedVarieties = this.allVarieties.slice(0, 3);
 
-        // 初始化选中第一个
+        // ⭐ 关键：异步加载完成后才初始化默认选项
         if (this.displayedVarieties.length) {
-          this.selectedVariety = this.displayedVarieties[0].value;
+          const first = this.displayedVarieties[0];
+          this.selectedVariety = first.value;
+
+          // ⭐ 主动触发一次 store 更新（相当于自动帮你点击了按钮）
+          this.cropStore.setSelectedVariety({
+            id: first.value,
+            name: first.label
+          });
         }
+
       } catch (error) {
         console.error('获取品种列表失败:', error);
         this.$message.error('获取品种列表失败，请重试');
       }
     },
+
 
     // 打开弹窗（清空搜索框+初始化列表）
     openAddDialog() {

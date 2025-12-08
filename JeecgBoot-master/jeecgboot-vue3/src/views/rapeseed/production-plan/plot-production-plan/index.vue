@@ -18,10 +18,13 @@
 <!--    <BaseOverview></BaseOverview>-->
       <div class="prediction-card">
         <PredictionResults></PredictionResults>
+
+      </div>
+      <div class="">
         <DataBasis></DataBasis>
+        <ProgressTrack></ProgressTrack>
       </div>
 
-    <ProgressTrack></ProgressTrack>
     </div>
 <!--    &lt;!&ndash; 生产计划列表区域 &ndash;&gt;-->
 <!--    <a-card :bordered="false" v-if="selectedBaseId" class="table-card">-->

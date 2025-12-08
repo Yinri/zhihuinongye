@@ -49,16 +49,6 @@
             <p class="param-item">K₂O：{{ nutrientDemand.k || '4.3' }} kg/100kg</p>
           </div>
         </div>
-        <!-- 气象预测模块 -->
-        <div class="basis-card info-card">
-          <p class="card-title">当年气象预测</p>
-          <p class="card-desc">作为目标产量调整参考</p>
-        </div>
-        <!-- 土壤肥力均值模块 -->
-        <div class="basis-card info-card">
-          <p class="card-title">土壤肥力均值</p>
-          <p class="card-desc">作为目标产量调整参考</p>
-        </div>
       </div>
     </div>
 
@@ -144,7 +134,7 @@
     <div v-if="showNutrientDemandModal" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
-          <h4>修改单位产量需肥量</h4>
+          <h4>修改当前品种单位产量需肥量</h4>
           <button @click="showNutrientDemandModal = false" class="close-btn">×</button>
         </div>
         <div class="modal-body">
@@ -299,7 +289,8 @@ export default {
       },
       set(val) {
         this.updateFertilizerParams({
-          safetyCoefficient: Number(val)
+          ...this.fertilizerParams,       // ← 保留已有字段
+          safetyCoefficient: Number(val)  // ← 只更新安全系数
         });
       }
     },
@@ -761,14 +752,12 @@ export default {
   border-radius: 8px;
   padding: 16px 8px;
   background-color: #fff;
-  height: 395px;
 }
 
 .cards-container {
   display: flex;
   justify-content: center;
   width: 100%;
-  min-height: 300px;
   align-items: center;
 }
 
@@ -782,7 +771,7 @@ export default {
 
 .basis-cards {
   display: flex;
-  gap: 10px;
+  gap: 30px;
   width: 100%;
   justify-content: center;
   flex-wrap: wrap;

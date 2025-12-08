@@ -21,20 +21,92 @@
       </div>
     </div>
     <!-- 农药计划投入卡片 -->
-    <div class="input-card">
-      <div class="card-header">农药计划投入</div>
-      <div class="main-value">
-        {{ pesticideInput || '0.0' }}
+    <!-- 👉 新增：农药计划投入组合卡片 -->
+    <div class="pesticide-combination-card input-card" style="min-width: 600px; flex: 1;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>农药计划投入组合</span>
+
+        <!-- 农药安全系数 -->
+        <span style="display:flex; align-items:center; gap:5px;">
+        <span>安全系数：</span>
+        <a-select
+          v-model:value="pesticideSafetyCoeff"
+          size="small"
+          style="width: 80px;"
+        >
+          <a-select-option :value="0.8">0.8</a-select-option>
+          <a-select-option :value="1.0">1.0</a-select-option>
+          <a-select-option :value="1.1">1.1</a-select-option>
+          <a-select-option :value="1.2">1.2</a-select-option>
+          <a-select-option :value="1.3">1.3</a-select-option>
+          <a-select-option :value="1.5">1.5</a-select-option>
+        </a-select>
+
+        </span>
+
       </div>
-      <div class="unit">kg / 亩</div>
+
+      <!-- 选择农药 + 添加按钮 -->
+      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <a-select
+          v-model:value="selectedPesticideId"
+          placeholder="请选择农药类型"
+          style="flex: 1; text-align: left;"
+        >
+          <a-select-option
+            v-for="item in pesticideList"
+            :key="item.id"
+            :value="String(item.id)"
+          >
+            {{ item.name  }}（建议：{{ item.defaultDose }}{{ item.unit }}）
+          </a-select-option>
+        </a-select>
+
+        <a-button
+          type="primary"
+          size="small"
+          @click="addPesticideToCombination"
+          :disabled="selectedPesticideId === '' || selectedPesticideId == null"
+        >
+          添加
+        </a-button>
+      </div>
+
+      <!-- 农药表格 -->
+      <a-table
+        :columns="pesticideColumns"
+        :dataSource="pesticideCombinationList"
+        bordered
+        :pagination="false"
+        style="margin-bottom: 10px;"
+        :scroll="{ y: 300 }"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'operation'">
+            <a-button type="text" @click="deletePesticide(record.id)" style="color: #f5222d;">
+              删除
+            </a-button>
+          </template>
+          <template v-if="column.key === 'safetyCoeff'">
+            {{ record.safetyCoeff }}
+          </template>
+        </template>
+      </a-table>
     </div>
+
 
     <!-- 多肥料组合展示卡片（复杂场景） -->
     <div class="fertilizer-combination-card input-card" style="min-width: 600px; flex: 1;">
-      <div class="card-header">肥料计划投入组合</div>
-      <div class="safety-coeff-display">
-        当前安全系数：<b>{{ fertilizerParams?.value?.safetyCoefficient || 1.2 }}</b>
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>肥料计划投入组合</span>
+
+        <!-- 安全系数一排显示 -->
+        <span style="font-size: 13px; color: #555;">
+    安全系数：
+    <b>{{ fertilizerParams?.safetyCoefficient || 1.2 }}</b>
+  </span>
       </div>
+
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         <a-select
           v-model="selectedFertilizerId"
@@ -104,13 +176,16 @@
 
 <script>
 import { useCropVarietyStore, useSelectStore } from '@/store/selectStore';
+import { message } from 'ant-design-vue';
+
 import { storeToRefs } from 'pinia';
 import {
   getSeedParamsByVarietyId,
   getFertilizerParamsByVarietyId,
   getSoilFertilityByPlotId,
   getFertilizerUtilizationRate,
-  getFertilizerList
+  getFertilizerList,
+  getPesticideList
 } from '../base.api';
 import { nanoid } from 'nanoid';
 
@@ -145,7 +220,27 @@ export default {
   },
   data() {
     return {
-      pesticideInput: 68.3,
+      // 👉 新增：农药相关数据
+      pesticideList: [],              // 来自农药信息表
+      selectedPesticideId: null,        // 下拉选中值
+      pesticideCombinationList: [],   // 当前组合
+      pesticideSafetyCoeff: 1.1,      // 农药安全系数
+      pesticideInput: 0,              // 农药合计投入显示（卡片用）
+      defaultPesticides: [
+        "1993510200000000001", // 咪鲜胺（杀菌）
+        "1993510200000000002", // 高效氯氰菊酯（杀虫）
+        "1993510200000000006"  // 赤霉酸（调节剂）
+      ],
+
+      pesticideColumns: [
+        { title: '农药名称', dataIndex: 'name', key: 'name' },
+        { title: '建议剂量(ml/亩)', dataIndex: 'defaultDose', key: 'defaultDose' },
+        { title: '计划剂量(ml/亩)', dataIndex: 'planDose', key: 'planDose' },
+        { title: '安全系数', dataIndex: 'safetyCoeff', key: 'safetyCoeff' },
+        { title: '操作', key: 'operation' }
+      ],
+
+
       varietyDetail: null,
       missingSeedParam: '',
       missingFertilizerParam: '',
@@ -312,6 +407,19 @@ export default {
     }
   },
   watch: {
+    pesticideSafetyCoeff(newVal, oldVal) {
+      if (!this.pesticideCombinationList.length) return;
+
+      this.pesticideCombinationList = this.pesticideCombinationList.map(item => {
+        return {
+          ...item,
+          safetyCoeff: newVal,
+          planDose: item.defaultDose * newVal   // ⭐ 计划剂量 = 推荐剂量 × 安全系数
+        };
+      });
+
+      this.calcPesticideTotal();
+    },
     // 品种变化
     async 'cropStore.selected.id'(newVarietyId) {
       console.log('========== 品种ID变化 ==========');
@@ -334,7 +442,7 @@ export default {
 
       // 等待页面刷新
       await this.$nextTick();
-
+      this.addSmartDefaultPesticides();
       // ⭐ 仅在两个关键数据都齐全后再智能推荐肥料
       if (this.soilFertilityData && this.nutrientDemandData) {
         console.log("🔥 自动智能推荐肥料（因品种变化触发）");
@@ -358,7 +466,7 @@ export default {
 
       await this.fetchSoilFertilityByPlot(newPlotId);
       await this.$nextTick();
-
+      this.addSmartDefaultPesticides();
       // 如果品种需求也加载好了，就重新智能推荐肥料
       if (this.nutrientDemandData) {
         console.log("🔥 自动智能推荐肥料（因地块变化触发）");
@@ -375,7 +483,7 @@ export default {
     },
 
     // ⭐ 安全系数变化 → 自动刷新肥料计算
-    'fertilizerParams.value.safetyCoefficient'(newVal, oldVal) {
+    'fertilizerParams.safetyCoefficient'(newVal, oldVal) {
       if (newVal === oldVal) return;
       if (!this.fertilizerCombinationList.length) return;
 
@@ -400,6 +508,90 @@ export default {
   },
 
   methods: {
+    addSmartDefaultPesticides() {
+      if (this.pesticideCombinationList.length > 0) return;
+      if (!this.pesticideList.length) return;
+
+      this.defaultPesticides.forEach(pid => {
+        const p = this.pesticideList.find(x => String(x.id) === pid);
+        if (!p) return;
+
+        const planDose = p.defaultDose * this.pesticideSafetyCoeff;
+
+        this.pesticideCombinationList.push({
+          id: nanoid(),
+          pesticideId: p.id,
+          name: p.pesticideName || p.name,
+          defaultDose: p.defaultDose + p.unit,
+          safetyCoeff: this.pesticideSafetyCoeff,
+          planDose
+        });
+      });
+
+      this.calcPesticideTotal();
+    },
+
+    // 👉 新增：加载农药信息（从你的农药信息表）
+    async fetchPesticideList() {
+      // TODO: 调你的后端接口（你有农药信息表）
+      // 假设后端返回格式如下：
+      // [{id: 1, name: '甲维盐', defaultDose: 20, unit: 'ml'}]
+
+      const res = await getPesticideList();
+      console.log("📦 加载农药信息", res);
+      this.pesticideList = res || [];
+    },
+
+// 👉 新增：添加农药组合
+    addPesticideToCombination() {
+      // ❌ 禁止重复添加
+      const exists = this.pesticideCombinationList.some(
+        item => String(item.pesticideId) === String(this.selectedPesticideId)
+      );
+      if (exists) {
+        message.warning("该农药已添加，不可重复添加");
+        return;
+      }
+
+      const id = String(this.selectedPesticideId);
+      const p = this.pesticideList.find(x => String(x.id) === id);
+
+      if (!p) {
+        console.warn("未找到农药信息：", id);
+        return;
+      }
+
+      const planDose = p.defaultDose * this.pesticideSafetyCoeff;
+
+      this.pesticideCombinationList.push({
+        id: nanoid(),
+        pesticideId: p.id,
+        name: p.name,
+        defaultDose: p.defaultDose,
+        planDose,
+        safetyCoeff: this.pesticideSafetyCoeff
+      });
+
+      this.selectedPesticideId = '';
+      this.calcPesticideTotal();
+    },
+
+// 👉 新增：删除农药组合
+    deletePesticide(id) {
+      this.pesticideCombinationList =
+        this.pesticideCombinationList.filter(x => x.id !== id);
+      this.calcPesticideTotal();
+    },
+
+// 👉 新增：合计计算（用于卡片显示）
+    calcPesticideTotal() {
+      let total = 0;
+      this.pesticideCombinationList.forEach(item => {
+        total += item.actualDose;
+      });
+      this.pesticideInput = total.toFixed(1);
+    },
+
     // 智能生成默认肥料组合（根据 N/P/K 缺口）
     generateSmartDefaultFertilizers() {
       if (!this.targetYield || !this.soilFertilityData || !this.nutrientDemandData) {
@@ -642,7 +834,7 @@ export default {
       const pRate = (this.currentFertilizerUtilization.pRate || 25) / 100;
       const kRate = (this.currentFertilizerUtilization.kRate || 35) / 100;
 
-      const safetyCoeff = this.fertilizerParams.value?.safetyCoefficient || 1.2;
+      const safetyCoeff = this.fertilizerParams?.safetyCoefficient || 1.2;
 
       // 目标养分需求（正确计算）
       const targetNDemand = this.targetYield * this.nutrientDemandData.nDemand / 100;
@@ -690,6 +882,15 @@ export default {
       };
     },
     addFertilizerToCombination() {
+      // ❌ 禁止重复添加
+      const exists = this.fertilizerCombinationList.some(
+        item => String(item.fertilizerId) === String(this.selectedFertilizerId)
+      );
+      if (exists) {
+        message.warning("该肥料已添加，不可重复添加");
+        return;
+      }
+
       // ========== 复制这部分打印代码 ==========
       console.log('========== 按钮点击时的关键值 ==========');
       // 打印肥料ID
@@ -743,7 +944,7 @@ export default {
         pContent: calcResult.pContent,
         kContent: calcResult.kContent,
         fertilizerId: selectedFertilizer.id,
-        safetyCoeff: this.fertilizerParams.value?.safetyCoefficient || 1.2,
+        safetyCoeff: this.fertilizerParams?.safetyCoefficient || 1.2,
       };
 
       this.fertilizerCombinationList.push(combinationItem);
@@ -762,6 +963,7 @@ export default {
   },
   async mounted() {
     await this.fetchFertilizerList();
+    await this.fetchPesticideList();
     const varietyId = this.cropStore.selected?.id; // 改用 Store 实例
     const plotId = this.selectStore.selectedPlot?.plotId; // 改用 Store 实例
 
@@ -831,12 +1033,6 @@ export default {
   color: #2f5496;
 }
 
-.unit {
-  font-size: 14px;
-  color: #666;
-  margin-top: 4px;
-}
-
 .missing-tip {
   position: absolute;
   bottom: 5px;
@@ -863,7 +1059,7 @@ export default {
   font-size: 14px;
 }
 .fertilizer-table-container {
-  height: 450px;      /* 🔥 你想要的固定高度，随便设，比如 200/240/300px */
+  height: 460px;      /* 🔥 你想要的固定高度，随便设，比如 200/240/300px */
   margin-bottom: 10px;
 }
 .safety-coeff-display {
