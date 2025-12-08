@@ -46,6 +46,7 @@
           :key="stage"
           :style="{'--index': index}"
           :class="{ active: currentGrowthStage === stage }"
+          v-show="selectedPlot?.plotId !== 'all'"
         >
           {{ stage }}
         </div>
@@ -174,22 +175,19 @@ const fetchPlotList = async () => {
   }
   try {
     const res = await getPlotsByBaseId(currentBaseId);
-    plotList.value = res.map((item: any) => ({
-      plotId: String(item.id),
-      plotName: item.plotName
-    }));
-    // 选中第一个地块（若有）
-    if (plotList.value.length > 0) {
-      selectedPlot.value = plotList.value[0]; // 存储完整对象
-      // 同步到全局状态（后续步骤会修改全局方法）
-      selectStore.updateSelectedPlot(plotList.value[0]);
-      fetchPlotGrowthStage(plotList.value[0].plotId);
-    } else {
-      plotList.value = [];
-      selectedPlot.value = null;
-      selectStore.updateSelectedPlot(null);
-      currentGrowthStage.value = '';
-    }
+    // 添加"全部地块"选项作为第一个选项
+    plotList.value = [
+      { plotId: 'all', plotName: '全部地块' },
+      ...res.map((item: any) => ({
+        plotId: String(item.id),
+        plotName: item.plotName
+      }))
+    ];
+    // 默认选择"全部地块"
+    selectedPlot.value = plotList.value[0];
+    selectStore.updateSelectedPlot(plotList.value[0]);
+    // 不获取生长阶段，因为选择的是"全部地块"
+    currentGrowthStage.value = '';
   } catch (error) {
     console.error('获取地块列表错误：', error);
     showMessage('获取地块列表失败，请检查网络', true);
@@ -241,8 +239,15 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
         plotId: String(matchedPlot.plotId), // 关键：转为字符串
         plotName: matchedPlot.plotName
       });
-      // 获取地块生长阶段
-      fetchPlotGrowthStage(matchedPlot.plotId);
+      
+      // 只有在选择了具体地块时才获取生长阶段
+      if (matchedPlot.plotId !== 'all') {
+        // 获取地块生长阶段
+        fetchPlotGrowthStage(matchedPlot.plotId);
+      } else {
+        // 选择"全部地块"时清空生长阶段
+        currentGrowthStage.value = '';
+      }
     }
   }
   // 关闭下拉框
@@ -266,10 +271,10 @@ const fetchPlotGrowthStage = async (plotId: string | number) => {
 watch(
   () => selectedPlot.value?.plotId,
   (newPlotId) => {
-    if (newPlotId) {
+    if (newPlotId && newPlotId !== 'all') {
       fetchPlotGrowthStage(newPlotId);
     } else {
-      currentGrowthStage.value = ''; // 未选地块时清空
+      currentGrowthStage.value = ''; // 未选地块或选择"全部地块"时清空
     }
   },
   { immediate: true } // 初始加载时执行
@@ -279,7 +284,7 @@ watch(
 <style scoped lang="less">
 .header {
   position: relative;
-  z-index: 10;
+  z-index: 1001;
 }
 
 .growth-stage-tag-container {
@@ -291,6 +296,8 @@ watch(
   height: 50px;
   padding: 0 20px;
   background-color: #fff;
+  position: relative;
+  z-index: 1001;
 
   .dropdown-group {
     display: flex;
@@ -343,7 +350,7 @@ watch(
         height: 200px;
         display: flex;
         flex-direction: column;
-        z-index: 20;
+        z-index: 1002;
         overflow: hidden;
 
         .options-scroll {
@@ -644,3 +651,7 @@ watch(
   }
 }
 </style>
+
+
+
+
