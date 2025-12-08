@@ -79,6 +79,13 @@ const transform: AxiosTransform = {
 
     // errorMessageMode=‘modal’的时候会显示modal错误弹窗，而不是消息提示，用于一些比较重要的错误
     // errorMessageMode='none' 一般是调用时明确表示不希望自动弹出错误提示
+    if (message?.includes('未找到该品种+地块+肥料的利用率配置')) {
+      // 你希望给用户看的提示，可以修改 ↓↓↓
+      createMessage.info('该组合利用率未配置，已使用默认配置');
+      // 返回空对象，让前端自动 fallback 默认值
+      return {};
+    }
+
     if (options.errorMessageMode === 'modal') {
       createErrorModal({ title: t('sys.api.errorTip'), content: timeoutMsg });
     } else if (options.errorMessageMode === 'message') {
