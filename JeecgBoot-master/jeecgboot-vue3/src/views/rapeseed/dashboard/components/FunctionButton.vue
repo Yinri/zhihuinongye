@@ -2,13 +2,12 @@
 import { ref, onMounted, watch } from 'vue';
 import { useSelectStore } from '/@/store/selectStore'; // 全局状态
 // 导入基地/地块查询接口（根据实际API路径调整）
-import { getBaseById, getPlotById } from '/src/views/rapeseed/production-plan/plot-production-plan/base.api';
+import { getBaseById } from '/src/views/rapeseed/production-plan/plot-production-plan/base.api';
 // 导入天地图组件
 import TiandituMap from '/@/components/TiandituMap/index.vue';
 
 // 弹窗显示控制
 const showBaseInfoModal = ref(false);
-const showPlotInfoModal = ref(false);
 
 const selectStore = useSelectStore();
 
@@ -23,15 +22,6 @@ const baseForm = ref({
   soilType: [''] as string[]
 });
 
-const plotForm = ref({
-  name: '',
-  code: '',
-  base: '',
-  area: 0,
-  growthStage: '',
-  location: ''
-});
-
 const newPlot = ref({
   name: '',
   color: 'blue',
@@ -41,14 +31,11 @@ const newPlot = ref({
 
 // 监听全局状态变化，同步更新数据（可选：切换基地/地块时自动刷新）
 watch(
-  () => [selectStore.selectedBase.baseId, selectStore.selectedPlot.plotId],
-  ([newBaseId, newPlotId]) => {
+  () => selectStore.selectedBase.baseId,
+  (newBaseId) => {
     // 若弹窗已打开，自动刷新数据
     if (showBaseInfoModal.value && newBaseId) {
       fetchBaseInfo(newBaseId);
-    }
-    if (showPlotInfoModal.value && newPlotId) {
-      fetchPlotInfo(newPlotId);
     }
   },
   { immediate: false }
@@ -77,29 +64,6 @@ const fetchBaseInfo = async (baseId: string | number) => {
   }
 };
 
-// 查询地块详情（需后端提供按地块ID查询的接口）
-const fetchPlotInfo = async (plotId: string | number) => {
-  try {
-    const res = await getPlotById(plotId); // 新增：地块详情接口（需后端提供）
-    const plotData = res|| {};
-    // 赋值给表单（字段名需与接口返回一致）
-    plotForm.value = {
-      name: plotData.plotName || '',
-      code: plotData.id || '',
-      base: selectStore.selectedBase.baseName || '', // 所属基地名称从全局状态获取
-      area: plotData.area || 0,
-      growthStage: plotData.growthStage || '',
-      location: plotData.location || ''
-    };
-  } catch (error) {
-    console.error('获取地块详情失败：', error);
-    // 错误时重置表单
-    plotForm.value = {
-      name: '', code: '', base: '', area: 0, growthStage: '', location: ''
-    };
-  }
-};
-
 // 点击基地信息按钮
 const handleOpenBaseModal = () => {
   const currentBaseId = selectStore.selectedBase.baseId;
@@ -113,20 +77,6 @@ const handleOpenBaseModal = () => {
     showBaseInfoModal.value = true;
   });
 };
-
-// 点击地块信息按钮
-const handleOpenPlotModal = () => {
-  const currentPlotId = selectStore.selectedPlot.plotId;
-
-  if (!currentPlotId) {
-    alert('请先选择地块'); // 或使用之前的 showMessage 提示
-    return;
-  }
-  // 查询数据后打开弹窗
-  fetchPlotInfo(currentPlotId).then(() => {
-    showPlotInfoModal.value = true;
-  });
-};
 </script>
 
 <template>
@@ -137,9 +87,6 @@ const handleOpenPlotModal = () => {
       <div class="horizontal-button-component">
         <button @click="handleOpenBaseModal" class="horizontal-btn">
             <i class="icon-base"></i> 基地信息
-          </button>
-          <button @click="handleOpenPlotModal" class="horizontal-btn">
-            <i class="icon-plot"></i> 地块信息
           </button>
         </div>
 
@@ -188,42 +135,6 @@ const handleOpenPlotModal = () => {
       </div>
       <div class="modal-footer">
         <button @click="showBaseInfoModal = false">返回</button>
-      </div>
-    </div>
-  </div>
-
-
-  <div v-if="showPlotInfoModal" class="modal-overlay" @click="showPlotInfoModal = false">
-    <div class="modal-container" @click.stop>
-      <div class="modal-header">地块信息</div>
-      <div class="modal-body">
-        <div class="form-item">
-          <label>地块名</label>
-          <input type="text" :value="plotForm.name" disabled>
-        </div>
-        <div class="form-item">
-          <label>地块编号</label>
-          <input type="text" :value="plotForm.code" disabled>
-        </div>
-        <div class="form-item">
-          <label>所属基地</label>
-          <input type="text" :value="plotForm.base" disabled>
-        </div>
-        <div class="form-item">
-          <label>地块面积</label>
-          <input type="text" :value="plotForm.area + ' 亩'" disabled>
-        </div>
-        <div class="form-item">
-          <label>生长阶段</label>
-          <input type="text" :value="plotForm.growthStage" disabled>
-        </div>
-        <div class="form-item">
-          <label>地块位置</label>
-          <textarea :value="plotForm.location" disabled></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button @click="showPlotInfoModal = false">返回</button>
       </div>
     </div>
   </div>
@@ -405,3 +316,4 @@ textarea {
   color: #fff;
 }
 </style>
+

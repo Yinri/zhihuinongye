@@ -228,10 +228,6 @@ const initMap = async () => {
     // 设置地图类型为卫星图
     mapInstance.setMapType(window.TMAP_SATELLITE_MAP);
     
-    // 添加缩放控件
-    const control = new T.Control.Zoom();
-    mapInstance.addControl(control);
-    
     // 设置地图中心和缩放级别
     // 优先使用store中的基地经纬度信息，如果没有则使用默认坐标
     if (selectedBase.value.longitude && selectedBase.value.latitude) {
@@ -1932,7 +1928,7 @@ onUnmounted(() => {
     position: absolute;
     top: 10px;
     right: 10px;
-    z-index: 999;
+    z-index: 5;
     background: rgba(255, 255, 255, 0.8);
     padding: 8px;
     border-radius: 4px;
@@ -2200,5 +2196,15 @@ onUnmounted(() => {
       font-size: 20px !important;
     }
   }
+}
+
+/* 降低天地图缩放控件的z-index，防止遮挡下拉框 */
+:deep(.tdt-control-zoom) {
+  z-index: 10 !important;
+}
+
+/* 降低天地图所有控件的z-index */
+:deep(.tdt-control) {
+  z-index: 10 !important;
 }
 </style>
