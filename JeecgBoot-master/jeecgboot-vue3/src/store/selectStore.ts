@@ -156,3 +156,45 @@ export const useCropVarietyStore = defineStore('cropVariety', {
     }
   }
 });
+//存储当前地块是否存在生产计划
+export const usePlanStore = defineStore('planStore', {
+  state: () => ({
+    // 缓存所有地块对应的生产计划
+    // 结构：
+    // {
+    //   'plotId1': { plan data ... },
+    //   'plotId2': null,          // 查询结果为空也存 null（避免重复查）
+    // }
+    planCache: {},
+  }),
+
+  actions: {
+    /** 保存某地块的生产计划数据（null 也要保存） */
+    setPlan(plotId, planData) {
+      this.planCache[plotId] = planData;
+    },
+
+    /** 获取指定地块的计划（可能为 null） */
+    getPlan(plotId) {
+      return this.planCache.hasOwnProperty(plotId)
+        ? this.planCache[plotId]
+        : undefined;     // undefined 表示「没查过」
+    },
+
+    /** 清空缓存（比如用户切换基地后清空） */
+    clear() {
+      this.planCache = {};
+    }
+  },
+
+  getters: {
+    /** 判断地块是否已有计划 */
+    hasPlan: (state) => {
+      return (plotId) => {
+        const plan = state.planCache[plotId];
+        return plan != null; // null 表无计划；undefined 表未查询
+      };
+    }
+  }
+});
+

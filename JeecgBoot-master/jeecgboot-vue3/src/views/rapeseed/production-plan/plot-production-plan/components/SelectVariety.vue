@@ -71,17 +71,19 @@
 <script>
 import { getAllVariety } from '../base.api';
 import { Modal } from 'ant-design-vue';
-import { useCropVarietyStore } from '@/store/selectStore';
+import { useCropVarietyStore ,usePlanStore,useSelectStore } from '@/store/selectStore';
 import { storeToRefs } from 'pinia'; // 用于保持解构后的数据响应式
 export default {
   components: {
     aModal: Modal
   },
   setup() {
-    // ========== 关键修复：在 setup 中一次性实例化 Store（全局共享） ==========
     const cropStore = useCropVarietyStore();
-    return { cropStore }; // 暴露给组件内部使用
+    const planStore = usePlanStore();
+    const selectStore = useSelectStore();
+    return { cropStore, planStore, selectStore };
   },
+
   data() {
     return {
       // 品种列表
@@ -98,16 +100,57 @@ export default {
       selectedToAdd: '' // 弹窗中选中要添加的品种
     };
   },
-  created() {
-    this.fetchVarieties();
-    this.initStore();
+  async mounted() {
+    await this.fetchVarieties();
+
+    const plotId = this.selectStore.selectedPlot?.plotId;
+    const existingPlan = plotId ? this.planStore.getPlan(plotId) : null;
+
+    if (existingPlan && existingPlan.varietyId) {
+      this.applyPlanVariety(existingPlan.varietyId);
+    } else {
+      this.$nextTick(() => {
+        this.selectVariety(this.displayedVarieties[0].value);
+      });
+    }
   },
+
   computed: {
     hasMoreVarieties() {
       return this.allVarieties.length > this.displayedVarieties.length;
     }
   },
   methods: {
+    applyPlanVariety(varietyId) {
+      // 在 allVarieties 中找到对应品种
+      const v = this.allVarieties.find(item => item.value === String(varietyId));
+
+      if (!v) {
+        console.warn("⚠ 计划中的品种ID在品种表中找不到：", varietyId);
+        return;
+      }
+
+      // ⭐ 强制选中（渲染 UI 按钮 & Store）
+      this.selectedVariety = v.value;
+
+      this.cropStore.setSelectedVariety({
+        id: v.value,
+        name: v.label
+      });
+
+      // ⭐ 如果不在前三个，替换最后一个
+      const exists = this.displayedVarieties.some(d => d.value === v.value);
+
+      if (!exists) {
+        if (this.displayedVarieties.length < 3) {
+          this.displayedVarieties.push(v);
+        } else {
+          this.displayedVarieties.splice(-1, 1, v);
+        }
+      }
+
+      console.log("🎯 已根据计划自动选中品种：", v);
+    },
     // 选择品种
     selectVariety(value) {
       this.selectedVariety = value;
@@ -134,6 +177,7 @@ export default {
       }
     },
     // 获取品种列表
+
     async fetchVarieties() {
       try {
         const response = await getAllVariety();
@@ -153,13 +197,8 @@ export default {
         // ⭐ 关键：异步加载完成后才初始化默认选项
         if (this.displayedVarieties.length) {
           const first = this.displayedVarieties[0];
-          this.selectedVariety = first.value;
-
-          // ⭐ 主动触发一次 store 更新（相当于自动帮你点击了按钮）
-          this.cropStore.setSelectedVariety({
-            id: first.value,
-            name: first.label
-          });
+          // ⭐ 正确：模拟用户点击，触发所有后续逻辑
+          this.selectVariety(first.value);
         }
 
       } catch (error) {
@@ -167,7 +206,6 @@ export default {
         this.$message.error('获取品种列表失败，请重试');
       }
     },
-
 
     // 打开弹窗（清空搜索框+初始化列表）
     openAddDialog() {

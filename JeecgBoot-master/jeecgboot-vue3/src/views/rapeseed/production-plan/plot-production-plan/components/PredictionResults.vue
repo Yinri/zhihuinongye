@@ -175,7 +175,7 @@
 </template>
 
 <script>
-import { useCropVarietyStore, useSelectStore } from '@/store/selectStore';
+import { useCropVarietyStore, useSelectStore,usePlanStore } from '@/store/selectStore';
 import { message } from 'ant-design-vue';
 
 import { storeToRefs } from 'pinia';
@@ -185,7 +185,8 @@ import {
   getSoilFertilityByPlotId,
   getFertilizerUtilizationRate,
   getFertilizerList,
-  getPesticideList
+  getPesticideList,
+  getPlotPlanByPlotId
 } from '../base.api';
 import { nanoid } from 'nanoid';
 
@@ -196,6 +197,7 @@ export default {
     const cropStore = useCropVarietyStore();
     const selectStore = useSelectStore();
     const cropVarietyStore = useCropVarietyStore(); // 关键：和品种组件的Store实例名一致
+    const planStore = usePlanStore();
 
     // 2. 正确解构需要响应式的变量（保留 yieldCalcData/seedParams 等）
     const {
@@ -215,7 +217,8 @@ export default {
       selected,
       seedParams,
       fertilizerParams,
-      selectedPlot
+      selectedPlot,
+      planStore
     };
   },
   data() {
@@ -228,8 +231,7 @@ export default {
       pesticideInput: 0,              // 农药合计投入显示（卡片用）
       defaultPesticides: [
         "1993510200000000001", // 咪鲜胺（杀菌）
-        "1993510200000000002", // 高效氯氰菊酯（杀虫）
-        "1993510200000000006"  // 赤霉酸（调节剂）
+        "1993510200000000002" // 高效氯氰菊酯（杀虫）
       ],
 
       pesticideColumns: [
@@ -407,74 +409,130 @@ export default {
     }
   },
   watch: {
-    pesticideSafetyCoeff(newVal, oldVal) {
+    // ==========================
+    // 农药安全系数
+    // ==========================
+    pesticideSafetyCoeff(newVal) {
       if (!this.pesticideCombinationList.length) return;
-
-      this.pesticideCombinationList = this.pesticideCombinationList.map(item => {
-        return {
-          ...item,
-          safetyCoeff: newVal,
-          planDose: item.defaultDose * newVal   // ⭐ 计划剂量 = 推荐剂量 × 安全系数
-        };
-      });
-
+      this.pesticideCombinationList = this.pesticideCombinationList.map(item => ({
+        ...item,
+        safetyCoeff: newVal,
+        planDose: item.defaultDose * newVal
+      }));
       this.calcPesticideTotal();
     },
+
+    // ==========================
     // 品种变化
-    async 'cropStore.selected.id'(newVarietyId) {
-      console.log('========== 品种ID变化 ==========');
-      console.log('新的品种ID:', newVarietyId);
-      console.log('================================');
+    // ==========================
+    'cropStore.selected.id': {
+      async handler(newVarietyId, oldVarietyId) {
+        console.log("🌱 品种变化：", oldVarietyId, "→", newVarietyId);
 
-      // 重置页面肥料组合
-      this.fertilizerCombinationList = [];
-      this.missingFertilizerParam = '';
+        this.fertilizerCombinationList = [];
+        this.missingFertilizerParam = '';
 
-      if (!newVarietyId) {
-        this.varietyDetail = null;
-        this.nutrientDemandData = null;
-        return;
-      }
+        if (!newVarietyId) {
+          this.varietyDetail = null;
+          this.nutrientDemandData = null;
+          return;
+        }
 
-      // 顺序不能乱：品种信息 → 养分需求
-      await this.fetchVarietyDetail(newVarietyId);
-      await this.fetchFertilizerByVariety(newVarietyId);
+        await this.fetchVarietyDetail(newVarietyId);
+        await this.fetchFertilizerByVariety(newVarietyId);
 
-      // 等待页面刷新
-      await this.$nextTick();
-      this.addSmartDefaultPesticides();
-      // ⭐ 仅在两个关键数据都齐全后再智能推荐肥料
-      if (this.soilFertilityData && this.nutrientDemandData) {
-        console.log("🔥 自动智能推荐肥料（因品种变化触发）");
-        this.addSmartDefaultFertilizers();
-      }
+        await this.$nextTick();
+
+        this.addSmartDefaultPesticides();
+
+        if (this.soilFertilityData && this.nutrientDemandData) {
+          console.log("🤖 自动推荐肥料（因品种变化）");
+          this.addSmartDefaultFertilizers();
+        }
+      },
+      immediate: false
     },
 
-    // 地块变化
-    async 'selectStore.selectedPlot.plotId'(newPlotId) {
-      console.log('========== 地块ID变化 ==========');
-      console.log('新的地块ID:', newPlotId);
-      console.log('================================');
+// ==========================
+    // 地块变化（立即执行）
+    // ==========================
+    'selectStore.selectedPlot.plotId': {
+      async handler(newPlotId, oldPlotId) {
+        const planStore = usePlanStore();
 
-      this.fertilizerCombinationList = [];
-      this.missingFertilizerParam = '';
+        console.log("🟨 地块切换：", oldPlotId, "→", newPlotId);
 
-      if (!newPlotId) {
-        this.soilFertilityData = null;
-        return;
-      }
+        // ⭐ 把“跟某块地计划强绑定”的东西统一清空
+        const resetPlanRelatedState = () => {
+          // 肥料 / 农药组合
+          this.fertilizerCombinationList = [];
+          this.pesticideCombinationList = [];
 
-      await this.fetchSoilFertilityByPlot(newPlotId);
-      await this.$nextTick();
-      this.addSmartDefaultPesticides();
-      // 如果品种需求也加载好了，就重新智能推荐肥料
-      if (this.nutrientDemandData) {
-        console.log("🔥 自动智能推荐肥料（因地块变化触发）");
-        this.addSmartDefaultFertilizers();
-      }
+          // 土壤肥力
+          this.soilFertilityData = null;
+
+          // 👉 关键：目标产量相关
+          if (this.yieldCalcData) {
+            // 你这里原来是把 plan.targetYield 写进 avgThreeYearYield
+            // 所以清掉它，targetYield 计算就会变成 null
+            this.yieldCalcData.avgThreeYearYield = null;
+            // 如果 increaseRate 也是跟地块计划一起存的，可以顺便归零
+            this.yieldCalcData.increaseRate = 0;
+          }
+
+          // 👉 种子参数（计划快照）
+          if (this.cropStore.updateSeedParams) {
+            // 给个空对象清空之前 plan 写进去的 snapshot
+            this.cropStore.updateSeedParams({});
+          }
+
+          // 提示信息清空
+          this.missingSeedParam = '';
+          this.missingFertilizerParam = '';
+        };
+
+        // ① 没选地块（比如回到“全部地块”）
+        if (!newPlotId) {
+          resetPlanRelatedState();
+          return;
+        }
+
+        // ② 先看缓存里有没有该地块的计划
+        if (this.planStore.hasPlan(newPlotId)) {
+          const plan = this.planStore.getPlan(newPlotId);
+          console.log("🟢 使用缓存计划：", plan);
+          this.loadPlanFromDatabase(plan);
+          return;
+        }
+
+        // （如果你前面有从后端 getPlanByPlotId 的逻辑，就插在这里，
+        //  只要记得：后端也没有计划时，最终一定要走到 resetPlanRelatedState 这一段）
+
+        // ③ 真·无计划 → 默认逻辑
+        console.log("🔵 无计划 → 恢复默认投入");
+
+        // 先清空跟上一个地块计划相关的所有状态
+        resetPlanRelatedState();
+
+        // 再按新地块做默认推荐
+        await this.fetchSoilFertilityByPlot(newPlotId);
+        await this.$nextTick();
+
+        // 默认农药
+        this.resetToDefaultPesticides();
+
+        // 智能肥料
+        if (this.nutrientDemandData) {
+          console.log("🤖 自动智能推荐肥料（因地块变化）");
+          this.addSmartDefaultFertilizers();
+        }
+      },
+      immediate: true
     },
 
-    // 自动更新合计
+    // ==========================
+    // 肥料组合变化 → 更新合计
+    // ==========================
     fertilizerCombinationList: {
       deep: true,
       handler() {
@@ -482,32 +540,69 @@ export default {
       }
     },
 
-    // ⭐ 安全系数变化 → 自动刷新肥料计算
-    'fertilizerParams.safetyCoefficient'(newVal, oldVal) {
-      if (newVal === oldVal) return;
-      if (!this.fertilizerCombinationList.length) return;
+    // ==========================
+    // 肥料安全系数变化
+    // ==========================
+    'fertilizerParams.safetyCoefficient': {
+      handler(newVal, oldVal) {
+        if (newVal === oldVal) return;
+        if (!this.fertilizerCombinationList.length) return;
 
-      console.log("🔄 安全系数更新，自动刷新所有肥料投入", newVal);
+        console.log("🟦 肥料安全系数变化：", oldVal, "→", newVal);
 
-      this.fertilizerCombinationList = this.fertilizerCombinationList.map(item => {
-        const fertilizer = this.fertilizerList.find(f => f.id === item.fertilizerId);
-        if (!fertilizer) return item;
+        this.fertilizerCombinationList = this.fertilizerCombinationList.map(item => {
+          const fert = this.fertilizerList.find(f => f.id === item.fertilizerId);
+          if (!fert) return item;
 
-        const calc = this.calcSingleFertilizerInput(fertilizer);
+          const calc = this.calcSingleFertilizerInput(fert);
 
-        return {
-          ...item,
-          inputAmount: calc.inputAmount,
-          nContent: calc.nContent,
-          pContent: calc.pContent,
-          kContent: calc.kContent,
-          safetyCoeff: newVal
-        };
-      });
+          return {
+            ...item,
+            inputAmount: calc.inputAmount,
+            nContent: calc.nContent,
+            pContent: calc.pContent,
+            kContent: calc.kContent,
+            safetyCoeff: newVal
+          };
+        });
+      }
     }
   },
 
+
   methods: {
+    loadPlanFromDatabase(plan) {
+      if (!plan) return;
+
+      console.log("📌 加载生产计划数据到投入组件", plan);
+
+      // 目标产量
+      this.yieldCalcData.avgThreeYearYield = plan.targetYield;
+
+      // 种子参数
+      if (plan.seedParamsSnapshot) {
+        this.cropStore.updateSeedParams(JSON.parse(plan.seedParamsSnapshot));
+      }
+
+      // 肥料组合
+      if (plan.fertilizerCombination) {
+        this.fertilizerCombinationList = JSON.parse(plan.fertilizerCombination);
+      }
+
+      this.totalN = plan.fertilizerTotalN || 0;
+      this.totalP = plan.fertilizerTotalP || 0;
+      this.totalK = plan.fertilizerTotalK || 0;
+
+      // 农药组合
+      if (plan.pesticideCombination) {
+        this.pesticideCombinationList = JSON.parse(plan.pesticideCombination);
+      }
+
+      this.pesticideSafetyCoeff = plan.pesticideSafetyCoeff || 1.1;
+
+      console.log("🎉 生产计划成功渲染到页面");
+    },
+
     addSmartDefaultPesticides() {
       if (this.pesticideCombinationList.length > 0) return;
       if (!this.pesticideList.length) return;
@@ -667,6 +762,31 @@ export default {
         this.selectedFertilizerId = fertId;
         this.addFertilizerToCombination();
       }
+    },
+    resetToDefaultPesticides() {
+      this.pesticideCombinationList = [
+        {
+          id: nanoid(),
+          pesticideId: "1993510200000000001",
+          name: "咪鲜胺",
+          defaultDose: 70,
+          safetyCoeff: this.pesticideSafetyCoeff,
+          planDose: 70 * this.pesticideSafetyCoeff
+        },
+        {
+          id: nanoid(),
+          pesticideId: "1993510200000000002",
+          name: "高效氯氰菊酯",
+          defaultDose: 40,
+          safetyCoeff: this.pesticideSafetyCoeff,
+          planDose: 40 * this.pesticideSafetyCoeff
+        }
+      ];
+
+      // 恢复安全系数
+      this.pesticideSafetyCoeff = 1.1;
+
+      this.calcPesticideTotal();
     },
 
 
@@ -962,26 +1082,34 @@ export default {
     }
   },
   async mounted() {
+    const plotId = this.selectStore.selectedPlot?.plotId;
+
+    console.log("🚀 mounted 初始化，当前地块：", plotId);
+
+    // ① 先加载列表型数据（肥料 & 农药）
     await this.fetchFertilizerList();
     await this.fetchPesticideList();
-    const varietyId = this.cropStore.selected?.id; // 改用 Store 实例
-    const plotId = this.selectStore.selectedPlot?.plotId; // 改用 Store 实例
 
+    // ② 品种相关初始化
+    const varietyId = this.cropStore.selected?.id;
     if (varietyId) {
       await this.fetchVarietyDetail(varietyId);
       await this.fetchFertilizerByVariety(varietyId);
     }
+
+    // ③ 土壤肥力
     if (plotId) {
       await this.fetchSoilFertilityByPlot(plotId);
     }
-    // ========== 复制这部分打印代码 ==========
-    console.log('========== 页面初始化时的关键值 ==========');
+
+    console.log('========== 页面初始化关键值 ==========');
     console.log('肥料列表数据:', this.fertilizerList);
     console.log('初始化品种ID:', this.cropStore.selected?.id);
     console.log('初始化地块ID:', this.selectStore.selectedPlot?.plotId);
-    console.log('==========================================');
-    // ========== 打印代码结束 ==========
+    console.log('planStore 中已有计划 keys:', Object.keys(this.planStore.planMap || {}));
+    console.log('=====================================');
   }
+
 };
 </script>
 

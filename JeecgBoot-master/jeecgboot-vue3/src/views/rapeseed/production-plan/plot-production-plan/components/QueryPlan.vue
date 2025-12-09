@@ -21,65 +21,90 @@
 </template>
 
 <script>
-import {useSelectStore} from '/src/store/selectStore'; // 全局状态
-import {getPlotPlanByPlotId} from '../base.api';
+import { useSelectStore,usePlanStore } from '/src/store/selectStore'
+import { getPlotPlanByPlotId } from '../base.api'
 
 export default {
   data() {
     return {
-      hasProductionPlan: false // 本地维护是否有计划的状态
-    };
+      hasProductionPlan: false,
+      productionPlan: null
+    }
   },
+
   computed: {
-    // 获取当前选中地块的ID
     currentPlotId() {
-      return useSelectStore().selectedPlot?.plotId;
+      return useSelectStore().selectedPlot?.plotId
     }
   },
+
   watch: {
-    // 当选中地块ID变化时重新查询计划
     currentPlotId: {
-      immediate: true, // 初始化时立即执行
-      handler(newId) {
-        if (newId) {
-          this.checkProductionPlan(newId);
-        } else {
-          this.hasProductionPlan = false;
+      immediate: true,
+      async handler(newPlotId) {
+        if (!newPlotId) {
+          this.hasProductionPlan = false
+          this.productionPlan = null
+          return
         }
+        await this.checkProductionPlan(newPlotId)
       }
     }
   },
+
   methods: {
-    // 检查当前地块是否有生产计划
     async checkProductionPlan(plotId) {
+      const planStore = usePlanStore()
+
       try {
-        // 调用API查询生产计划
-        const response = await getPlotPlanByPlotId(plotId);
-        // 根据实际接口返回结构判断是否有计划
-        this.productionPlan = response.data;
-        // 有计划（data不为null）则设为true
-        this.hasProductionPlan = !this.productionPlan;
-      } catch (error) {
-        console.error('查询生产计划失败:', error);
-        this.hasProductionPlan = false;
-        this.productionPlan = null;
+        // ① 查看缓存（undefined 代表未查过）
+        const cached = planStore.getPlan(plotId)
+
+        if (cached !== undefined) {
+          console.log("📌 使用缓存计划数据：", cached)
+          this.productionPlan = cached
+          this.hasProductionPlan = cached !== null
+          return
+        }
+
+        // ② 未查询过 → 调接口
+        const res = await getPlotPlanByPlotId(plotId)
+        console.log("📡 后端返回生产计划：", res)
+
+        // ⭐ 正确从 result 中取计划数据
+        const plan = res|| null
+
+        this.productionPlan = plan
+        this.hasProductionPlan = plan !== null
+
+        // ③ 写入缓存
+        planStore.setPlan(plotId, plan)
+
+      } catch (err) {
+        console.error("❌ 查询生产计划失败：", err)
+
+        this.productionPlan = null
+        this.hasProductionPlan = false
+
+        // 防止重复查
+        planStore.setPlan(plotId, null)
       }
     },
-    // 生成计划按钮点击事件
+
+    // 生成新计划
     handleGeneratePlan() {
-      // 触发父组件的生成计划方法，可传递当前地块ID
-      this.$emit('generate-plan', this.currentPlotId);
+      this.$emit("generate-plan", this.currentPlotId)
     },
-    // 修改计划按钮点击事件
+
+    // 修改已有计划
     handleModifyPlan() {
-      // 触发父组件的修改计划方法，传递当前地块ID和现有计划数据
-      this.$emit('modify-plan', {
+      this.$emit("modify-plan", {
         plotId: this.currentPlotId,
         planData: this.productionPlan
-      });
+      })
     }
   }
-};
+}
 </script>
 
 <style>

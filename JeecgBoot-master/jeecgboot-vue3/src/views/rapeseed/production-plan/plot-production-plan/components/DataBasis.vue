@@ -185,6 +185,10 @@
 </template>
 
 <script>
+import { onMounted } from "vue";
+
+
+
 import axios from 'axios';
 import {
   getVarietyHistoryByVarietyId,
@@ -194,9 +198,9 @@ import {
   addSeedParams,
   updateSeedParams,
   saveFertilizerParams,
-  getFertilizerParamsByVarietyId // 新增导入查询接口
+  getFertilizerParamsByVarietyId, getPlotPlanByPlotId // 新增导入查询接口
 } from '../base.api';
-import { useCropVarietyStore } from '@/store/selectStore';
+import {useCropVarietyStore, useSelectStore} from '@/store/selectStore';
 import { storeToRefs } from 'pinia';
 import { message } from 'ant-design-vue';
 
@@ -220,19 +224,29 @@ export default {
   name: 'YieldCalcBasis',
   setup() {
     const cropStore = useCropVarietyStore();
+    const selectStore = useSelectStore();
+
     const { selected, yieldCalcData, fertilizerParams } = storeToRefs(cropStore);
-    const {
-      updateYieldCalcData,
-      updateFertilizerParams
-    } = cropStore;
+    const { selectedPlot } = storeToRefs(selectStore);
     return {
       selected,
+      selectedPlot,
       yieldCalcData,
-      updateYieldCalcData,
       fertilizerParams,
-      updateFertilizerParams
+      updateYieldCalcData: cropStore.updateYieldCalcData,
+      updateFertilizerParams: cropStore.updateFertilizerParams
     };
   },
+  mounted() {
+    const id = this.selected?.id;
+    if (id) {
+      console.log("🌟 mounted 初始化品种 →", id);
+      this.fetchAndUpdateAvg();
+      this.fetchSeedParams();
+      this.getNutrientDemandByVarietyId();
+    }
+  },
+
   data() {
     const currentYear = new Date().getFullYear();
     return {
@@ -277,7 +291,7 @@ export default {
     },
     increaseRate: {
       get() {
-        return this.yieldCalcData.increaseRate;
+        return this.yieldCalcData.increaseRate|| '12';
       },
       set(val) {
         this.updateYieldCalcData({increaseRate: val});
@@ -307,30 +321,27 @@ export default {
     }
   },
   watch: {
+    'selectedPlot.plotId': {
+      immediate: true,
+      handler(newId) {
+        if (newId) {
+          this.loadPlanRateAndSafety();  // ← 自动加载计划参数
+        } else {
+          this.applyDefaultParams();     // ← 清空时恢复默认
+        }
+      }
+    },
     'selected.id': {
       immediate: true,
       handler(newId, oldId) {
-        console.log('品种ID变化：', {oldId, newId, selected: this.selected});
-        if (newId && newId !== oldId) {
+        console.log("🔥 品种变化触发:", oldId, "→", newId);
+
+        if (newId) {
           this.fetchAndUpdateAvg();
           this.fetchSeedParams();
-          this.getNutrientDemandByVarietyId(); // 新增：品种切换时查询需肥量
-        } else if (newId) {
-          this.fetchAndUpdateAvg();
-          this.fetchSeedParams();
-          this.getNutrientDemandByVarietyId(); // 新增：首次加载查询需肥量
+          this.getNutrientDemandByVarietyId();
         } else {
-          this.updateYieldCalcData({avgThreeYearYield: null, increaseRate: '12'});
-          this.yearValues = [undefined, undefined, undefined];
-          this.seedParams = {
-            harvestCoefficient: null,
-            seedlingRate: null,
-            settingRate: null,
-            id: null
-          };
-          this.updateFertilizerParams({
-            nutrientDemand: {n: 5.8, p: 2.5, k: 4.3}
-          });
+          this.applyDefaultParams();
         }
       }
     },
@@ -338,7 +349,74 @@ export default {
       this.safetyCoefficient = Number(newVal);
     }
   },
+
   methods: {
+    async loadPlanRateAndSafety() {
+      const plotId = this.selectedPlot?.plotId;
+      if (!plotId) {
+        console.log("📌 无地块 → 使用默认递增率=12、安全系数=1.2");
+        this.increaseRate = '10';
+        this.safetyCoefficient = 1.2;
+        return;
+      }
+
+      // --- 引用 planStore ---
+      const planStore = usePlanStore();
+      const cachedPlan = planStore.getPlan(plotId);
+
+      // 1) 缓存中已有（可能是 null）
+      if (cachedPlan !== undefined) {
+        console.log("📌 使用缓存计划：", cachedPlan);
+
+        if (cachedPlan) {
+          this.applyPlanParams(cachedPlan);
+        } else {
+          this.applyDefaultParams();
+        }
+        return;
+      }
+
+      // 2) 没查过 → 调接口
+      try {
+        const res = await getPlotPlanByPlotId({ plotId });
+        const plan = res?.data || null;
+
+        // 存入缓存
+        planStore.setPlan(plotId, plan);
+
+        if (plan) {
+          console.log("📌 查询到计划：", plan);
+          this.applyPlanParams(plan);
+        } else {
+          console.log("📌 查询无计划 → 使用默认值");
+          this.applyDefaultParams();
+        }
+      } catch (err) {
+        console.error("❌ 查询地块计划失败：", err);
+        this.applyDefaultParams();
+      }
+    },
+    applyPlanParams(plan) {
+      // 递增率
+      if (plan.increaseRate != null) {
+        this.increaseRate = String(plan.increaseRate);
+      } else {
+        this.increaseRate = '12';
+      }
+
+      // 安全系数
+      if (plan.safetyCoefficient != null) {
+        this.safetyCoefficient = Number(plan.safetyCoefficient);
+      } else {
+        this.safetyCoefficient = 1.2;
+      }
+    },
+
+    applyDefaultParams() {
+      this.increaseRate = '12';
+      this.safetyCoefficient = 1.2;
+    },
+
     async fetchAndUpdateAvg() {
       try {
         const response = await getVarietyHistoryByVarietyId({
