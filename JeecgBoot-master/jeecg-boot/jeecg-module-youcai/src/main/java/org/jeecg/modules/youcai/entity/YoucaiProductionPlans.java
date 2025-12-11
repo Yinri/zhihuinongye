@@ -142,5 +142,10 @@ public class YoucaiProductionPlans extends JeecgEntity {
 
     @Schema(description = "种子参数快照 JSON")
     private String seedParamsSnapshot;
+    /** 产量递增率（百分比，如 10/12/15） */
+    @Excel(name = "递增率(%)", width = 15)
+    @Schema(description = "产量递增率（百分比）")
+    @com.baomidou.mybatisplus.annotation.TableField("increase_rate")
+    private Integer increaseRate;
 
 }
