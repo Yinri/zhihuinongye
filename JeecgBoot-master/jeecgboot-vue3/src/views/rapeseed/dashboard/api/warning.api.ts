@@ -82,8 +82,7 @@ export const updateWarningStatus = (
 ) => {
   return defHttp.put({
     url: Api.UpdateStatus,
-    params: { warningId, status, handler, remark },
-    data: {}, // 提供空data对象，确保params作为URL参数传递
+    data: { warningId, status, handler, remark },
   });
 };
 
