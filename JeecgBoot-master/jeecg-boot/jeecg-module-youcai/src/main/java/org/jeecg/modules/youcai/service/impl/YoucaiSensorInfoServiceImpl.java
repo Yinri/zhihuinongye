@@ -4,9 +4,12 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.jeecg.common.api.vo.Result;
+import org.jeecg.modules.youcai.dto.UnifiedDeviceDto;
 import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
+import org.jeecg.modules.youcai.entity.iotEntity.sensor.SensorListRequest;
 import org.jeecg.modules.youcai.entity.iotEntity.sensor.SensorRealTimeData;
 import org.jeecg.modules.youcai.mapper.YoucaiSensorInfoMapper;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
@@ -114,7 +117,215 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
             return new ArrayList<>();
         }
     }
+
+    @Override
+    public Result<List<UnifiedDeviceDto>> getAllDevices(String baseId) {
+        List<UnifiedDeviceDto> result = new ArrayList<>();
+
+        //这里根据baseId查询项目ID
+        Integer projectId = 229;
+
+        try {
+            // 1. 虫情设备 (eqType = 1)
+            ApiResponse pestResponse = ioTApiUtil.getDeviceList(projectId, 1).block();
+            if (pestResponse != null && pestResponse.getCode() == 1 && pestResponse.getData() != null) {
+                List<UnifiedDeviceDto> pestDevices = parseDeviceData(pestResponse.getData(), "虫情设备");
+                result.addAll(pestDevices);
+                log.info("获取到 {} 个虫情设备", pestDevices.size());
+            }
+            
+            // 2. 孢子仪设备 (eqType = 2)
+            ApiResponse sporeResponse = ioTApiUtil.getDeviceList(projectId, 2).block();
+            if (sporeResponse != null && sporeResponse.getCode() == 1 && sporeResponse.getData() != null) {
+                List<UnifiedDeviceDto> sporeDevices = parseDeviceData(sporeResponse.getData(), "孢子仪设备");
+                result.addAll(sporeDevices);
+                log.info("获取到 {} 个孢子仪设备", sporeDevices.size());
+            }
+            
+            // 3. 杀虫灯设备 (eqType = 3)
+            ApiResponse lampResponse = ioTApiUtil.getDeviceList(projectId, 3).block();
+            if (lampResponse != null && lampResponse.getCode() == 1 && lampResponse.getData() != null) {
+                List<UnifiedDeviceDto> lampDevices = parseDeviceData(lampResponse.getData(), "杀虫灯设备");
+                result.addAll(lampDevices);
+                log.info("获取到 {} 个杀虫灯设备", lampDevices.size());
+            }
+            
+            // 4. 气象传感器 (sensorTypeId = 1)
+            SensorListRequest weatherRequest = new SensorListRequest();
+            weatherRequest.setProjectId(projectId);
+            weatherRequest.setSensorTypeId(1);
+            ApiResponse weatherResponse = ioTApiUtil.getSensorList(weatherRequest).block();
+            if (weatherResponse != null && weatherResponse.getCode() == 1 && weatherResponse.getData() != null) {
+                List<UnifiedDeviceDto> weatherDevices = parseDeviceData(weatherResponse.getData(), "气象传感器");
+                result.addAll(weatherDevices);
+                log.info("获取到 {} 个气象传感器", weatherDevices.size());
+            }
+            
+            // 5. 土壤传感器 (sensorTypeId = 2)
+            SensorListRequest soilRequest = new SensorListRequest();
+            soilRequest.setProjectId(projectId);
+            soilRequest.setSensorTypeId(2);
+            ApiResponse soilResponse = ioTApiUtil.getSensorList(soilRequest).block();
+            if (soilResponse != null && soilResponse.getCode() == 1 && soilResponse.getData() != null) {
+                List<UnifiedDeviceDto> soilDevices = parseDeviceData(soilResponse.getData(), "土壤传感器");
+                result.addAll(soilDevices);
+                log.info("获取到 {} 个土壤传感器", soilDevices.size());
+            }
+            
+            // 6. 水质传感器 (sensorTypeId = 4)
+            SensorListRequest waterRequest = new SensorListRequest();
+            waterRequest.setProjectId(projectId);
+            waterRequest.setSensorTypeId(4);
+            ApiResponse waterResponse = ioTApiUtil.getSensorList(waterRequest).block();
+            if (waterResponse != null && waterResponse.getCode() == 1 && waterResponse.getData() != null) {
+                List<UnifiedDeviceDto> waterDevices = parseDeviceData(waterResponse.getData(), "水质传感器");
+                result.addAll(waterDevices);
+                log.info("获取到 {} 个水质传感器", waterDevices.size());
+            }
+            
+            // 7. 光谱设备
+            ApiResponse spectrumResponse = ioTApiUtil.getSpectrumDeviceList(projectId).block();
+            if (spectrumResponse != null && spectrumResponse.getCode() == 1 && spectrumResponse.getData() != null) {
+                List<UnifiedDeviceDto> spectrumDevices = parseSpectrumDeviceData(spectrumResponse.getData());
+                result.addAll(spectrumDevices);
+                log.info("获取到 {} 个光谱设备", spectrumDevices.size());
+            }
+            
+            log.info("总共获取到 {} 个设备", result.size());
+            return Result.OK(result);
+            
+        } catch (Exception e) {
+            log.error("获取设备列表失败", e);
+            return Result.error("获取设备列表失败：" + e.getMessage());
+        }
+    }
     
+    /**
+     * 解析设备数据，转换为UnifiedDeviceDto列表
+     */
+    private List<UnifiedDeviceDto> parseDeviceData(Object data, String deviceType) {
+        List<UnifiedDeviceDto> deviceList = new ArrayList<>();
+        
+        try {
+            // 将数据转换为JSON数组
+            JSONArray jsonArray = null;
+            if (data instanceof JSONArray) {
+                jsonArray = (JSONArray) data;
+            } else if (data instanceof String) {
+                jsonArray = JSON.parseArray((String) data);
+            } else if (data instanceof List) {
+                jsonArray = new JSONArray((List<?>) data);
+            } else {
+                // 尝试将对象转换为JSON，然后再解析为数组
+                String jsonString = JSON.toJSONString(data);
+                jsonArray = JSON.parseArray(jsonString);
+            }
+            
+            if (jsonArray != null) {
+                for (int i = 0; i < jsonArray.size(); i++) {
+                    JSONObject deviceJson = jsonArray.getJSONObject(i);
+                    UnifiedDeviceDto device = new UnifiedDeviceDto();
+                    
+                    // 设置设备编号
+                    // 传感器设备使用sensorSerial作为设备编号
+                    if (deviceJson.containsKey("sensorSerial")) {
+                        device.setDeviceCode(deviceJson.getString("sensorSerial"));
+                    } else if (deviceJson.containsKey("DeviceCode")) {
+                        device.setDeviceCode(deviceJson.getString("DeviceCode"));
+                    } else if (deviceJson.containsKey("deviceCode")) {
+                        device.setDeviceCode(deviceJson.getString("deviceCode"));
+                    }
+                    
+                    // 设置经纬度
+                    if (deviceJson.containsKey("Lat")) {
+                        device.setLat(deviceJson.getString("Lat"));
+                    } else if (deviceJson.containsKey("lat")) {
+                        device.setLat(deviceJson.getString("lat"));
+                    }
+                    
+                    if (deviceJson.containsKey("Lng")) {
+                        device.setLng(deviceJson.getString("Lng"));
+                    } else if (deviceJson.containsKey("lng")) {
+                        device.setLng(deviceJson.getString("lng"));
+                    }
+                    
+                    // 设置设备类型
+                    device.setDeviceType(deviceType);
+                    
+                    // 只有当设备编号不为空时才添加到列表
+                    if (device.getDeviceCode() != null && !device.getDeviceCode().isEmpty()) {
+                        deviceList.add(device);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析设备数据失败", e);
+        }
+        
+        return deviceList;
+    }
+    
+    /**
+     * 解析光谱设备数据，转换为UnifiedDeviceDto列表
+     */
+    private List<UnifiedDeviceDto> parseSpectrumDeviceData(Object data) {
+        List<UnifiedDeviceDto> deviceList = new ArrayList<>();
+        
+        try {
+            // 将数据转换为JSON数组
+            JSONArray jsonArray = null;
+            if (data instanceof JSONArray) {
+                jsonArray = (JSONArray) data;
+            } else if (data instanceof String) {
+                jsonArray = JSON.parseArray((String) data);
+            } else if (data instanceof List) {
+                jsonArray = new JSONArray((List<?>) data);
+            } else {
+                // 尝试将对象转换为JSON，然后再解析为数组
+                String jsonString = JSON.toJSONString(data);
+                jsonArray = JSON.parseArray(jsonString);
+            }
+            
+            if (jsonArray != null) {
+                for (int i = 0; i < jsonArray.size(); i++) {
+                    JSONObject item = jsonArray.getJSONObject(i);
+                    
+                    // 光谱设备的数据结构是 {"q": {...}, "cropName": "..."}
+                    if (item.containsKey("q")) {
+                        JSONObject deviceJson = item.getJSONObject("q");
+                        UnifiedDeviceDto device = new UnifiedDeviceDto();
+                        
+                        // 设置设备编号 (sensorSerial)
+                        if (deviceJson.containsKey("sensorSerial")) {
+                            device.setDeviceCode(deviceJson.getString("sensorSerial"));
+                        }
+                        
+                        // 设置经纬度
+                        if (deviceJson.containsKey("lat")) {
+                            device.setLat(deviceJson.getString("lat"));
+                        }
+                        
+                        if (deviceJson.containsKey("lng")) {
+                            device.setLng(deviceJson.getString("lng"));
+                        }
+                        
+                        // 设置设备类型为光谱设备
+                        device.setDeviceType("光谱设备");
+                        
+                        // 只有当设备编号不为空时才添加到列表
+                        if (device.getDeviceCode() != null && !device.getDeviceCode().isEmpty()) {
+                            deviceList.add(device);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析光谱设备数据失败", e);
+        }
+        
+        return deviceList;
+    }
+
     /**
      * 获取传感器实时数据（原始数据）
      */

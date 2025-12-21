@@ -3,6 +3,7 @@ package org.jeecg.modules.youcai.controller;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
@@ -10,9 +11,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.common.util.oConvertUtils;
+import org.jeecg.modules.youcai.dto.UnifiedDeviceDto;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
+import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
+import org.jeecg.modules.youcai.util.IoTApiUtil;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -50,6 +54,9 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo, IYoucaiSensorInfoService> {
 	@Autowired
 	private IYoucaiSensorInfoService youcaiSensorInfoService;
+	
+	@Autowired
+	private IoTApiUtil ioTApiUtil;
 	
 	/**
 	 * 分页列表查询
@@ -255,6 +262,48 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
         } catch (Exception e) {
             log.error("获取传感器历史数据异常", e);
             return Result.error("获取传感器历史数据异常：" + e.getMessage());
+        }
+    }
+
+    @AutoLog(value = "传感器信息表-获取所有设备")
+    @GetMapping(value = "/getAllDevices")
+    public Result<List<UnifiedDeviceDto>> getAllDevices(@RequestParam(defaultValue = "229") String baseId){
+        return youcaiSensorInfoService.getAllDevices(baseId);
+    }
+
+    /**
+     * 获取设备状态信息
+     *
+     * @param projectId 项目ID，默认为1
+     * @return 设备状态信息
+     */
+    @AutoLog(value = "设备管理-获取设备状态")
+    @Operation(summary="设备管理-获取设备状态", description="设备管理-获取设备状态")
+    @GetMapping(value = "/deviceStatus")
+    public Result<Object> getDeviceStatus(
+            @Parameter(name="projectId", description="项目ID") @RequestParam(name="projectId", defaultValue = "229") Integer projectId) {
+        try {
+            log.info("获取项目ID {} 的设备状态信息", projectId);
+            
+            // 调用IoTApiUtil获取设备在线状态
+            ApiResponse response = ioTApiUtil.getDeviceOnline(projectId).block();
+            
+            if (response != null && response.getCode() == 1) {
+                // 直接返回IoT API的响应数据
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", response.getCode());
+                result.put("msg", response.getMsg());
+                result.put("count", response.getCount());
+                result.put("data", response.getData());
+                
+                return Result.OK(result);
+            } else {
+                log.error("获取设备状态失败: {}", response != null ? response.getMsg() : "响应为空");
+                return Result.error("获取设备状态失败");
+            }
+        } catch (Exception e) {
+            log.error("获取设备状态异常", e);
+            return Result.error("获取设备状态异常：" + e.getMessage());
         }
     }
 

@@ -1,5 +1,7 @@
 package org.jeecg.modules.youcai.service;
 
+import org.jeecg.common.api.vo.Result;
+import org.jeecg.modules.youcai.dto.UnifiedDeviceDto;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -36,4 +38,6 @@ public interface IYoucaiSensorInfoService extends IService<YoucaiSensorInfo> {
      * @return 历史数据
      */
     List<WeatherSensorDataDTO> getSensorHistoryData(String sensorId, String startDate, String endDate);
+
+    Result<List<UnifiedDeviceDto>> getAllDevices(String baseId);
 }
