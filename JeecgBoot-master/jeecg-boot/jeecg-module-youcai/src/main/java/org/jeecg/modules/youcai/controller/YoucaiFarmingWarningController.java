@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @Description: 农事预警统一管理Controller
@@ -22,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/youcai/farmingWarning")
 @Slf4j
-public class FarmingWarningController {
+public class YoucaiFarmingWarningController {
 
     @Autowired
     private IYoucaiWarningRecordService warningRecordService;
@@ -48,12 +49,17 @@ public class FarmingWarningController {
      */
     @Operation(summary = "更新预警状态")
     @PutMapping("/updateStatus")
-    public Result<String> updateStatus(
-            @RequestParam String warningId,
-            @RequestParam String status,
-            @RequestParam(required = false) String handler,
-            @RequestParam(required = false) String remark) {
+    public Result<String> updateStatus(@RequestBody Map<String, String> params) {
         try {
+            String warningId = params.get("warningId");
+            String status = params.get("status");
+            String handler = params.get("handler");
+            String remark = params.get("remark");
+            
+            if (warningId == null || status == null) {
+                return Result.error("warningId和status参数不能为空");
+            }
+            
             log.info("更新预警状态，ID: {}, 状态: {}, 处理人: {}", warningId, status, handler);
             boolean success = warningRecordService.updateWarningStatus(warningId, status, handler, remark);
             return success ? Result.OK("更新成功") : Result.error("更新失败");

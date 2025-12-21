@@ -7,10 +7,12 @@
         <span class="header-title">农事预警信息</span>
         <span class="warning-count">{{ warningList.length }} 条预警</span>
       </div>
-      <button class="refresh-btn" @click="handleRefresh" :disabled="loading">
-        <span class="refresh-icon" :class="{ rotating: loading }">↻</span>
-        <span class="refresh-text">{{ loading ? '加载中' : '刷新' }}</span>
-      </button>
+      <div class="header-right">
+        <button class="refresh-btn" @click="handleRefresh" :disabled="loading">
+          <span class="refresh-icon" :class="{ rotating: loading }">↻</span>
+          <span class="refresh-text">{{ loading ? '加载中' : '刷新' }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- 预警内容区（带滚动条） -->
@@ -45,7 +47,10 @@
             <div class="info-title" :title="item.title">
               {{ item.title }}
             </div>
-            <span v-if="item.plotName" class="plot-tag">{{ item.plotName }}</span>
+            <div class="location-tags">
+              <span v-if="item.baseName" class="base-tag">{{ item.baseName }}</span>
+              <span v-if="item.plotName" class="plot-tag">{{ item.plotName }}</span>
+            </div>
           </div>
           <div class="info-desc" :title="item.description">{{ item.description }}</div>
           <div class="info-meta">
@@ -103,27 +108,15 @@ const router = useRouter();
 const loadWarnings = async () => {
   loading.value = true;
   try {
-    // 查询待处理和处理中的预警
+    // 查询待处理的预警
     const pendingData = await getWarningList({
       warningStatus: 'pending', // 查询待处理的预警
       onlyValid: true, // 只查询未过期的预警
       limit: 10,
     });
     
-    const processingData = await getWarningList({
-      warningStatus: 'processing', // 查询处理中的预警
-      onlyValid: true, // 只查询未过期的预警
-      limit: 10,
-    });
-    
-    const resolvedData = await getWarningList({
-      warningStatus: 'resolved', // 查询已处理的预警
-      onlyValid: true, // 只查询未过期的预警
-      limit: 5,
-    });
-    
-    // 合并三个列表，待处理的在前，处理中的次之，已处理的最后
-    warningList.value = [...(pendingData || []), ...(processingData || []), ...(resolvedData || [])];
+    // 只显示待处理的预警
+    warningList.value = pendingData || [];
   } catch (error) {
     console.error('加载预警失败:', error);
     message.error('加载预警信息失败');
@@ -171,12 +164,30 @@ const handleWarning = async (item: FarmingWarning, action: string) => {
 };
 
 // 跳转到预警详情页
-const goToDetail = (item: FarmingWarning) => {
-  // 跳转到地块风险详情页面，传递地块ID
-  if (item.plotId) {
-    router.push(`/rapeseed/plot-risk-detail/${item.plotId}`);
-  } else {
-    message.error('无法获取地块信息，无法跳转到详情页');
+const goToDetail = async (item: FarmingWarning) => {
+  try {
+    // 点击"去处理"时，先将状态更新为"处理中"
+    if (item.warningStatus === 'pending') {
+      await updateWarningStatus(item.id, 'processing', undefined, undefined);
+      
+      // 更新本地数据状态
+      const index = warningList.value.findIndex((w) => w.id === item.id);
+      if (index !== -1) {
+        warningList.value[index].warningStatus = 'processing';
+      }
+      
+      message.success('预警已标记为处理中');
+    }
+    
+    // 跳转到地块风险详情页面，传递地块ID
+    if (item.plotId) {
+      router.push(`/rapeseed/plot-risk-detail/${item.plotId}`);
+    } else {
+      message.error('无法获取地块信息，无法跳转到详情页');
+    }
+  } catch (error) {
+    console.error('更新预警状态失败:', error);
+    message.error('操作失败，请重试');
   }
 };
 
@@ -218,6 +229,12 @@ onMounted(() => {
 }
 
 .header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-right {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -363,7 +380,7 @@ onMounted(() => {
 /* 预警项样式 */
 .warning-item {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
   transition: all 0.2s;
@@ -421,7 +438,7 @@ onMounted(() => {
 
 .info-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 6px;
 }
@@ -432,9 +449,31 @@ onMounted(() => {
   color: #854d0e;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+  max-height: 2.8em;
   flex: 1;
   margin-right: 8px;
+  word-break: break-word;
+}
+
+.location-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.base-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  background-color: #f6ffed;
+  color: #52c41a;
+  border-radius: 4px;
+  font-weight: normal;
+  flex-shrink: 0;
 }
 
 .plot-tag {
@@ -478,6 +517,8 @@ onMounted(() => {
   flex-shrink: 0;
   flex-wrap: wrap;
   max-width: 180px;
+  align-self: flex-start;
+  margin-top: 2px;
 }
 
 .handle-btn,
