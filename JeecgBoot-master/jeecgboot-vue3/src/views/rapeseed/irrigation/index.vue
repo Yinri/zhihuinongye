@@ -14,7 +14,7 @@
             <div class="moisture-info">
               <div>当前含水率：{{ soilMoisturePercent }}%</div>
               <div>
-                含水状态：<Tag :color="moistureStateColor">{{ moistureStateLabel }}</Tag>
+                含水状态：<Tag :color="moistureStateColor ?? ''">{{ moistureStateLabel }}</Tag>
               </div>
             </div>
           </div>
@@ -134,56 +134,7 @@
     </a-row>
 
     <!-- 天气与蒸散 / 风险与操作 -->
-    <a-row :gutter="16" class="mt-4 row-stretch">
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:cloud-outlined" /> 天气与蒸散概览
-            </div>
-          </template>
-          <a-space v-if="hasData" direction="vertical" style="width: 100%">
-            <div class="statistic-grid">
-              <div class="metric">
-              <div class="metric-title">最近1小时 ET0</div>
-              <div class="metric-value">{{ et0Last1h }} mm</div>
-              </div>
-              <div class="metric">
-              <div class="metric-title">最近3小时 ET0平均</div>
-              <div class="metric-value">{{ et0Last3hAvg }} mm</div>
-              </div>
-              <div class="metric">
-              <div class="metric-title">近24小时 ET0累计</div>
-              <div class="metric-value">{{ et0Sum24h }} mm</div>
-              </div>
-            </div>
-            <div class="hint">基于 Penman 估算的参考蒸散量，供灌溉决策参考。</div>
-          </a-space>
-          <a-empty v-else description="暂无数据" />
-        </a-card>
-      </a-col>
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:warning-outlined" /> 风险与提示 / 快捷操作
-            </div>
-          </template>
-          <a-space v-if="hasData" direction="vertical" style="width: 100%">
-            <a-alert :message="`当前灌溉风险：${riskLevel}`" type="warning" show-icon />
-            <ul class="tips">
-              <li v-for="(tip, idx) in riskTips" :key="idx">{{ tip }}</li>
-            </ul>
-            <div class="actions">
-              <a-button size="small" @click="copySuggestion" :disabled="!selectedPlotId || !hasData">复制建议</a-button>
-              <a-button size="small" @click="refresh" :disabled="!selectedPlotId">刷新数据</a-button>
-              <a-button size="small" @click="openReportModal('risk')" :disabled="!selectedPlotId || !hasData">导出报告</a-button>
-            </div>
-          </a-space>
-          <a-empty v-else description="暂无数据" />
-        </a-card>
-      </a-col>
-    </a-row>
+    <!-- 已删除：天气与蒸散概览 + 风险与提示 / 快捷操作 -->
 
     <!-- 一键灌溉管理（移至页面底部） -->
     <a-row class="mt-4">
@@ -318,34 +269,25 @@
     <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="800">
       <div style="padding:16px" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
         <h3>智慧灌溉报告</h3>
-        <p>地块：{{ selectedPlotName }}</p>
+        <p>基地：{{ selectStore.selectedBase.baseName || '-' }}</p>
         <p>含水率：{{ soilMoisturePercent }}%</p>
         <p>建议：{{ penmanSuggestion.needIrrigation ? '需要灌溉' : '暂不需要' }}</p>
         <p>时间：{{ penmanSuggestion.recommendedTime || '-' }}</p>
         <p>方式：{{ penmanSuggestion.method || '-' }}</p>
         <p>推荐灌水量：{{ recommendedVolumeMm }} mm（约 {{ mmToM3PerMu(recommendedVolumeMm) }} m³/亩）</p>
-        <h4>ET0 近24小时</h4>
+        <h4>ET0 近12小时</h4>
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr>
-              <th v-for="d in chartDates" :key="d" style="border:1px solid #ddd;padding:4px">{{ d }}</th>
+              <th v-for="d in chartDates12" :key="d" style="border:1px solid #ddd;padding:4px">{{ d }}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td v-for="(v,idx) in et0Forecast" :key="idx" style="border:1px solid #ddd;padding:4px">{{ v }}</td>
+              <td v-for="(v,idx) in et0Forecast12" :key="idx" style="border:1px solid #ddd;padding:4px">{{ v }}</td>
             </tr>
           </tbody>
         </table>
-      </div>
-      <div style="padding:16px" v-if="reportType==='risk' && hasData" id="riskReport">
-        <h3>灌溉风险与提示报告</h3>
-        <p>地块：{{ selectedPlotName }}</p>
-        <p>当前风险等级：{{ riskLevel }}</p>
-        <h4>提示与建议</h4>
-        <ul class="tips">
-          <li v-for="(tip, idx) in riskTips" :key="idx">{{ tip }}</li>
-        </ul>
       </div>
       <template #footer>
         <a-space>
@@ -982,6 +924,7 @@ const moistureStatus = computed(() => {
 
 // 额外状态与计算
 const lastUpdatedText = ref<string>('-');
+const progressText = (p: number) => `${Math.round((p || 0) * 10) / 10}%`;
 const moistureStateLabel = computed(() => {
   if (soilMoisturePercent.value < 40) return '偏低';
   if (soilMoisturePercent.value < 60) return '适中';
@@ -993,54 +936,18 @@ const moistureStateColor = computed(() => {
   return 'green';
 });
 
-const progressText = (p: number) => `${Math.round((p || 0) * 10) / 10}%`;
-
 function mmToM3PerMu(mm: number): number {
   return Math.round(mm * 0.6667 * 10) / 10;
 }
 
 const et0Forecast = ref<number[]>([]);
 const chartDates = ref<string[]>([]);
+const chartDates12 = computed<string[]>(() => chartDates.value.slice(-12));
+const et0Forecast12 = computed<number[]>(() => et0Forecast.value.slice(-12));
 const moistureTrendData = ref<number[]>([]);
 const penmanInputs = ref<any>({ dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] });
-const et0Last1h = computed<number>(() => {
-  const a = et0Forecast.value;
-  return a.length ? a[a.length - 1] : 0;
-});
-const et0Last3hAvg = computed<number>(() => {
-  const a = et0Forecast.value.slice(-3);
-  if (!a.length) return 0;
-  return Math.round((a.reduce((s, v) => s + (v || 0), 0) / a.length) * 10) / 10;
-});
-const et0Sum24h = computed<number>(() => {
-  const a = et0Forecast.value.slice(-24);
-  if (!a.length) return 0;
-  return Math.round((a.reduce((s, v) => s + (v || 0), 0)) * 10) / 10;
-});
 
-const riskLevel = computed(() => {
-  if (soilMoisturePercent.value < 35) return '较高';
-  if (soilMoisturePercent.value < 45) return '中等';
-  return '较低';
-});
-const riskTips = computed<string[]>(() => {
-  if (soilMoisturePercent.value < 40) {
-    return [
-      '建议在清晨低蒸发时段进行滴灌，避免地表径流',
-      '分次灌溉更利于均匀入渗，减少浪费',
-    ];
-  }
-  if (soilMoisturePercent.value < 60) {
-    return [
-      '关注未来两日蒸散量变化，必要时小水勤灌',
-      '保持田间通风，避免积水抑制根系生长',
-    ];
-  }
-  return [
-    '土壤含水率较高，暂不推荐灌溉',
-    '注意病害风险，保持叶面干燥并加强田间巡查',
-  ];
-});
+// 已删除：风险等级与提示计算
 
 async function copySuggestion() {
   const text = `地块：${selectedPlotName.value}\n需要灌溉：${penmanSuggestion.needIrrigation ? '是' : '否'}\n时间：${penmanSuggestion.recommendedTime || '-'}\n方式：${penmanSuggestion.method || '-'}\n推荐灌水量：${recommendedVolumeMm.value} mm（约 ${mmToM3PerMu(recommendedVolumeMm.value)} m³/亩）\n原因：${penmanSuggestion.reason || '-'}`;
