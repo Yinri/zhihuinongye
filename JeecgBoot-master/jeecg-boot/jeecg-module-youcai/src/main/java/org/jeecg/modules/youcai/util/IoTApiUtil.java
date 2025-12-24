@@ -187,6 +187,19 @@ public class IoTApiUtil {
     }
 
     /**
+     * 获取光谱设备列表
+     */
+    public Mono<ApiResponse> getSpectrumDeviceList(Integer projectId) {
+        return checkTokenAndRequest(() ->
+                webClient.post()
+                        .uri(BASE_URL + "/ALiYun/getSensorList")
+                        .body(BodyInserters.fromValue(Collections.singletonMap("projectId", projectId)))
+                        .retrieve()
+                        .bodyToMono(ApiResponse.class)
+        );
+    }
+
+    /**
      * 获取传感器历史数据（按设备编号+时间范围）
      */
 //    public Mono<ApiResponse> getSensorHistoryData(String deviceCode, String startDate, String endDate) {

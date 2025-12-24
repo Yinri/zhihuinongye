@@ -136,7 +136,7 @@ const fetchBaseList = async () => {
       latitude: item.latitude || ''    // 添加纬度信息
     }));
     if (baseList.value.length > 0) {
-      selectedBase.value = baseList.value[0];
+      selectedBase.value = baseList.value[3];
       selectStore.updateSelectedBase({
         baseId: selectedBase.value.baseId,
         baseName: selectedBase.value.baseName,

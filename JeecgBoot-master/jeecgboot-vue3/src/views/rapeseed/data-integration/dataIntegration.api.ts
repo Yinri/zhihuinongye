@@ -10,6 +10,8 @@ enum Api {
   GetDataIntegrationById = '/rapeseed/data-integration/queryById',
   ExportDataIntegration = '/rapeseed/data-integration/export',
   ImportDataIntegration = '/rapeseed/data-integration/import',
+  GetDeviceStatus = '/youcai/sensorInfo/deviceStatus',
+  GetAllDevices = '/youcai/sensorInfo/getAllDevices',
 }
 
 /**
@@ -86,4 +88,18 @@ export const importDataIntegration = (params?: any, config?: AxiosRequestConfig)
     params,
     config
   );
+};
+
+/**
+ * 获取设备状态信息
+ */
+export const getDeviceStatus = () => {
+  return defHttp.get<any>({ url: Api.GetDeviceStatus });
+};
+
+/**
+ * 获取所有设备信息
+ */
+export const getAllDevices = (baseId: number) => {
+  return defHttp.get<any>({ url: Api.GetAllDevices, params: { baseId } });
 };
