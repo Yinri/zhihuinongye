@@ -15,8 +15,12 @@ enum Api {
   getPlotById = '/youcai/youcaiGrowthMonitoring/queryByPlotId',
   // 创建基地
   createBase = '/youcai/bases/add',
-  // 通过地块id获取当前地块生产计划
+  //通过地块id获取当前地块生产计划
   getPlotPlanByPlotId = '/youcai/youcaiProductionPlans/queryByPlotId',
+  // 创建生产计划
+  createProductionPlan = '/youcai/youcaiProductionPlans/add',
+  // 生成生产计划（后端算法生成）
+  generateProductionPlan = '/youcai/youcaiProductionPlans/generate',
   // 查询所有品种信息
   getAllVariety = '/youcai/youcaiRapeVarieties/getAll',
   // 通过品种id查询该品种的历年产量
@@ -110,6 +114,33 @@ export const getPlotPlanByPlotId: Function = (plotId) => {
   return defHttp.get({
     url: Api.getPlotPlanByPlotId,
     params: { plotId: plotId + '' }
+  });
+};
+
+/**
+ * 创建生产计划
+ * @param data 生产计划数据
+ * @returns 创建结果
+ */
+export const createProductionPlan: Function = (data) => {
+  return defHttp.post({
+    url: Api.createProductionPlan,
+    data
+  });
+};
+
+/**
+ * 生成生产计划（后端算法生成）
+ * @param plotId 地块ID
+ * @returns 生成的生产计划数据
+ */
+export const generateProductionPlan: Function = (params) => {
+  const { plotId } = params || {};
+  return defHttp.get({
+    url: Api.generateProductionPlan,
+    params: { 
+      plotId: plotId + ''
+    }
   });
 };
 

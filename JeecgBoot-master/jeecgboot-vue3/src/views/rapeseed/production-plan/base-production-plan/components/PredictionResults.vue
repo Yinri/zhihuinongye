@@ -40,36 +40,19 @@
 </template>
 
 <script>
-import { useCropVarietyStore } from '@/store/selectStore';
-import { storeToRefs } from 'pinia';
-
 export default {
   name: 'YieldIndicator',
-  setup() {
-    // 从Pinia获取存储的平均单产和递增率
-    const cropStore = useCropVarietyStore();
-    const { yieldCalcData } = storeToRefs(cropStore);
-    return {
-      yieldCalcData
-    };
-  },
   data() {
     return {
       // 投入类示例数据（可替换为接口请求数据或计算值）
       seedInput: 85.5,    // 种子投入示例值
       fertilizerInput: 120.0, // 肥料投入示例值
-      pesticideInput: 68.3   // 农药投入示例值
+      pesticideInput: 68.3,   // 农药投入示例值
+      avgThreeYearYield: null,
+      increaseRate: 0
     };
   },
   computed: {
-    // 前三年平均单产（从Pinia获取）
-    avgThreeYearYield() {
-      return this.yieldCalcData.avgThreeYearYield ? Number(this.yieldCalcData.avgThreeYearYield) : null;
-    },
-    // 递增率（从Pinia获取，转为小数）
-    increaseRate() {
-      return this.yieldCalcData.increaseRate ? Number(this.yieldCalcData.increaseRate) / 100 : 0;
-    },
     // 计算目标产量：前三年平均单产 × (1 + 递增率)
     targetYield() {
       if (this.avgThreeYearYield === null || isNaN(this.avgThreeYearYield)) {

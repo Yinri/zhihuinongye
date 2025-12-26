@@ -11,4 +11,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IYoucaiProductionPlansService extends IService<YoucaiProductionPlans> {
 
+    YoucaiProductionPlans generateProductionPlan(String plotId);
 }

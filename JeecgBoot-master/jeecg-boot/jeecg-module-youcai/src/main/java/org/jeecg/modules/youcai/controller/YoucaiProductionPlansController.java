@@ -70,9 +70,24 @@ public class YoucaiProductionPlansController extends JeecgController<YoucaiProdu
 
 		 YoucaiProductionPlans productionPlan = youcaiProductionPlansService.getOne(queryWrapper);
 		 if (productionPlan == null) {
-			 return Result.OK(null); // 无数据时返回空，前端可通过null判断是否有计划
+			 return Result.OK(null); 
 		 }
 		 return Result.OK(productionPlan);
+	 }
+
+	 /**
+	  * 生成生产计划（后端算法生成）
+	  */
+	 @Operation(summary="生产计划表-生成生产计划")
+	 @GetMapping(value = "/generate")
+	 public Result<YoucaiProductionPlans> generateProductionPlan(@RequestParam(name="plotId", required=true) String plotId) {
+		 try {
+			 YoucaiProductionPlans productionPlan = youcaiProductionPlansService.generateProductionPlan(plotId);
+			 return Result.OK(productionPlan);
+		 } catch (Exception e) {
+			 log.error("生成生产计划失败: plotId={}, error={}", plotId, e.getMessage(), e);
+			 return Result.error("生成生产计划失败: " + e.getMessage());
+		 }
 	 }
 	/**
 	 *   添加

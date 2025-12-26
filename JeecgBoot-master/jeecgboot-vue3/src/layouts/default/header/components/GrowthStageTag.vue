@@ -39,7 +39,7 @@
         </div>
       </div>
 
-      <div class="stage-tag-group">
+      <div class="stage-tag-group" v-if="!hideGrowthStage">
         <div
           class="stage-tag"
           v-for="(stage, index) in stageList"
@@ -60,9 +60,18 @@
 </template>
 
 <script setup lang="ts">
-import {ref, reactive, onMounted, watch} from 'vue';
+import {ref, reactive, onMounted, watch, computed} from 'vue';
 import { useSelectStore } from '../../../../store/selectStore';
 import {getBaseList, getPlotsByBaseId,getPlotById} from '../../../../views/rapeseed/production-plan/plot-production-plan/base.api';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+
+const hideGrowthStage = computed(() => {
+  const currentPath = route.path;
+  return currentPath.includes('/rapeseed/production-plan/plot-production-plan') ||
+         currentPath.includes('/rapeseed/production-plan/base-production-plan');
+});
 
 // 定义基地类型接口
 interface BaseItem {
