@@ -47,13 +47,13 @@ export const getBaseById: Function = (id) => {
 
 /**
  * 根据基地ID获取地块列表（修正版）
- * @param baseid 基地ID（参数名与后端保持一致）
+ * @param baseId 基地ID（参数名与后端保持一致）
  * @returns 地块列表数据
  */
-export const getPlotsByBaseId: Function = (baseid) => {
-  return defHttp.get({
+export const getPlotsByBaseId: Function = (baseId) => {
+  return defHttp.get({    
     url: Api.getPlotsByBaseId,
-    params: { baseid }  // 明确传递 baseid 参数
+    params: { baseId }  // 明确传递 baseId 参数
   });
 };
 
