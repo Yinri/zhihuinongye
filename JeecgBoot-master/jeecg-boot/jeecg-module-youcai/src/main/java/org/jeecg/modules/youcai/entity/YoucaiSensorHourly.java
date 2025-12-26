@@ -30,6 +30,7 @@ public class YoucaiSensorHourly extends JeecgEntity {
     private BigDecimal soilMoisturePct;
     private BigDecimal dewTempC;
     private BigDecimal vpdKpa;
+    
     private String sysOrgCode;
     private Integer delFlag;
 }

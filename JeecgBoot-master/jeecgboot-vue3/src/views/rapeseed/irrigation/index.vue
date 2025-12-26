@@ -133,57 +133,7 @@
       </a-col>
     </a-row>
 
-    <!-- 天气与蒸散 / 风险与操作 -->
-    <a-row :gutter="16" class="mt-4 row-stretch">
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:cloud-outlined" /> 天气与蒸散概览
-            </div>
-          </template>
-          <a-space v-if="hasData" direction="vertical" style="width: 100%">
-            <div class="statistic-grid">
-              <div class="metric">
-              <div class="metric-title">最近1小时 ET0</div>
-              <div class="metric-value">{{ et0Last1h }} mm</div>
-              </div>
-              <div class="metric">
-              <div class="metric-title">最近3小时 ET0平均</div>
-              <div class="metric-value">{{ et0Last3hAvg }} mm</div>
-              </div>
-              <div class="metric">
-              <div class="metric-title">近24小时 ET0累计</div>
-              <div class="metric-value">{{ et0Sum24h }} mm</div>
-              </div>
-            </div>
-            <div class="hint">基于 Penman 估算的参考蒸散量，供灌溉决策参考。</div>
-          </a-space>
-          <a-empty v-else description="暂无数据" />
-        </a-card>
-      </a-col>
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:warning-outlined" /> 风险与提示 / 快捷操作
-            </div>
-          </template>
-          <a-space v-if="hasData" direction="vertical" style="width: 100%">
-            <a-alert :message="`当前灌溉风险：${riskLevel}`" type="warning" show-icon />
-            <ul class="tips">
-              <li v-for="(tip, idx) in riskTips" :key="idx">{{ tip }}</li>
-            </ul>
-            <div class="actions">
-              <a-button size="small" @click="copySuggestion" :disabled="!selectedPlotId || !hasData">复制建议</a-button>
-              <a-button size="small" @click="refresh" :disabled="!selectedPlotId">刷新数据</a-button>
-              <a-button size="small" @click="openReportModal('risk')" :disabled="!selectedPlotId || !hasData">导出报告</a-button>
-            </div>
-          </a-space>
-          <a-empty v-else description="暂无数据" />
-        </a-card>
-      </a-col>
-    </a-row>
+
 
     <!-- 一键灌溉管理（移至页面底部） -->
     <a-row class="mt-4">
@@ -318,22 +268,22 @@
     <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="800">
       <div style="padding:16px" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
         <h3>智慧灌溉报告</h3>
-        <p>地块：{{ selectedPlotName }}</p>
+        <p>基地：{{ selectStore.selectedBase.baseName }}</p>
         <p>含水率：{{ soilMoisturePercent }}%</p>
         <p>建议：{{ penmanSuggestion.needIrrigation ? '需要灌溉' : '暂不需要' }}</p>
         <p>时间：{{ penmanSuggestion.recommendedTime || '-' }}</p>
         <p>方式：{{ penmanSuggestion.method || '-' }}</p>
         <p>推荐灌水量：{{ recommendedVolumeMm }} mm（约 {{ mmToM3PerMu(recommendedVolumeMm) }} m³/亩）</p>
-        <h4>ET0 近24小时</h4>
+        <h4>ET0 近12小时</h4>
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr>
-              <th v-for="d in chartDates" :key="d" style="border:1px solid #ddd;padding:4px">{{ d }}</th>
+              <th v-for="d in chartDates.slice(-12)" :key="d" style="border:1px solid #ddd;padding:4px">{{ d }}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td v-for="(v,idx) in et0Forecast" :key="idx" style="border:1px solid #ddd;padding:4px">{{ v }}</td>
+              <td v-for="(v,idx) in et0Forecast.slice(-12)" :key="idx" style="border:1px solid #ddd;padding:4px">{{ v }}</td>
             </tr>
           </tbody>
         </table>
@@ -559,21 +509,32 @@ const fetchBaseListData = async () => {
     
     console.log('获取基地列表成功，共', baseList.value.length, '条');
 
-    // 默认选中第一个基地，并加载其地块列表
-  if (baseList.value.length > 0) {
-      selectedBase.value = baseList.value[0];
-      selectedBaseId.value = baseList.value[0].baseId;
+    if (baseList.value.length > 0) {
+      let targetBase;
+      
+      // 检查全局状态中是否已有选中的基地
+      if (selectStore.selectedBase.baseId) {
+        // 尝试在本地基地列表中找到全局选中的基地
+        targetBase = baseList.value.find(base => base.baseId === selectStore.selectedBase.baseId);
+      }
+      
+      // 如果没有找到全局选中的基地，或者全局状态中没有选中的基地，则默认选择第一个基地
+      targetBase = targetBase || baseList.value[0];
+      
+      // 选中基地
+      selectedBase.value = targetBase;
+      selectedBaseId.value = targetBase.baseId;
       
       // 更新全局状态
       selectStore.updateSelectedBase({
-        baseId: baseList.value[0].baseId,
-        baseName: baseList.value[0].baseName,
-        longitude: baseList.value[0].longitude,
-        latitude: baseList.value[0].latitude
+        baseId: targetBase.baseId,
+        baseName: targetBase.baseName,
+        longitude: targetBase.longitude,
+        latitude: targetBase.latitude
       });
 
       // 加载该基地的地块列表
-      plotList.value = await fetchPlotListByBaseId(baseList.value[0].baseId);
+      plotList.value = await fetchPlotListByBaseId(targetBase.baseId);
 
       if (plotList.value.length > 0) {
         const target = plotList.value[0] as any;
@@ -595,11 +556,41 @@ const fetchBaseListData = async () => {
 
 onMounted(async () => {
   await fetchBaseListData(); // 加载bases表数据
+  
+  // 检查全局状态中是否已有选中的基地，如果有则同步到本地并触发数据刷新
+  if (selectStore.selectedBase.baseId) {
+    const globalBaseId = selectStore.selectedBase.baseId;
+    // 如果全局选中的基地与当前本地选中的基地不同，则更新本地状态
+    if (globalBaseId !== selectedBaseId.value) {
+      selectedBaseId.value = globalBaseId;
+    }
+  }
 });
  
 watch(() => selectStore.selectedBase.baseId, async (baseId, prev) => {
   if (!baseId || baseId === prev) return;
   selectedBaseId.value = baseId;
+  
+  // 找到对应的基地对象
+  const targetBase = baseList.value.find(base => base.baseId === baseId);
+  if (targetBase) {
+    selectedBase.value = targetBase;
+    
+    // 触发数据刷新逻辑
+    resetIrrigationState();
+    plotList.value = await fetchPlotListByBaseId(baseId as any);
+    
+    if (plotList.value.length > 0) {
+      const target = plotList.value[0] as any;
+      lockedPlotId.value = target.plotId;
+      lockedPlotName.value = target.plotName;
+      selectedPlot.value = target;
+      selectedPlotId.value = target.plotId;
+      selectedPlotName.value = target.plotName;
+      selectStore.updateSelectedPlot(target);
+      await onPlotChange(target.plotId);
+    }
+  }
 });
 
 watch(() => selectStore.selectedPlot.plotId, async (pid, prev) => {
@@ -1003,20 +994,7 @@ const et0Forecast = ref<number[]>([]);
 const chartDates = ref<string[]>([]);
 const moistureTrendData = ref<number[]>([]);
 const penmanInputs = ref<any>({ dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] });
-const et0Last1h = computed<number>(() => {
-  const a = et0Forecast.value;
-  return a.length ? a[a.length - 1] : 0;
-});
-const et0Last3hAvg = computed<number>(() => {
-  const a = et0Forecast.value.slice(-3);
-  if (!a.length) return 0;
-  return Math.round((a.reduce((s, v) => s + (v || 0), 0) / a.length) * 10) / 10;
-});
-const et0Sum24h = computed<number>(() => {
-  const a = et0Forecast.value.slice(-24);
-  if (!a.length) return 0;
-  return Math.round((a.reduce((s, v) => s + (v || 0), 0)) * 10) / 10;
-});
+
 
 const riskLevel = computed(() => {
   if (soilMoisturePercent.value < 35) return '较高';
