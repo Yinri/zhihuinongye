@@ -18,6 +18,7 @@ public class YoucaiIotDevices extends JeecgEntity {
     private String deviceName;
     private Integer sensorTypeId;
     private String plotId;
+    private String baseId;
     private BigDecimal lat;
     private BigDecimal lng;
     private BigDecimal altitudeM;

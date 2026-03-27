@@ -16,6 +16,7 @@ import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
+import org.jeecg.modules.youcai.task.SensorDataSyncTask;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -57,6 +58,9 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
 	
 	@Autowired
 	private IoTApiUtil ioTApiUtil;
+	
+	@Autowired
+	private SensorDataSyncTask sensorDataSyncTask;
 	
 	/**
 	 * 分页列表查询
@@ -192,8 +196,14 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
     @Operation(summary="传感器信息表-同步传感器数据", description="传感器信息表-同步传感器数据")
     @PostMapping(value = "/syncSensorData")
     public Result<String> syncSensorData(@Parameter(name="projectId", description="项目ID") @RequestParam(name="projectId") Integer projectId) {
-        // TODO: 实现同步传感器数据的逻辑
-        return Result.OK("同步成功!");
+        try {
+            // 调用定时任务的同步方法
+            sensorDataSyncTask.syncSensorData();
+            return Result.OK("同步成功!");
+        } catch (Exception e) {
+            log.error("同步传感器数据失败", e);
+            return Result.error("同步失败: " + e.getMessage());
+        }
     }
     
     /**

@@ -35,7 +35,7 @@
         <a-card :bordered="false" class="rich-card">
           <template #title>
             <div class="table-title">
-              <Icon icon="ant-design:solution-outlined" /> 灌溉建议（Penman）
+              <Icon icon="ant-design:solution-outlined" /> 智能灌溉建议
             </div>
           </template>
           <div class="suggestion-card" v-if="hasData">
@@ -46,9 +46,9 @@
               <a-descriptions-item label="建议时间">{{ penmanSuggestion.recommendedTime || '-' }}</a-descriptions-item>
               <a-descriptions-item label="建议方式">{{ penmanSuggestion.method || '-' }}</a-descriptions-item>
               <a-descriptions-item label="推荐灌水量">
-                {{ recommendedVolumeMm }} mm（约 {{ mmToM3PerMu(recommendedVolumeMm) }} m³/亩）
+                {{ recommendedVolumeMm > 0 ? recommendedVolumeMm + ' mm（约 ' + mmToM3PerMu(recommendedVolumeMm) + ' m³/亩）' : '暂无' }}
               </a-descriptions-item>
-              <a-descriptions-item label="原因" v-if="penmanSuggestion.reason">{{ penmanSuggestion.reason }}</a-descriptions-item>
+              <a-descriptions-item label="分析建议">{{ penmanSuggestion.reason || '暂无建议' }}</a-descriptions-item>
             </a-descriptions>
             <div class="actions">
               <a-button size="small" @click="copySuggestion" :disabled="!selectedPlotId">复制建议</a-button>
@@ -61,210 +61,91 @@
       </a-col>
     </a-row>
 
-    <!-- 趋势折线图板块（四个方框） -->
-    <a-row :gutter="16" class="mt-4">
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:line-chart-outlined" /> 土壤含水率（近24小时）
+    <!-- 实时气象数据展示 -->
+    <a-row :gutter="16" class="mt-4" v-if="hasData">
+      <a-col :xs="12" :md="12">
+        <a-card :bordered="false" class="data-card weather-card">
+          <div class="data-item">
+            <div class="data-icon weather-icon temperature"><Icon icon="ant-design:cloud-outlined" /></div>
+            <div class="data-content">
+              <div class="data-label">空气温度</div>
+              <div class="data-value">{{ penmanInputs.temp?.[0] || '-' }} <span class="unit">℃</span></div>
+              <div class="data-status" :class="getTemperatureStatus(penmanInputs.temp?.[0])">{{ getTemperatureStatusText(penmanInputs.temp?.[0]) }}</div>
             </div>
-          </template>
-          <div v-show="moistureTrendData.length" ref="moistureTrendRef" class="chart-ref chart-220" />
+          </div>
         </a-card>
       </a-col>
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:line-chart-outlined" /> 参考蒸散（ET0，近24小时）
+      <a-col :xs="12" :md="12">
+        <a-card :bordered="false" class="data-card weather-card">
+          <div class="data-item">
+            <div class="data-icon weather-icon humidity"><Icon icon="ant-design:water-outlined" /></div>
+            <div class="data-content">
+              <div class="data-label">空气湿度</div>
+              <div class="data-value">{{ penmanInputs.humidity?.[0] || '-' }} <span class="unit">%</span></div>
+              <div class="data-status" :class="getHumidityStatus(penmanInputs.humidity?.[0])">{{ getHumidityStatusText(penmanInputs.humidity?.[0]) }}</div>
             </div>
-          </template>
-          <div v-show="et0Forecast.length" ref="et0ChartRef" style="width: 100%; height: 220px" />
-        </a-card>
-      </a-col>
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:line-chart-outlined" /> 降雨量（近24小时）
-            </div>
-          </template>
-          <div v-show="penmanInputs.precip && penmanInputs.precip.length" ref="rainChartRef" style="width: 100%; height: 220px" />
-        </a-card>
-      </a-col>
-      <a-col :xs="24" :md="12">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:line-chart-outlined" /> 平均温度（近24小时）
-            </div>
-          </template>
-          <div v-show="penmanInputs.temp && penmanInputs.temp.length" ref="tempChartRef" style="width: 100%; height: 220px" />
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- Penman 输入数据折线图 -->
-    <a-row :gutter="16" class="mt-4">
-      <a-col :xs="24" :lg="24">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:line-chart-outlined" /> Penman 算法输入数据（近24小时）
-            </div>
-          </template>
-          <div v-show="penmanInputs.dates && penmanInputs.dates.length" ref="penmanInputsChartRef" style="width: 100%; height: 320px" />
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 对比图 -->
-    <a-row :gutter="16" class="mt-4">
-      <a-col :xs="24" :lg="24">
-        <a-card :bordered="false">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:area-chart-outlined" /> 干预灌溉 vs 不干预对比
-            </div>
-          </template>
-          <div v-show="comparisonReady" ref="comparisonChartRef" class="chart-ref" style="width: 100%; height: 320px" />
-        </a-card>
-      </a-col>
-    </a-row>
-
-
-
-    <!-- 一键灌溉管理（移至页面底部） -->
-    <a-row class="mt-4">
-      <a-col :span="24">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:tool-outlined" /> 一键灌溉管理
-            </div>
-          </template>
-          <div class="quick-card">
-            <a-space direction="vertical" style="width: 100%; gap: 8px;">
-              <a-row :gutter="12" justify="center" align="middle">
-                <a-col :xs="24" :sm="12" :md="3">
-                  <div class="form-item form-inline">
-                    <div class="label">算法推荐</div>
-                    <a-switch v-model:checked="quickUseAlgorithm" size="small" />
-                  </div>
-                </a-col>
-
-                <!-- 替换 BaseSelect 为自定义基地下拉框 -->
-                <a-col :xs="24" :sm="12" :md="5">
-                  <div class="form-item">
-                    <div class="label">选择基地</div>
-                    <div 
-                      class="custom-select" 
-                      @click="toggleDropdown('base')"
-                      style="cursor: pointer; width: 100%;"
-                    >
-                      <div class="select-value">{{ selectedBase?.baseName || '请选择基地' }}</div>
-                      <div class="select-icon" :class="{ open: isDropdownOpen.base }">▼</div>
-                      <div class="select-options" v-if="isDropdownOpen.base">
-                        <div class="options-scroll">
-                          <div
-                            class="option-item"
-                            v-for="item in baseList"
-                            :key="item.baseId"
-                            @click.stop="selectItem('base', item)"
-                          >
-                            {{ item.baseName }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </a-col>
-
-                <!-- 替换 PlotSelect 为自定义地块下拉框 -->
-                <a-col :xs="24" :sm="12" :md="5">
-                  <div class="form-item">
-                    <div class="label">选择地块</div>
-                    <div 
-                      class="custom-select" 
-                      @click="toggleDropdown('plot')"
-                      style="cursor: pointer; width: 100%;"
-                      :class="{ disabled: !selectedBase }"
-                    >
-                      <div class="select-value">{{ selectedPlot?.plotName || '请选择地块' }}</div>
-                      <div class="select-icon" :class="{ open: isDropdownOpen.plot }">▼</div>
-                      <div class="select-options" v-if="isDropdownOpen.plot">
-                        <div class="options-scroll">
-                          <div
-                            class="option-item"
-                            v-for="item in plotList"
-                            :key="item.plotId"
-                            @click.stop="selectItem('plot', item)"
-                          >
-                            {{ item.plotName }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </a-col>
-
-                <a-col :xs="24" :sm="12" :md="4">
-                  <div class="form-item">
-                    <div class="label">灌溉面积(亩)</div>
-                    <a-input-number v-model:value="quickArea" :min="0" :step="0.1" style="width: 100%" />
-                  </div>
-                </a-col>
-                <a-col :xs="24" :sm="12" :md="4">
-                  <div class="form-item">
-                    <div class="label">灌溉次数</div>
-                    <a-input-number v-model:value="quickTimes" :min="1" :step="1" style="width: 100%" />
-                  </div>
-                </a-col>
-                <a-col :xs="24" :sm="12" :md="3">
-                  <div class="form-item">
-                    <div class="label">灌溉方式</div>
-                    <a-select v-model:value="quickMethod" :options="irrigationMethodOptions" style="width: 100%" />
-                  </div>
-                </a-col>
-              </a-row>
-
-              <a-row :gutter="12" justify="center" align="middle">
-                <a-col :xs="24" :md="8">
-                  <div class="form-item">
-                    <div class="label">灌溉日期</div>
-                    <a-date-picker v-model:value="quickDate" style="width: 100%" />
-                  </div>
-                </a-col>
-                <a-col :xs="24" :md="16">
-                  <div class="form-item">
-                    <div class="label">备注</div>
-                    <a-input v-model:value="quickRemark" placeholder="备注（可选）" />
-                  </div>
-                </a-col>
-              </a-row>
-
-              <a-divider dashed style="margin: 8px 0;" />
-              <div v-if="hasData" class="calc-result">
-                <span v-if="quickUseAlgorithm">按建议：{{ recommendedVolumeMm }} mm ≈ {{ algoWaterPerMuM3 }} m³/亩</span>
-                <span v-else>人工设定：每亩 {{ manualWaterPerMu }} m³</span>
-                <span>分次灌溉：{{ quickTimes }} 次，每次约 {{ perTimeWaterM3 }} m³</span>
-                <span>总用水量：{{ totalWaterUsageM3 }} m³，预估时长：{{ durationHours }} 小时</span>
-              </div>
-
-              <div class="quick-actions">
-                <a-space :size="12" align="center">
-                  <a-button type="primary" @click="calcQuickIrrigation" :disabled="!selectedPlotId || !hasData">计算用水量</a-button>
-                  <a-button @click="executeAutomationQuick" :disabled="!selectedPlotId">执行自动化（占位）</a-button>
-                </a-space>
-              </div>
-            </a-space>
           </div>
         </a-card>
       </a-col>
     </a-row>
 
-    
+    <!-- 土壤分层数据展示 -->
+    <a-row :gutter="16" class="mt-4" v-if="hasData">
+      <a-col :xs="24">
+        <a-card :bordered="false" class="rich-card">
+          <template #title>
+            <div class="table-title">
+              <Icon icon="ant-design:database-outlined" /> 土壤分层数据
+            </div>
+          </template>
+          <div class="soil-layers">
+            <!-- 上层(浅层) -->
+            <div class="soil-layer layer-top">
+              <div class="layer-label">上层 (浅层)</div>
+              <div class="layer-data">
+                <div class="layer-item">
+                  <span class="layer-item-label">土壤温度</span>
+                  <span class="layer-item-value">{{ soilTemp1 || '-' }}℃</span>
+                </div>
+                <div class="layer-item">
+                  <span class="layer-item-label">土壤湿度</span>
+                  <span class="layer-item-value">{{ soilMoisture1 || '-' }}%</span>
+                </div>
+              </div>
+            </div>
+            <!-- 中层 -->
+            <div class="soil-layer layer-middle">
+              <div class="layer-label">中层</div>
+              <div class="layer-data">
+                <div class="layer-item">
+                  <span class="layer-item-label">土壤温度</span>
+                  <span class="layer-item-value">{{ soilTemp2 || '-' }}℃</span>
+                </div>
+                <div class="layer-item">
+                  <span class="layer-item-label">土壤湿度</span>
+                  <span class="layer-item-value">{{ soilMoisture2 || '-' }}%</span>
+                </div>
+              </div>
+            </div>
+            <!-- 深层 -->
+            <div class="soil-layer layer-bottom">
+              <div class="layer-label">深层</div>
+              <div class="layer-data">
+                <div class="layer-item">
+                  <span class="layer-item-label">土壤温度</span>
+                  <span class="layer-item-value">{{ soilTemp3 || '-' }}℃</span>
+                </div>
+                <div class="layer-item">
+                  <span class="layer-item-label">土壤湿度</span>
+                  <span class="layer-item-value">{{ soilMoisture3 || '-' }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-card>
+      </a-col>
+    </a-row>
+
     <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="800">
       <div style="padding:16px" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
         <h3>智慧灌溉报告</h3>
@@ -722,6 +603,16 @@ async function fetchPlotStatusAndSuggest(pid?: string | number) {
     penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
     moistureTrendData.value = (suggest?.soilMoistureSeriesPct ?? []).map(v => Number(v) || 0);
     
+    // 解析土壤详细数据
+    const soilDetail = suggest?.soilDetail ?? {};
+    soilTemp1.value = String(soilDetail.soilTemp1 ?? '-');
+    soilTemp2.value = String(soilDetail.soilTemp2 ?? '-');
+    soilTemp3.value = String(soilDetail.soilTemp3 ?? '-');
+    soilMoisture1.value = String(soilDetail.soilMoisture1 ?? '-');
+    soilMoisture2.value = String(soilDetail.soilMoisture2 ?? '-');
+    soilMoisture3.value = String(soilDetail.soilMoisture3 ?? '-');
+    console.log('土壤详细数据:', soilDetail);
+    
     if (chartDates.value.length) {
       await nextTick();
       renderMoistureTrendChart(chartDates.value, moistureTrendData.value as number[]);
@@ -775,6 +666,17 @@ async function fetchBaseStatusAndSuggest(baseId: string | number) {
     et0Forecast.value = (suggest?.et0Forecast ?? []).map((v: any) => Number(v) || 0);
     penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
     moistureTrendData.value = (suggest?.soilMoistureSeriesPct ?? []).map((v: any) => Number(v) || 0);
+    
+    // 解析土壤详细数据
+    const baseSoilDetail = suggest?.soilDetail ?? {};
+    soilTemp1.value = String(baseSoilDetail.soilTemp1 ?? '-');
+    soilTemp2.value = String(baseSoilDetail.soilTemp2 ?? '-');
+    soilTemp3.value = String(baseSoilDetail.soilTemp3 ?? '-');
+    soilMoisture1.value = String(baseSoilDetail.soilMoisture1 ?? '-');
+    soilMoisture2.value = String(baseSoilDetail.soilMoisture2 ?? '-');
+    soilMoisture3.value = String(baseSoilDetail.soilMoisture3 ?? '-');
+    console.log('基地土壤详细数据:', baseSoilDetail);
+    
     if (chartDates.value.length) {
       await nextTick();
       renderMoistureTrendChart(chartDates.value, moistureTrendData.value as number[]);
@@ -995,6 +897,14 @@ const chartDates = ref<string[]>([]);
 const moistureTrendData = ref<number[]>([]);
 const penmanInputs = ref<any>({ dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] });
 
+// 土壤传感器详细数据
+const soilTemp1 = ref<string>('-');
+const soilTemp2 = ref<string>('-');
+const soilTemp3 = ref<string>('-');
+const soilMoisture1 = ref<string>('-');
+const soilMoisture2 = ref<string>('-');
+const soilMoisture3 = ref<string>('-');
+
 
 const riskLevel = computed(() => {
   if (soilMoisturePercent.value < 35) return '较高';
@@ -1073,6 +983,40 @@ const reportType = ref<string>('irrigation');
 function openReportModal(type?: string) {
   reportType.value = type || 'irrigation';
   reportModalVisible.value = true;
+}
+
+// 温度状态计算
+function getTemperatureStatus(temp: any): string {
+  const t = Number(temp);
+  if (t < 10) return 'cold';
+  if (t < 25) return 'comfortable';
+  if (t < 35) return 'hot';
+  return 'very-hot';
+}
+
+function getTemperatureStatusText(temp: any): string {
+  const t = Number(temp);
+  if (t < 10) return '较冷';
+  if (t < 25) return '舒适';
+  if (t < 35) return '较热';
+  return '炎热';
+}
+
+// 湿度状态计算
+function getHumidityStatus(humidity: any): string {
+  const h = Number(humidity);
+  if (h < 30) return 'dry';
+  if (h < 70) return 'comfortable';
+  if (h < 90) return 'humid';
+  return 'very-humid';
+}
+
+function getHumidityStatusText(humidity: any): string {
+  const h = Number(humidity);
+  if (h < 30) return '干燥';
+  if (h < 70) return '适宜';
+  if (h < 90) return '潮湿';
+  return '非常潮湿';
 }
 
 function downloadReportAsWord() {
@@ -1350,5 +1294,242 @@ function exportReport() {
   .chart-220 { height: 260px; }
   .chart-320 { height: 360px; }
   .quick-card { gap: 16px; }
+}
+
+/* 气象数据卡片样式 */
+.weather-card {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fff;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+  
+  :deep(.ant-card-body) {
+    padding: 20px;
+  }
+}
+
+.data-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.data-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.weather-icon {
+  &.temperature {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    color: #fff;
+  }
+  
+  &.humidity {
+    background: linear-gradient(135deg, #4ECDC4 0%, #45B7D1 100%);
+    color: #fff;
+  }
+}
+
+.data-content {
+  flex: 1;
+}
+
+.data-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.data-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 4px;
+  
+  .unit {
+    font-size: 16px;
+    font-weight: 500;
+    color: #999;
+    margin-left: 4px;
+  }
+}
+
+.data-status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
+  
+  &.cold {
+    background: #E3F2FD;
+    color: #1976D2;
+  }
+  
+  &.comfortable {
+    background: #E8F5E9;
+    color: #388E3C;
+  }
+  
+  &.hot {
+    background: #FFF3E0;
+    color: #F57C00;
+  }
+  
+  &.very-hot {
+    background: #FFEBEE;
+    color: #D32F2F;
+  }
+  
+  &.dry {
+    background: #FFF3E0;
+    color: #F57C00;
+  }
+  
+  &.humid {
+    background: #E3F2FD;
+    color: #1976D2;
+  }
+  
+  &.very-humid {
+    background: #E0F7FA;
+    color: #00838F;
+  }
+}
+
+/* 土壤分层展示样式 */
+.soil-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.soil-layer {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: #fff;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.layer-top {
+  background: linear-gradient(135deg, #8B5A2B 0%, #A0522D 100%);
+}
+
+.layer-middle {
+  background: linear-gradient(135deg, #6B4423 0%, #8B4513 100%);
+}
+
+.layer-bottom {
+  background: linear-gradient(135deg, #4A3520 0%, #5D4037 100%);
+}
+
+.layer-label {
+  width: 100px;
+  font-weight: 600;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.layer-data {
+  display: flex;
+  gap: 32px;
+  flex: 1;
+  justify-content: center;
+}
+
+.layer-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.layer-item-label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.layer-item-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .layer-data {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .layer-label {
+    width: 80px;
+    font-size: 14px;
+  }
+  .layer-item-value {
+    font-size: 16px;
+  }
+  
+  .data-item {
+    gap: 16px;
+  }
+  
+  .data-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .data-value {
+    font-size: 24px;
+  }
+  
+  .weather-card :deep(.ant-card-body) {
+    padding: 16px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .data-item {
+    gap: 24px;
+  }
+  
+  .data-icon {
+    width: 70px;
+    height: 70px;
+    font-size: 28px;
+  }
+  
+  .data-value {
+    font-size: 36px;
+  }
+  
+  .weather-card :deep(.ant-card-body) {
+    padding: 24px;
+  }
 }
 </style>
