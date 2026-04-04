@@ -4,71 +4,61 @@ import { getPlotInfoList } from '../plot-info/plotInfo.api';
 
 export const columns: BasicColumn[] = [
   {
-    title: '地块编号',
-    dataIndex: 'plotCode',
+    title: '农机编号',
+    dataIndex: 'vehicleNumber',
     width: 120,
   },
   {
-    title: '地块名',
-    dataIndex: 'plotName',
-    width: 150,
-  },
-  {
-    title: '本次收割面积(亩)',
-    dataIndex: 'area',
-    width: 140,
-  },
-  {
-    title: '预计产量(kg)',
-    dataIndex: 'predictYield',
+    title: '收割面积(亩)',
+    dataIndex: 'qualifiedArea',
     width: 130,
-  },
-  {
-    title: '实际产量(kg)',
-    dataIndex: 'totalYield',
-    width: 130,
-  },
-  {
-    title: '负责农机',
-    dataIndex: 'machineName',
-    width: 120,
-  },
-  {
-    title: '收获日期',
-    dataIndex: 'harvestDate',
-    width: 160,
     customRender: ({ text }) => {
-      if (!text) return '';
-      // 格式化日期，只显示年月日
-      const date = new Date(text);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      return text ? Number(text).toFixed(2) : '0.00';
     },
   },
   {
-    title: '作业人员',
-    dataIndex: 'operator',
-    width: 100,
+    title: '累计产量(kg)',
+    dataIndex: 'totalYield',
+    width: 130,
+    customRender: ({ text }) => {
+      return text ? Number(text).toFixed(2) : '0.00';
+    },
   },
   {
-    title: '作业时长(小时)',
-    dataIndex: 'workDuration',
-    width: 130,
+    title: '开始时间',
+    dataIndex: 'startTime',
+    width: 160,
+    customRender: ({ text }) => {
+      if (!text) return '-';
+      return text.replace(/\.\d+$/, '');
+    },
+  },
+  {
+    title: '结束时间',
+    dataIndex: 'endTime',
+    width: 160,
+    customRender: ({ text }) => {
+      if (!text) return '-';
+      return text.replace(/\.\d+$/, '');
+    },
+  },
+  {
+    title: '作业位置',
+    dataIndex: 'location',
+    width: 180,
   },
 ];
 
 export const searchFormSchema: FormSchema[] = [
   {
-    field: 'plotName',
-    label: '地块名',
+    field: 'vehicleNumber',
+    label: '农机编号',
     component: 'Input',
     colProps: { span: 8 },
   },
   {
-    field: 'harvestDate',
-    label: '收获日期',
+    field: 'dateRange',
+    label: '作业日期',
     component: 'RangePicker',
     colProps: { span: 8 },
     componentProps: {
@@ -83,7 +73,7 @@ export const formSchema: FormSchema[] = [
     field: 'baseId',
     label: '基地ID',
     component: 'Input',
-    show: false, // 默认隐藏基地ID字段
+    show: false,
     required: true,
     rules: [{ required: true, message: '请输入基地ID' }],
   },
@@ -91,7 +81,7 @@ export const formSchema: FormSchema[] = [
     field: 'plotId',
     label: '地块',
     component: 'Select',
-    show: false, // 默认隐藏地块字段，新增时动态显示
+    show: false,
     required: true,
     rules: [{ required: true, message: '请选择地块' }],
     componentProps: {

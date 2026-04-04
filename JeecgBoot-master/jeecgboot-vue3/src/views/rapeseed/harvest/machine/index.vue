@@ -6,7 +6,7 @@
           <Icon icon="ant-design:arrow-left-outlined" /> 返回收获管理
         </a-button>
       </template>
-      <BasicTable @register="registerTable" :searchInfo="searchInfo">
+      <BasicTable @register="registerTable">
         <template #toolbar>
           <a-button type="primary" @click="handleCreate">
             <Icon icon="ant-design:plus-outlined" /> 新增
@@ -14,11 +14,6 @@
           <a-button @click="handleExport">
             <Icon icon="ant-design:download-outlined" /> 导出
           </a-button>
-          <a-upload :file-list="fileList" :before-upload="beforeUpload" @remove="handleRemove">
-            <a-button>
-              <Icon icon="ant-design:upload-outlined" /> 导入
-            </a-button>
-          </a-upload>
         </template>
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'action'">
@@ -35,15 +30,14 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { BasicTable, useTable, TableAction } from '/@/components/Table';
 import { Icon } from '/@/components/Icon';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { useRouter } from 'vue-router';
-import { columns as baseColumns, searchFormSchema } from './machine.data';
-import { getMachineList, deleteMachine, exportMachine, importMachine } from './machine.api';
-import { getHarvesterStatus } from '../harvest.api';
-import { h, computed } from 'vue';
+import { columns } from './machine.data';
+import { getMachineList, deleteMachine, saveMachine } from './machine.api';
+import { getHarvestMachineList } from '../harvest.api';
 import { useSelectStore } from '/@/store/selectStore';
 import { storeToRefs } from 'pinia';
 import MachineModal from './MachineModal.vue';
@@ -56,55 +50,51 @@ const [registerModal, { openModal }] = useModal();
 const selectStore = useSelectStore();
 const { selectedBase } = storeToRefs(selectStore);
 
-const searchInfo = reactive<Recordable>({ baseId: selectedBase.value?.baseId });
-const fileList = ref<any[]>([]);
+const machineData = ref<any[]>([]);
+const loading = ref(false);
 
-const liveStatusDict = ref<Record<string, string>>({});
+const selectedBaseName = computed(() => {
+  const name = selectedBase.value?.baseName || '';
+  return name.replace('基地', '');
+});
 
-async function loadLiveStatus() {
+const filteredMachineData = computed(() => {
+  if (!selectedBaseName.value) return machineData.value;
+  return machineData.value.filter(m => m.baseName === selectedBaseName.value);
+});
+
+async function loadMachineData() {
+  loading.value = true;
   try {
-    const baseId = selectedBase.value?.baseId;
-    const params = baseId ? { baseId } : undefined; // 避免传递空值
-    const list = await getHarvesterStatus(params);
-    const dict: Record<string, string> = {};
-    (Array.isArray(list) ? list : []).forEach((item: any) => { dict[item.name] = item.status; });
-    liveStatusDict.value = dict;
-  } catch (e) {
-    // ignore
+    const list = await getHarvestMachineList();
+    machineData.value = Array.isArray(list) ? list : [];
+  } catch (error) {
+    console.error('加载农机列表失败:', error);
+    machineData.value = [];
+  } finally {
+    loading.value = false;
   }
 }
 
-const dynamicColumns = computed(() => {
-  const liveCol = {
-    title: '机器实时状态',
-    dataIndex: 'liveStatus',
-    width: 120,
-    customRender: ({ record }) => {
-      const status = liveStatusDict.value[record.machineName] || 'unknown';
-      const label = status === 'working' ? '作业中' : status === 'idle' ? '待命' : status === 'maintenance' ? '维护中' : '未知';
-      const color = status === 'working' ? '#52c41a' : status === 'idle' ? '#faad14' : '#8c8c8c';
-      return h('span', { style: { color, fontWeight: 500 } }, label);
-    },
-  } as any;
-  return [...baseColumns, liveCol];
-});
-
-const [registerTable, { reload }] = useTable({
-  api: getMachineList,
+const [registerTable] = useTable({
   title: '农机档案',
-  columns: dynamicColumns.value,
-  formConfig: { labelWidth: 120, schemas: searchFormSchema, autoSubmitOnEnter: true },
-  useSearchForm: true,
+  columns,
+  dataSource: filteredMachineData,
+  loading: loading,
   showTableSetting: false,
   bordered: true,
   showIndexColumn: false,
+  pagination: {
+    defaultPageSize: 10,
+    showSizeChanger: true,
+    pageSizeOptions: ['10', '20', '50', '100'],
+  },
 });
 
 function handleCreate() {
   openModal(true, { isUpdate: false });
 }
 
-// 返回收获管理页面
 function goBack() {
   router.push('/rapeseed/harvest');
 }
@@ -114,55 +104,46 @@ function handleEdit(record: Recordable) {
 }
 
 async function handleDelete(record: Recordable) {
-  await deleteMachine(record.id);
+  await deleteMachine({ id: record.id });
   createMessage.success('删除成功');
-  reload();
+  loadMachineData();
 }
 
 function handleSuccess() {
   createMessage.success('操作成功');
-  reload();
+  loadMachineData();
 }
 
 async function handleExport() {
-  const data = await getMachineList(searchInfo);
-  exportMachine(data);
-}
-
-function handleRemove() {
-  fileList.value = [];
-}
-
-function beforeUpload(file) {
-  fileList.value = [...fileList.value, file];
-  return false;
-}
-
-async function handleImport() {
-  if (fileList.value.length === 0) {
-    createMessage.warning('请选择要导入的文件');
+  if (filteredMachineData.value.length === 0) {
+    createMessage.warning('暂无数据可导出');
     return;
   }
-  const formData = new FormData();
-  fileList.value.forEach((file) => formData.append('file', file));
-  try {
-    await importMachine(formData);
-    createMessage.success('导入成功');
-    reload();
-    fileList.value = [];
-  } catch (error) {
-    createMessage.error('导入失败');
-  }
+  
+  const headers = ['北斗设备编码', '车辆编号', '农机品牌', '农机型号', '机主姓名', '机主电话', '所属基地'];
+  const rows = filteredMachineData.value.map(r => [
+    r.beidouSn || '',
+    r.vehicleNumber || '',
+    r.brand || '',
+    r.model || '',
+    r.ownerName || '',
+    r.ownerPhone || '',
+    r.baseName || ''
+  ]);
+  
+  const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `农机档案_${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
-// 初始化实时状态字典
-loadLiveStatus();
+loadMachineData();
 
-// 基地切换时按基地过滤并刷新列表与状态
-watch(() => selectedBase.value?.baseId, (newBaseId) => {
-  searchInfo.baseId = newBaseId;
-  loadLiveStatus();
-  reload();
+watch(() => selectedBase.value?.baseId, () => {
+  loadMachineData();
 });
 </script>
 

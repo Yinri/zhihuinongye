@@ -1,27 +1,117 @@
 <template>
   <div class="lodging-risk-page">
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-content">
-        <a-spin size="large" />
-        <div class="loading-text">正在加载倒伏风险数据...</div>
-        <div v-if="errorCount > 0" class="retry-info">
-          正在重试 ({{ errorCount }}/{{ maxRetries }})...
-        </div>
-      </div>
-    </div>
-
     <!-- 主要内容区域 -->
-    <div class="main-content" v-else>
+    <div class="main-content">
       <!-- 顶部标题区域 -->
       <div class="page-header">
         <h2 class="page-title">油菜倒伏风险监测</h2>
         <div class="header-actions">
-          <a-button type="primary" @click="refreshData">
+          <a-button type="primary" @click="refreshData" :loading="loading">
             <template #icon><ReloadOutlined /></template>
             刷新数据
           </a-button>
         </div>
+      </div>
+
+      <!-- 视频监控与倒伏分析区域 -->
+      <div class="video-analysis-section">
+        <a-row :gutter="16">
+          <!-- 左侧：视频监控 -->
+          <a-col :span="12">                                                                                                                                                       <a-card title="视频监控" class="video-card">
+              <div class="video-grid" :class="`video-grid-${Math.min(videoDevices.length, 4)}`">
+                <FlvPlayer
+                  v-for="device in videoDevices" 
+                  :key="device.equipmentCode"
+                  :url="device.streamUrl"
+                  :title="device.equipmentName"
+                  class="video-item"
+                />
+                <a-empty v-if="videoDevices.length === 0" description="暂无视频设备" />
+              </div>
+            </a-card>
+          </a-col>
+          
+          <!-- 右侧：倒伏分析结果 -->
+          <a-col :span="12">
+            <a-card title="倒伏分析结果" class="analysis-card">
+              <template #extra>
+                <a-tag v-if="analysisResult" :color="getRiskTagColor(analysisResult.riskLevel)">
+                  {{ analysisResult.riskLevel }}
+                </a-tag>
+              </template>
+              <div class="analysis-container">
+                <div v-if="analysisLoading" class="analysis-placeholder">
+                  <a-spin size="large" tip="正在分析中..." />
+                </div>
+                <div v-else-if="!analysisResult" class="analysis-placeholder">
+                  <a-empty description="暂无分析数据" />
+                </div>
+                <div v-else class="analysis-content">
+                  <!-- 分析图片 -->
+                  <div class="analysis-image">
+                    <img :src="analysisResult.imageUrl" alt="分析图片" />
+                  </div>
+                  
+                  <!-- 关键指标 -->
+                  <div class="analysis-metrics">
+                    <a-row :gutter="12">
+                      <a-col :span="8">
+                        <a-statistic
+                          title="倒伏比例"
+                          :value="analysisResult.lodgingRatio"
+                          suffix="%"
+                          :value-style="{ color: getRiskValueColor(analysisResult.lodgingRatio) }"
+                        />
+                      </a-col>
+                      <a-col :span="8">
+                        <a-statistic
+                          title="倒伏面积"
+                          :value="analysisResult.lodgingArea"
+                          suffix="㎡"
+                        />
+                      </a-col>
+                      <a-col :span="8">
+                        <a-statistic
+                          title="置信度"
+                          :value="analysisResult.confidence"
+                          suffix="%"
+                        />
+                      </a-col>
+                    </a-row>
+                  </div>
+                  
+                  <!-- 详细数据 -->
+                  <div class="analysis-details">
+                    <a-descriptions :column="2" size="small" bordered>
+                      <a-descriptions-item label="健康区域">
+                        {{ analysisResult.details.healthyArea }} ㎡
+                      </a-descriptions-item>
+                      <a-descriptions-item label="轻度倒伏">
+                        {{ analysisResult.details.mildLodgingArea }} ㎡
+                      </a-descriptions-item>
+                      <a-descriptions-item label="中度倒伏">
+                        {{ analysisResult.details.moderateLodgingArea }} ㎡
+                      </a-descriptions-item>
+                      <a-descriptions-item label="重度倒伏">
+                        {{ analysisResult.details.severeLodgingArea }} ㎡
+                      </a-descriptions-item>
+                    </a-descriptions>
+                  </div>
+                  
+                  <!-- 建议措施 -->
+                  <div class="analysis-suggestions" v-if="analysisResult.suggestions?.length">
+                    <h4><BulbOutlined /> 建议措施</h4>
+                    <ul>
+                      <li v-for="(suggestion, index) in analysisResult.suggestions" :key="index">
+                        {{ suggestion }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </a-card>
+          </a-col>
+        </a-row>
       </div>
 
       <!-- 主要布局区域 -->
@@ -386,8 +476,10 @@ import dayjs from 'dayjs';
 import { 
   getLodgingRiskDataById, 
   getBatchLodgingRiskDataByBaseId,
+  getBatchVideoLodgingAnalysis,
   type LodgingRiskAssessmentResponse,
-  type BatchLodgingRiskAssessmentResponse
+  type BatchLodgingRiskAssessmentResponse,
+  type VideoLodgingAnalysisResult
 } from './lodgingRisk.api';
 import { 
   getLatestGrowthMonitoringByPlotId,
@@ -395,6 +487,7 @@ import {
   type GrowthMonitoringData
 } from '/@/api/rapeseed/growthMonitoring';
 import { getWeatherSensorData } from '/@/api/rapeseed/weatherSensor';
+import { getVideoDevices, getVideoStream } from '/@/views/rapeseed/work-area/workArea.api';
 import type { 
   LodgingRiskData, 
   WeatherSensorData, 
@@ -404,6 +497,7 @@ import TiandituMap from '/@/components/TiandituMap/index.vue';
 import Pie from '/@/components/chart/Pie.vue';
 import Bar from '/@/components/chart/Bar.vue';
 import { Icon } from '/@/components/Icon';
+import FlvPlayer from '/@/views/rapeseed/work-area/components/FlvPlayer.vue';
 import { debounce, throttle } from 'lodash-es';
 import {
   ReloadOutlined,
@@ -418,7 +512,8 @@ import {
   FireOutlined,
   CloudOutlined,
   BulbOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  VideoCameraOutlined
 } from '@ant-design/icons-vue';
 
 // ==================== 状态管理 ====================
@@ -431,10 +526,89 @@ const dataLoaded = ref(false);
 const errorCount = ref(0);
 const maxRetries = 3;
 
+// ==================== 视频监控与倒伏分析相关 ====================
+const videoDevices = ref<any[]>([]);
+const videoLoading = ref(false);
+const analysisLoading = ref(false);
+const analysisResult = ref<VideoLodgingAnalysisResult | null>(null);
+
 // 地图相关
 const mapInstance = ref(null);
 const plotLayers = ref([]);
 const fieldOverlayRef = ref(null);
+
+// ==================== 视频监控与倒伏分析方法 ====================
+async function loadVideoDevices() {
+  const baseId = selectStore.selectedBase.baseId;
+  if (!baseId) return;
+  
+  videoLoading.value = true;
+  try {
+    const result = await getVideoDevices(String(baseId));
+    videoDevices.value = (result || []).map((device: any) => ({
+      ...device,
+      streamUrl: null,
+    }));
+    
+    for (let i = 0; i < videoDevices.value.length; i++) {
+      const device = videoDevices.value[i];
+      try {
+        const streamUrl = await getVideoStream(device.equipmentCode, device.channelNum || '1');
+        videoDevices.value[i].streamUrl = streamUrl;
+      } catch (e) {
+        console.error(`加载设备 ${device.equipmentName} 视频流失败`, e);
+      }
+    }
+    
+    if (videoDevices.value.length > 0) {
+      autoAnalyzeAllVideos();
+    }
+  } catch (error) {
+    console.error('加载视频设备失败:', error);
+    videoDevices.value = [];
+  } finally {
+    videoLoading.value = false;
+  }
+}
+
+async function autoAnalyzeAllVideos() {
+  if (videoDevices.value.length === 0) return;
+  
+  const videoIds = videoDevices.value
+    .filter(device => device.id)
+    .map(device => device.id);
+  
+  if (videoIds.length === 0) return;
+  
+  analysisLoading.value = true;
+  try {
+    const result = await getBatchVideoLodgingAnalysis(videoIds);
+    analysisResult.value = result as VideoLodgingAnalysisResult;
+  } catch (error) {
+    console.error('批量倒伏分析失败:', error);
+  } finally {
+    analysisLoading.value = false;
+  }
+}
+
+function getRiskTagColor(level: string): string {
+  const colorMap: Record<string, string> = {
+    '低风险': 'green',
+    '中低风险': 'lime',
+    '中等风险': 'orange',
+    '高风险': 'red',
+    '极高风险': 'magenta',
+  };
+  return colorMap[level] || 'blue';
+}
+
+function getRiskValueColor(value: number): string {
+  if (value < 30) return '#52c41a';
+  if (value < 50) return '#afcb2b';
+  if (value < 65) return '#faad14';
+  if (value < 80) return '#fa8c16';
+  return '#f5222d';
+}
 
 // ==================== 图表相关变量 ====================
 // 饼图数据
@@ -1582,6 +1756,7 @@ onMounted(() => {
   if (selectStore.selectedBase?.baseId) {
     console.log('已有选中的基地，加载数据');
     loadLodgingRiskData();
+    loadVideoDevices();
   } else {
     console.log('没有选中的基地，请先选择基地');
     createMessage.warning('请先选择一个基地以查看倒伏风险数据');
@@ -1647,6 +1822,155 @@ onBeforeUnmount(() => {
       font-size: 24px;
       font-weight: 600;
       color: #262626;
+    }
+  }
+  
+  // 视频监控与倒伏分析区域
+  .video-analysis-section {
+    margin-bottom: 16px;
+    
+    .video-card, .analysis-card {
+      height: 400px;
+      
+      :deep(.ant-card-body) {
+        height: calc(100% - 57px);
+        padding: 8px;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+    }
+    
+    .video-grid {
+      height: 100%;
+      width: 100%;
+      display: grid;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .video-grid-0,
+    .video-grid-1 {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+    }
+
+    .video-grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: 1fr;
+    }
+
+    .video-grid-3 {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+    }
+
+    .video-grid-4 {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+    }
+
+    .video-item {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+    
+    .video-container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      
+      .video-placeholder {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: #f5f5f5;
+        border-radius: 8px;
+        
+        p {
+          margin-top: 16px;
+          color: #999;
+        }
+      }
+      
+      .video-loading {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #f5f5f5;
+        border-radius: 8px;
+      }
+      
+      .video-wrapper {
+        flex: 1;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+    }
+    
+    .analysis-container {
+      height: 100%;
+      
+      .analysis-placeholder {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      
+      .analysis-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        
+        .analysis-image {
+          flex: 1;
+          min-height: 150px;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #f5f5f5;
+          
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+        }
+        
+        .analysis-metrics {
+          padding: 8px 0;
+        }
+        
+        .analysis-details {
+          flex-shrink: 0;
+        }
+        
+        .analysis-suggestions {
+          flex-shrink: 0;
+          
+          h4 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #262626;
+          }
+          
+          ul {
+            margin: 0;
+            padding-left: 20px;
+            
+            li {
+              margin-bottom: 4px;
+              color: #595959;
+              font-size: 13px;
+            }
+          }
+        }
+      }
     }
   }
 

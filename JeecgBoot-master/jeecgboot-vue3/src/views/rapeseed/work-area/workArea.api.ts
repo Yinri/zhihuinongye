@@ -16,6 +16,7 @@ enum Api {
   TrackData = '/youcai/sensorInfo/track',
   VideoList = '/youcai/sensorInfo/getVideoDevices',
   VideoStream = '/youcai/sensorInfo/getVideoStream',
+  AllDevices = '/youcai/sensorInfo/getAllDevices',
 }
 
 export const getWorkAreaList = (params?: AxiosRequestConfig) => {
@@ -79,4 +80,8 @@ export const getVideoDevices = (baseId: string) => {
 
 export const getVideoStream = (equipmentCode: string, channelNum: string) => {
   return defHttp.post({ url: `${Api.VideoStream}?equipmentCode=${equipmentCode}&channelNum=${channelNum}` }, { successMessageMode: 'none' });
+};
+
+export const getAllDevices = (baseId: string) => {
+  return defHttp.get({ url: Api.AllDevices, params: { baseId } });
 };

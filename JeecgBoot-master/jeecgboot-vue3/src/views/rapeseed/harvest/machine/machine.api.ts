@@ -10,10 +10,15 @@ enum Api {
   QueryById = '/youcai/harvesterMachine/queryById',
   Export = '/youcai/harvesterMachine/export',
   Import = '/youcai/harvesterMachine/import',
+  MachineList = '/youcai/sensorInfo/machine/list',
 }
 
 export const getMachineList = (params?: any) => {
   return defHttp.get<any>({ url: Api.List, params });
+};
+
+export const getHarvestMachineList = () => {
+  return defHttp.get<any>({ url: Api.MachineList });
 };
 
 export const saveMachine = (params?: any) => {

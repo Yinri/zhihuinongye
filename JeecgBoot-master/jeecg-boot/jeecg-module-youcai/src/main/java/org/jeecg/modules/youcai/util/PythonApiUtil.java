@@ -6,6 +6,7 @@ import org.jeecg.common.api.vo.Result;
 import org.jeecg.modules.youcai.config.PythonServiceConfig;
 import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentRequestDTO;
 import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
+import org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.core.ParameterizedTypeReference;
@@ -137,5 +138,96 @@ public class PythonApiUtil {
                 })
                 .doOnError(error -> log.warn("调用Python服务失败: {}", error.getMessage(), error))
                 .onErrorReturn(new LodgingRiskAssessmentResponseDTO());
+    }
+
+    /**
+     * 调用Python服务进行图片倒伏分析
+     * @param imageUrl 图片URL
+     * @return 分析结果
+     */
+    public Mono<VideoLodgingAnalysisResultDTO> analyzeLodgingFromImage(String imageUrl) {
+        if (!pythonServiceConfig.getEnabled()) {
+            log.warn("Python服务未启用，跳过图片倒伏分析");
+            return Mono.just(createEmptyVideoAnalysisResult());
+        }
+
+        String pythonServiceUrl = pythonServiceConfig.getUrl();
+        if (pythonServiceUrl == null || pythonServiceUrl.isEmpty()) {
+            log.error("Python服务URL未配置");
+            return Mono.just(createEmptyVideoAnalysisResult());
+        }
+
+        String apiUrl = pythonServiceUrl + "/api/lodging-risk/analyze-image";
+        
+        log.info("调用Python服务进行图片倒伏分析，URL: {}", apiUrl);
+        log.info("图片URL: {}", imageUrl);
+        
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("imageUrl", imageUrl);
+        
+        return webClient.post()
+                .uri(apiUrl)
+                .header("X-API-Key", pythonServiceConfig.getApiKey())
+                .body(BodyInserters.fromValue(requestBody))
+                .retrieve()
+                .onStatus(
+                    status -> status.is4xxClientError(),
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> {
+                            log.error("Python服务返回4xx错误，状态码: {}, 响应体: {}", response.statusCode(), body);
+                            return Mono.error(new RuntimeException("Python服务调用失败: " + response.statusCode()));
+                        })
+                )
+                .onStatus(
+                    status -> status.is5xxServerError(),
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> {
+                            log.error("Python服务返回5xx错误，状态码: {}, 响应体: {}", response.statusCode(), body);
+                            return Mono.error(new RuntimeException("Python服务内部错误: " + response.statusCode()));
+                        })
+                )
+                .bodyToMono(String.class)
+                .flatMap(responseBody -> {
+                    log.info("Python图片分析服务原始响应: {}", responseBody);
+                    try {
+                        Result<VideoLodgingAnalysisResultDTO> result = JSONObject.parseObject(responseBody, 
+                            new com.alibaba.fastjson.TypeReference<Result<VideoLodgingAnalysisResultDTO>>() {});
+                        
+                        if (result.isSuccess() && result.getResult() != null) {
+                            return Mono.just(result.getResult());
+                        } else {
+                            log.error("Python图片分析服务返回失败，错误信息: {}", result.getMessage());
+                            return Mono.just(createEmptyVideoAnalysisResult());
+                        }
+                    } catch (Exception e) {
+                        log.error("解析Python图片分析服务响应失败: {}", e.getMessage(), e);
+                        return Mono.just(createEmptyVideoAnalysisResult());
+                    }
+                })
+                .doOnSuccess(response -> {
+                    log.info("Python图片分析服务调用成功，倒伏比例: {}%, 风险等级: {}", 
+                            response.getLodgingRatio(), response.getRiskLevel());
+                })
+                .doOnError(error -> log.warn("调用Python图片分析服务失败: {}", error.getMessage()))
+                .onErrorReturn(createEmptyVideoAnalysisResult());
+    }
+    
+    private VideoLodgingAnalysisResultDTO createEmptyVideoAnalysisResult() {
+        VideoLodgingAnalysisResultDTO result = new VideoLodgingAnalysisResultDTO();
+        result.setLodgingRatio(0.0);
+        result.setLodgingArea(0.0);
+        result.setTotalArea(0.0);
+        result.setRiskLevel("未知");
+        result.setConfidence(0.0);
+        
+        VideoLodgingAnalysisResultDTO.DetailsDTO details = new VideoLodgingAnalysisResultDTO.DetailsDTO();
+        details.setHealthyArea(0.0);
+        details.setMildLodgingArea(0.0);
+        details.setModerateLodgingArea(0.0);
+        details.setSevereLodgingArea(0.0);
+        result.setDetails(details);
+        
+        result.setSuggestions(java.util.Arrays.asList("暂无分析结果"));
+        return result;
     }
 }
