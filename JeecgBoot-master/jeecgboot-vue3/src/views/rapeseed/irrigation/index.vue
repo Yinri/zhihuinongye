@@ -146,37 +146,107 @@
       </a-col>
     </a-row>
 
-    <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="800">
+    <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="900">
       <div style="padding:16px" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
-        <h3>智慧灌溉报告</h3>
-        <p>基地：{{ selectStore.selectedBase.baseName }}</p>
-        <p>含水率：{{ soilMoisturePercent }}%</p>
-        <p>建议：{{ penmanSuggestion.needIrrigation ? '需要灌溉' : '暂不需要' }}</p>
-        <p>时间：{{ penmanSuggestion.recommendedTime || '-' }}</p>
-        <p>方式：{{ penmanSuggestion.method || '-' }}</p>
-        <p>推荐灌水量：{{ recommendedVolumeMm }} mm（约 {{ mmToM3PerMu(recommendedVolumeMm) }} m³/亩）</p>
-        <h4>ET0 近12小时</h4>
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr>
-              <th v-for="d in chartDates.slice(-12)" :key="d" style="border:1px solid #ddd;padding:4px">{{ d }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td v-for="(v,idx) in et0Forecast.slice(-12)" :key="idx" style="border:1px solid #ddd;padding:4px">{{ v }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- 报告头部 -->
+        <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #1890ff;padding-bottom:16px">
+          <h2 style="color:#1890ff;margin:0">智慧灌溉分析报告</h2>
+          <p style="color:#666;margin:8px 0 0">生成时间：{{ new Date().toLocaleString() }}</p>
+        </div>
+        
+        <!-- 基本信息 -->
+        <a-divider orientation="left">基本信息</a-divider>
+        <a-descriptions :column="2" bordered size="small">
+          <a-descriptions-item label="基地名称">{{ selectStore.selectedBase.baseName || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="地块名称">{{ selectedPlotName || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="当前土壤含水率">{{ soilMoisturePercent }}%</a-descriptions-item>
+          <a-descriptions-item label="数据更新时间">{{ lastUpdatedText }}</a-descriptions-item>
+        </a-descriptions>
+        
+        <!-- 土壤分层数据 -->
+        <a-divider orientation="left">土壤分层监测数据</a-divider>
+        <a-row :gutter="16">
+          <a-col :span="8">
+            <div style="background:linear-gradient(135deg,#8B5A2B,#A0522D);color:#fff;padding:12px;border-radius:8px;text-align:center">
+              <div style="font-weight:bold;margin-bottom:8px">上层 (浅层)</div>
+              <div>温度：{{ soilTemp1 || '-' }}℃</div>
+              <div>湿度：{{ soilMoisture1 || '-' }}%</div>
+            </div>
+          </a-col>
+          <a-col :span="8">
+            <div style="background:linear-gradient(135deg,#6B4423,#8B4513);color:#fff;padding:12px;border-radius:8px;text-align:center">
+              <div style="font-weight:bold;margin-bottom:8px">中层</div>
+              <div>温度：{{ soilTemp2 || '-' }}℃</div>
+              <div>湿度：{{ soilMoisture2 || '-' }}%</div>
+            </div>
+          </a-col>
+          <a-col :span="8">
+            <div style="background:linear-gradient(135deg,#4A3520,#5D4037);color:#fff;padding:12px;border-radius:8px;text-align:center">
+              <div style="font-weight:bold;margin-bottom:8px">深层</div>
+              <div>温度：{{ soilTemp3 || '-' }}℃</div>
+              <div>湿度：{{ soilMoisture3 || '-' }}%</div>
+            </div>
+          </a-col>
+        </a-row>
+        
+        <!-- 气象数据 -->
+        <a-divider orientation="left">气象数据</a-divider>
+        <a-descriptions :column="2" bordered size="small">
+          <a-descriptions-item label="空气温度">{{ penmanInputs.temp?.[0] || '-' }}℃</a-descriptions-item>
+          <a-descriptions-item label="空气湿度">{{ penmanInputs.humidity?.[0] || '-' }}%</a-descriptions-item>
+        </a-descriptions>
+        
+        <!-- 灌溉建议 -->
+        <a-divider orientation="left">灌溉建议分析</a-divider>
+        <a-alert
+          :message="penmanSuggestion.needIrrigation ? '需要灌溉' : '暂不需要灌溉'"
+          :type="penmanSuggestion.needIrrigation ? 'warning' : 'success'"
+          show-icon
+          style="margin-bottom:16px"
+        />
+        <a-descriptions :column="1" bordered size="small">
+          <a-descriptions-item label="建议灌溉时间">{{ penmanSuggestion.recommendedTime || '暂无' }}</a-descriptions-item>
+          <a-descriptions-item label="推荐灌溉方式">{{ penmanSuggestion.method || '暂无' }}</a-descriptions-item>
+          <a-descriptions-item label="推荐灌水量">{{ recommendedVolumeMm > 0 ? recommendedVolumeMm + ' mm（约 ' + mmToM3PerMu(recommendedVolumeMm) + ' m³/亩）' : '暂无' }}</a-descriptions-item>
+          <a-descriptions-item label="详细分析建议">{{ penmanSuggestion.reason || '暂无' }}</a-descriptions-item>
+        </a-descriptions>
+        
+        <!-- 底部说明 -->
+        <div style="margin-top:24px;padding:12px;background:#f5f5f5;border-radius:4px;font-size:12px;color:#666">
+          <p style="margin:0">※ 本报告基于实时传感器数据生成，仅供参考。具体灌溉方案请根据实际情况调整。</p>
+          <p style="margin:4px 0 0">※ 如有疑问，请联系农业技术专家咨询。</p>
+        </div>
       </div>
       <div style="padding:16px" v-if="reportType==='risk' && hasData" id="riskReport">
-        <h3>灌溉风险与提示报告</h3>
-        <p>地块：{{ selectedPlotName }}</p>
-        <p>当前风险等级：{{ riskLevel }}</p>
-        <h4>提示与建议</h4>
-        <ul class="tips">
-          <li v-for="(tip, idx) in riskTips" :key="idx">{{ tip }}</li>
+        <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #ff4d4f;padding-bottom:16px">
+          <h2 style="color:#ff4d4f;margin:0">灌溉风险与提示报告</h2>
+          <p style="color:#666;margin:8px 0 0">生成时间：{{ new Date().toLocaleString() }}</p>
+        </div>
+        
+        <a-divider orientation="left">基本信息</a-divider>
+        <a-descriptions :column="2" bordered size="small">
+          <a-descriptions-item label="基地名称">{{ selectStore.selectedBase.baseName || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="地块名称">{{ selectedPlotName || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="当前土壤含水率">{{ soilMoisturePercent }}%</a-descriptions-item>
+          <a-descriptions-item label="风险等级">
+            <a-tag :color="riskLevel === '较高' ? 'red' : riskLevel === '中等' ? 'orange' : 'green'">{{ riskLevel }}</a-tag>
+          </a-descriptions-item>
+        </a-descriptions>
+        
+        <a-divider orientation="left">风险提示与建议</a-divider>
+        <a-alert
+          :message="riskLevel === '较高' ? '土壤含水率偏低，需关注灌溉' : riskLevel === '中等' ? '土壤含水率适中，建议关注' : '土壤含水率充足，状况良好'"
+          :type="riskLevel === '较高' ? 'warning' : riskLevel === '中等' ? 'info' : 'success'"
+          show-icon
+          style="margin-bottom:16px"
+        />
+        <ul class="tips" style="padding-left:20px">
+          <li v-for="(tip, idx) in riskTips" :key="idx" style="margin-bottom:8px">{{ tip }}</li>
         </ul>
+        
+        <div style="margin-top:24px;padding:12px;background:#fff7e6;border-radius:4px;font-size:12px;color:#d46b08">
+          <p style="margin:0">※ 本报告仅供决策参考，请结合实际天气和作物生长情况综合判断。</p>
+        </div>
       </div>
       <template #footer>
         <a-space>
@@ -528,11 +598,19 @@ function resetIrrigationState() {
   moistureTrendData.value = [];
   penmanInputs.value = { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
   lastUpdatedText.value = '-';
+  // 重置土壤分层数据
+  soilTemp1.value = '-';
+  soilTemp2.value = '-';
+  soilTemp3.value = '-';
+  soilMoisture1.value = '-';
+  soilMoisture2.value = '-';
+  soilMoisture3.value = '-';
 }
 
 function onBaseChange(value: string | number | undefined) {
   selectedPlotId.value = undefined;
   selectedPlotName.value = '';
+  deviceWarningShown.value = false; // 重置警告标志
   resetIrrigationState();
   if (value) {
     fetchBaseStatusAndSuggest(value);
@@ -578,9 +656,35 @@ async function fetchPlotStatusAndSuggest(pid?: string | number) {
     soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
     currentStageId.value = status?.currentStageId ?? '';
     lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
+    
+    // 检查是否配置了物联网设备
+    const deviceNotConfigured = status?.deviceNotConfigured || false;
+    if (deviceNotConfigured) {
+      if (!deviceWarningShown.value) {
+        deviceWarningShown.value = true;
+        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加设备');
+      }
+      resetIrrigationState();
+      hasData.value = false;
+      return;
+    }
 
     const suggest = await getPenmanPredict(currentId);
     console.log('Penman建议原始数据：', suggest);
+    
+    // 检查设备是否未配置
+    if (suggest?.deviceNotConfigured) {
+      if (!deviceWarningShown.value) {
+        deviceWarningShown.value = true;
+        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备');
+      }
+      resetIrrigationState();
+      hasData.value = false;
+      return;
+    }
+    
+    // 重置警告标志
+    deviceWarningShown.value = false;
     
     // 如果期间地块已切换，丢弃本次结果
     if (lastRequestPlotId.value !== currentId) return;
@@ -651,8 +755,35 @@ async function fetchBaseStatusAndSuggest(baseId: string | number) {
     soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0) || 0;
     soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
     lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
+    
+    // 检查是否配置了物联网设备
+    if (status?.deviceNotConfigured) {
+      if (!deviceWarningShown.value) {
+        deviceWarningShown.value = true;
+        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加设备');
+      }
+      resetIrrigationState();
+      hasData.value = false;
+      return;
+    }
+    
     const suggest = await defHttp.get({ url: `/rapeseed/irrigation/penmanPredict`, params: { baseId } });
     if (!suggest) return;
+    
+    // 检查设备是否未配置
+    if (suggest?.deviceNotConfigured) {
+      if (!deviceWarningShown.value) {
+        deviceWarningShown.value = true;
+        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备');
+      }
+      resetIrrigationState();
+      hasData.value = false;
+      return;
+    }
+    
+    // 重置警告标志
+    deviceWarningShown.value = false;
+    
     penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? false);
     penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '';
     penmanSuggestion.method = suggest?.method ?? '';
@@ -979,6 +1110,7 @@ const perTimeWaterM3 = computed<number>(() => {
 
 const reportModalVisible = ref<boolean>(false);
 const reportType = ref<string>('irrigation');
+const deviceWarningShown = ref<boolean>(false); // 防止重复弹出设备未配置提示
 
 function openReportModal(type?: string) {
   reportType.value = type || 'irrigation';

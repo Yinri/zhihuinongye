@@ -22,9 +22,64 @@ public class QueftsAlgorithm {
     private static final BigDecimal K_UTILIZATION_RATE = new BigDecimal("55"); // 钾利用效率
 
     /**
-     * 计算 QUEFTS 推荐施肥量
+     * 物联网传感器数据用的虚拟土壤肥力数据结构
+     */
+    public static class SoilFertilityData {
+        private BigDecimal nitrogen;
+        private BigDecimal phosphorus;
+        private BigDecimal potassium;
+
+        public BigDecimal getNitrogen() { return nitrogen; }
+        public void setNitrogen(BigDecimal nitrogen) { this.nitrogen = nitrogen; }
+        public BigDecimal getPhosphorus() { return phosphorus; }
+        public void setPhosphorus(BigDecimal phosphorus) { this.phosphorus = phosphorus; }
+        public BigDecimal getPotassium() { return potassium; }
+        public void setPotassium(BigDecimal potassium) { this.potassium = potassium; }
+    }
+
+    /**
+     * 计算 QUEFTS 推荐施肥量（物联网传感器数据版本）
      * @param targetYield 目标产量（kg/亩）
-     * @param soilFertility 土壤肥力数据
+     * @param soilData 物联网估算的土壤肥力数据
+     * @return 施肥推荐结果
+     */
+    public static YoucaiFertilization calculateRecommendation(BigDecimal targetYield, SoilFertilityData soilData) {
+        YoucaiFertilization recommendation = new YoucaiFertilization();
+
+        // 1. 计算作物总养分需求（kg/亩）
+        BigDecimal totalNNeed = targetYield.multiply(N_REQUIRE).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+        BigDecimal totalP2O5Need = targetYield.multiply(P2O5_REQUIRE).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+        BigDecimal totalK2ONeed = targetYield.multiply(K2O_REQUIRE).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+
+        // 2. 计算土壤供肥量（kg/亩）- 基于传感器估算值（mg/kg）转换
+        BigDecimal soilN = soilData.getNitrogen().multiply(new BigDecimal("0.15")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal soilP = soilData.getPhosphorus().multiply(new BigDecimal("0.12")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal soilK = soilData.getPotassium().multiply(new BigDecimal("0.18")).setScale(2, RoundingMode.HALF_UP);
+
+        // 3. 计算推荐施肥量 =（总需求 - 土壤供肥）/ 肥料利用效率
+        BigDecimal recommendN = totalNNeed.subtract(soilN)
+                .divide(N_UTILIZATION_RATE.divide(new BigDecimal("100")), 2, RoundingMode.HALF_UP);
+        BigDecimal recommendP2O5 = totalP2O5Need.subtract(soilP)
+                .divide(P_UTILIZATION_RATE.divide(new BigDecimal("100")), 2, RoundingMode.HALF_UP);
+        BigDecimal recommendK2O = totalK2ONeed.subtract(soilK)
+                .divide(K_UTILIZATION_RATE.divide(new BigDecimal("100")), 2, RoundingMode.HALF_UP);
+
+        // 4. 确保推荐量不为负数
+        recommendation.setNRecommendKgPerMu(recommendN.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : recommendN);
+        recommendation.setP2o5RecommendKgPerMu(recommendP2O5.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : recommendP2O5);
+        recommendation.setK2oRecommendKgPerMu(recommendK2O.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : recommendK2O);
+
+        // 5. 补充推荐信息
+        recommendation.setRecommendedTime("根据实时传感器数据计算");
+        recommendation.setMethodRecommend("水肥一体化（推荐）");
+
+        return recommendation;
+    }
+
+    /**
+     * 计算 QUEFTS 推荐施肥量（数据库版本）
+     * @param targetYield 目标产量（kg/亩）
+     * @param soilFertility 土壤肥力数据（数据库）
      * @return 施肥推荐结果
      */
     public static YoucaiFertilization calculateRecommendation(BigDecimal targetYield, YoucaiSoilFertility soilFertility) {
@@ -36,9 +91,9 @@ public class QueftsAlgorithm {
         BigDecimal totalK2ONeed = targetYield.multiply(K2O_REQUIRE).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
 
         // 2. 计算土壤供肥量（kg/亩）- 基于土壤测试值（mg/kg）转换
-        BigDecimal soilN = soilFertility.getNitrogen().multiply(new BigDecimal("0.15")).setScale(2, RoundingMode.HALF_UP); // 土壤氮转换系数
-        BigDecimal soilP = soilFertility.getPhosphorus().multiply(new BigDecimal("0.12")).setScale(2, RoundingMode.HALF_UP); // 土壤磷转换系数
-        BigDecimal soilK = soilFertility.getPotassium().multiply(new BigDecimal("0.18")).setScale(2, RoundingMode.HALF_UP); // 土壤钾转换系数
+        BigDecimal soilN = soilFertility.getNitrogen().multiply(new BigDecimal("0.15")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal soilP = soilFertility.getPhosphorus().multiply(new BigDecimal("0.12")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal soilK = soilFertility.getPotassium().multiply(new BigDecimal("0.18")).setScale(2, RoundingMode.HALF_UP);
 
         // 3. 计算推荐施肥量 =（总需求 - 土壤供肥）/ 肥料利用效率
         BigDecimal recommendN = totalNNeed.subtract(soilN)

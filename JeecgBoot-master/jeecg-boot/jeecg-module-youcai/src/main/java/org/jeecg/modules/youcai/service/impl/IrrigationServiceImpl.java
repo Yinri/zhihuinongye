@@ -8,12 +8,16 @@ import org.jeecg.modules.youcai.entity.YoucaiPlots;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
 import org.jeecg.modules.youcai.entity.YoucaiSensorHourly;
 import org.jeecg.modules.youcai.entity.YoucaiIotDevices;
+import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
+import org.jeecg.modules.youcai.entity.YoucaiBases;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import org.jeecg.modules.youcai.entity.iotEntity.sensor.SensorInfo;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiSensorHourlyMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiGrowthMonitoringMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiIotDevicesMapper;
+import org.jeecg.modules.youcai.mapper.YoucaiSensorInfoMapper;
+import org.jeecg.modules.youcai.mapper.YoucaiBasesMapper;
 import org.jeecg.modules.youcai.service.IIrrigationService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.slf4j.Logger;
@@ -48,6 +52,12 @@ public class IrrigationServiceImpl implements IIrrigationService {
     private YoucaiIotDevicesMapper iotDevicesMapper;
     
     @Autowired
+    private YoucaiSensorInfoMapper sensorInfoMapper;
+    
+    @Autowired
+    private YoucaiBasesMapper basesMapper;
+    
+    @Autowired
     private IoTApiUtil ioTApiUtil;
 
     public Map<String, Object> getPlotStatus(String plotId) {
@@ -66,6 +76,18 @@ public class IrrigationServiceImpl implements IIrrigationService {
         
         String baseId = plot.getBaseId();
         String soilDeviceCode = getDeviceCodeByBaseId(baseId);
+        
+        // 如果没有配置设备，返回提示信息
+        if (soilDeviceCode == null) {
+            log.warn("基地{}没有配置土壤传感器设备", baseId);
+            r.put("soilMoisturePercent", null);
+            r.put("soilMoistureTrend", "该基地未配置物联网设备");
+            r.put("currentStageId", "");
+            r.put("lastUpdated", null);
+            r.put("deviceNotConfigured", true);
+            return r;
+        }
+        
         Map<String, Object> soilData = fetchRealtimeSensorData(soilDeviceCode);
         
         BigDecimal soilMoisture = BigDecimal.ZERO;
@@ -76,7 +98,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
         boolean hasValidData = soilMoisture.compareTo(BigDecimal.ZERO) > 0;
         
         r.put("soilMoisturePercent", hasValidData ? soilMoisture : null);
-        r.put("soilMoistureTrend", hasValidData ? "稳定" : "");
+        r.put("soilMoistureTrend", hasValidData ? "稳定" : "该基地未配置物联网设备");
         r.put("currentStageId", "");
         r.put("lastUpdated", hasValidData ? new Date() : null);
         
@@ -107,6 +129,24 @@ public class IrrigationServiceImpl implements IIrrigationService {
         String baseId = plot.getBaseId();
         String soilDeviceCode = getDeviceCodeByBaseId(baseId);
         String meteoDeviceCode = getMeteoDeviceCodeByBaseId(baseId);
+        
+        // 如果没有配置设备，返回提示信息
+        if (soilDeviceCode == null || meteoDeviceCode == null) {
+            log.warn("地块{}所在基地{}没有配置物联网设备，soil={}, meteo={}", plotId, baseId, soilDeviceCode, meteoDeviceCode);
+            r.put("chartDates", Collections.singletonList(java.time.LocalDate.now().toString()));
+            r.put("et0Forecast", Collections.singletonList(BigDecimal.ZERO));
+            r.put("soilMoistureSeriesPct", Collections.singletonList(BigDecimal.ZERO));
+            r.put("penmanInputs", new HashMap<>());
+            r.put("soilDetail", new HashMap<>());
+            r.put("needIrrigation", false);
+            r.put("recommendedTime", "暂无数据");
+            r.put("method", "暂无数据");
+            r.put("reason", "该地块所在基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备");
+            r.put("recommendedVolumeMm", BigDecimal.ZERO);
+            r.put("flowRateM3PerHour", BigDecimal.ZERO);
+            r.put("deviceNotConfigured", true);
+            return r;
+        }
         
         Map<String, Object> soilData = fetchRealtimeSensorData(soilDeviceCode);
         Map<String, Object> meteoData = fetchRealtimeSensorData(meteoDeviceCode);
@@ -268,6 +308,18 @@ public class IrrigationServiceImpl implements IIrrigationService {
         Map<String, Object> r = new HashMap<>();
         
         String soilDeviceCode = getDeviceCodeByBaseId(baseId);
+        
+        // 如果没有配置设备，返回提示信息
+        if (soilDeviceCode == null) {
+            log.warn("基地{}没有配置土壤传感器设备", baseId);
+            r.put("soilMoisturePercent", null);
+            r.put("soilMoistureTrend", "该基地未配置物联网设备");
+            r.put("currentStageId", "");
+            r.put("lastUpdated", null);
+            r.put("deviceNotConfigured", true);
+            return r;
+        }
+        
         Map<String, Object> soilData = fetchRealtimeSensorData(soilDeviceCode);
         
         BigDecimal soilMoisture = BigDecimal.ZERO;
@@ -278,7 +330,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
         boolean hasValidData = soilMoisture.compareTo(BigDecimal.ZERO) > 0;
         
         r.put("soilMoisturePercent", hasValidData ? soilMoisture : null);
-        r.put("soilMoistureTrend", hasValidData ? "稳定" : "");
+        r.put("soilMoistureTrend", hasValidData ? "稳定" : "该基地未配置物联网设备");
         r.put("currentStageId", "");
         r.put("lastUpdated", hasValidData ? new Date() : null);
         
@@ -292,6 +344,24 @@ public class IrrigationServiceImpl implements IIrrigationService {
         
         String soilDeviceCode = getDeviceCodeByBaseId(baseId);
         String meteoDeviceCode = getMeteoDeviceCodeByBaseId(baseId);
+        
+        // 如果没有配置设备，返回提示信息
+        if (soilDeviceCode == null || meteoDeviceCode == null) {
+            log.warn("基地{}没有配置物联网设备，soil={}, meteo={}", baseId, soilDeviceCode, meteoDeviceCode);
+            r.put("chartDates", Collections.singletonList(java.time.LocalDate.now().toString()));
+            r.put("et0Forecast", Collections.singletonList(BigDecimal.ZERO));
+            r.put("soilMoistureSeriesPct", Collections.singletonList(BigDecimal.ZERO));
+            r.put("penmanInputs", new HashMap<>());
+            r.put("soilDetail", new HashMap<>());
+            r.put("needIrrigation", false);
+            r.put("recommendedTime", "暂无数据");
+            r.put("method", "暂无数据");
+            r.put("reason", "该基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备");
+            r.put("recommendedVolumeMm", BigDecimal.ZERO);
+            r.put("flowRateM3PerHour", BigDecimal.ZERO);
+            r.put("deviceNotConfigured", true);
+            return r;
+        }
         
         Map<String, Object> soilData = fetchRealtimeSensorData(soilDeviceCode);
         Map<String, Object> meteoData = fetchRealtimeSensorData(meteoDeviceCode);
@@ -731,39 +801,153 @@ public class IrrigationServiceImpl implements IIrrigationService {
     }
 
     private String getDeviceCodeByBaseId(String baseId) {
-        try {
-            QueryWrapper<YoucaiIotDevices> qw = new QueryWrapper<>();
-            qw.lambda().eq(YoucaiIotDevices::getBaseId, baseId)
-                    .eq(YoucaiIotDevices::getDelFlag, 0)
-                    .eq(YoucaiIotDevices::getSensorTypeId, 2)
-                    .last("limit 1");
-            YoucaiIotDevices device = iotDevicesMapper.selectOne(qw);
-            if (device != null && device.getDeviceCode() != null) {
-                log.info("从数据库获取土壤传感器设备码: {}", device.getDeviceCode());
-                return device.getDeviceCode();
-            }
-        } catch (Exception e) {
-            log.warn("查询土壤传感器设备失败: {}", e.getMessage());
+        // 从 youcai_sensor_info 表中根据基地经纬度匹配
+        String deviceCode = getSensorSerialByBaseIdAndType(baseId, 2);
+        if (deviceCode != null) {
+            return deviceCode;
         }
-        return "862635068101757";
+        log.warn("基地{}没有配置土壤传感器设备", baseId);
+        return null;
     }
 
     private String getMeteoDeviceCodeByBaseId(String baseId) {
-        try {
-            QueryWrapper<YoucaiIotDevices> qw = new QueryWrapper<>();
-            qw.lambda().eq(YoucaiIotDevices::getBaseId, baseId)
-                    .eq(YoucaiIotDevices::getDelFlag, 0)
-                    .eq(YoucaiIotDevices::getSensorTypeId, 1)
-                    .last("limit 1");
-            YoucaiIotDevices device = iotDevicesMapper.selectOne(qw);
-            if (device != null && device.getDeviceCode() != null) {
-                log.info("从数据库获取气象站设备码: {}", device.getDeviceCode());
-                return device.getDeviceCode();
-            }
-        } catch (Exception e) {
-            log.warn("查询气象站设备失败: {}", e.getMessage());
+        // 从 youcai_sensor_info 表中根据基地经纬度匹配
+        String deviceCode = getSensorSerialByBaseIdAndType(baseId, 1);
+        if (deviceCode != null) {
+            return deviceCode;
         }
-        return "0030022506040006";
+        log.warn("基地{}没有配置气象站设备", baseId);
+        return null;
+    }
+    
+    /**
+     * 硬编码的基地设备映射表
+     * 九里: 1992822087463333889
+     * 洋梓: 1992821962494046210
+     * 丰乐: 1992821272807862273
+     * 胡集: 1992821484976730114
+     */
+    private String getHardcodedDeviceCode(String baseId, Integer sensorTypeId) {
+        Map<String, Map<Integer, String>> deviceMap = new HashMap<>();
+        
+        // 九里
+        Map<Integer, String> jiuli = new HashMap<>();
+        jiuli.put(1, "0030022506040006"); // 气象
+        jiuli.put(2, "862635068101757");  // 土壤
+        deviceMap.put("1992822087463333889", jiuli);
+        
+        // 洋梓
+        Map<Integer, String> yangzi = new HashMap<>();
+        yangzi.put(1, "0030022506040007");
+        yangzi.put(2, "862635068112473");
+        deviceMap.put("1992821962494046210", yangzi);
+        
+        // 丰乐
+        Map<Integer, String> fengle = new HashMap<>();
+        fengle.put(1, "0030022506040004");
+        fengle.put(2, "862635068112416");
+        deviceMap.put("1992821272807862273", fengle);
+        
+        // 胡集
+        Map<Integer, String> huji = new HashMap<>();
+        huji.put(1, "0030022506040005");
+        huji.put(2, "862635068112390");
+        deviceMap.put("1992821484976730114", huji);
+        
+        Map<Integer, String> baseDevices = deviceMap.get(baseId);
+        if (baseDevices != null) {
+            return baseDevices.get(sensorTypeId);
+        }
+        return null;
+    }
+    
+    /**
+     * 根据基地ID和传感器类型从 youcai_sensor_info 表获取设备编号
+     * 通过基地名称匹配传感器名称中的关键词
+     * @param baseId 基地ID
+     * @param sensorTypeId 传感器类型：1=气象，2=土壤
+     * @return 设备编号，如果没有找到返回null
+     */
+    private String getSensorSerialByBaseIdAndType(String baseId, Integer sensorTypeId) {
+        // 优先使用硬编码的设备映射表（4个已知基地）
+        String hardcodedCode = getHardcodedDeviceCode(baseId, sensorTypeId);
+        if (hardcodedCode != null) {
+            log.info("通过硬编码映射获取设备: baseId={}, type={}, code={}", baseId, sensorTypeId, hardcodedCode);
+            return hardcodedCode;
+        }
+        
+        try {
+            // 1. 根据baseId获取基地信息（包含经纬度）
+            YoucaiBases base = basesMapper.selectById(baseId);
+            if (base == null) {
+                log.warn("基地{}不存在", baseId);
+                return null;
+            }
+            BigDecimal baseLat = base.getLatitude();
+            BigDecimal baseLon = base.getLongitude();
+            String baseName = base.getBaseName();
+            
+            if (baseLat == null || baseLon == null) {
+                log.warn("基地{}没有经纬度信息，尝试通过名称匹配", baseName);
+                // 备用方案：通过名称匹配
+                return getSensorSerialByNameMatch(baseName, sensorTypeId);
+            }
+            
+            log.info("开始匹配基地{}的传感器，类型={}，经纬度=({}, {})", baseName, sensorTypeId, baseLat, baseLon);
+            
+            // 2. 在 youcai_sensor_info 中查找同位置的传感器（通过经纬度匹配，距离小于0.01度约1km）
+            QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
+            qw.lambda()
+                .eq(YoucaiSensorInfo::getIsDelete, 0)
+                .eq(YoucaiSensorInfo::getSensorTypeId, sensorTypeId)
+                .apply("ABS(CAST(latitude AS DECIMAL(10,6)) - CAST({0} AS DECIMAL(10,6))) < 0.01", baseLat.toPlainString())
+                .apply("ABS(CAST(longitude AS DECIMAL(10,6)) - CAST({0} AS DECIMAL(10,6))) < 0.01", baseLon.toPlainString())
+                .last("limit 1");
+            
+            YoucaiSensorInfo sensor = sensorInfoMapper.selectOne(qw);
+            if (sensor != null && sensor.getSensorSerial() != null) {
+                log.info("通过经纬度匹配到传感器: {} -> {}", sensor.getSensorName(), sensor.getSensorSerial());
+                return sensor.getSensorSerial();
+            }
+            
+            // 3. 备用方案：通过名称匹配
+            log.warn("经纬度匹配未找到，尝试通过名称匹配");
+            return getSensorSerialByNameMatch(baseName, sensorTypeId);
+            
+        } catch (Exception e) {
+            log.warn("查询传感器设备失败: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * 通过基地名称匹配传感器（备用方案）
+     */
+    private String getSensorSerialByNameMatch(String baseName, Integer sensorTypeId) {
+        try {
+            if (baseName == null) return null;
+            
+            // 在 youcai_sensor_info 中查找名称包含基地名的传感器
+            QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
+            qw.lambda()
+                .eq(YoucaiSensorInfo::getIsDelete, 0)
+                .eq(YoucaiSensorInfo::getSensorTypeId, sensorTypeId)
+                .like(YoucaiSensorInfo::getSensorName, baseName);
+            
+            List<YoucaiSensorInfo> sensors = sensorInfoMapper.selectList(qw);
+            if (sensors != null && !sensors.isEmpty()) {
+                YoucaiSensorInfo sensor = sensors.get(0);
+                log.info("通过名称匹配到传感器: {} -> {}", sensor.getSensorName(), sensor.getSensorSerial());
+                return sensor.getSensorSerial();
+            }
+            
+            log.warn("名称匹配未找到传感器: baseName={}, type={}", baseName, sensorTypeId);
+            return null;
+            
+        } catch (Exception e) {
+            log.warn("名称匹配传感器失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     private Optional<BigDecimal> toBigDecimal(Object value) {
@@ -879,17 +1063,17 @@ public class IrrigationServiceImpl implements IIrrigationService {
             // 根据温度和时间决定灌溉时间
             if (airTemp.compareTo(new BigDecimal("30")) > 0) {
                 recommendedTime = "建议清晨5:00-7:00或傍晚17:00后灌溉";
-                method = "滴灌或微喷";
+                method = "漫灌";
                 reason = String.format("当前土壤含水率偏低(%s%%)%s，当前气温较高(%.1f℃)%s，蒸散强烈，需及时补充水分。",
                     soilMoisture.toPlainString(), layerStatus, airTemp, weatherCondition);
             } else if (airTemp.compareTo(new BigDecimal("20")) > 0) {
                 recommendedTime = "建议上午8:00-10:00或下午15:00-17:00灌溉";
-                method = "滴灌";
+                method = "漫灌";
                 reason = String.format("当前土壤含水率%s(%s%%)%s，气温适宜(%.1f℃)%s，建议适量灌溉。",
                     moistureLevel, soilMoisture.toPlainString(), layerStatus, airTemp, weatherCondition);
             } else {
                 recommendedTime = "建议上午10:00-12:00灌溉";
-                method = "滴灌";
+                method = "漫灌";
                 reason = String.format("当前土壤含水率%s(%s%%)%s，气温较低(%.1f℃)%s，灌溉量不宜过大。",
                     moistureLevel, soilMoisture.toPlainString(), layerStatus, airTemp, weatherCondition);
             }
@@ -906,9 +1090,9 @@ public class IrrigationServiceImpl implements IIrrigationService {
                     soilMoisture.toPlainString(), layerStatus, weatherCondition);
             } else {
                 recommendedTime = "近期关注";
-                method = "滴灌";
+                method = "漫灌";
                 reason = String.format("当前土壤含水率适宜(%s%%)%s%s，可维持当前灌溉策略。",
-                    soilMoisture.toPlainString(), layerStatus, weatherCondition);
+                    moistureLevel, soilMoisture.toPlainString(), layerStatus, weatherCondition);
             }
         }
         
