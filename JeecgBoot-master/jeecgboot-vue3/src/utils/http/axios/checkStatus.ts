@@ -18,7 +18,7 @@ export function checkStatus(status: number, msg: string, errorMessageMode: Error
 
   switch (status) {
     case 400:
-      errMessage = `${msg}`;
+      errMessage = t('sys.api.errMsg400');
       break;
     // 401: Not logged in
     // Jump to the login page if not logged in, and carry the path of the current page

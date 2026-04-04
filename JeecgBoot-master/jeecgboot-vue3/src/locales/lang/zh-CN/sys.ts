@@ -9,6 +9,7 @@ export default {
     networkException: '网络异常',
     networkExceptionMsg: '网络异常，请检查您的网络连接是否正常!',
 
+    errMsg400: '请求参数错误!',
     errMsg401: '用户没有权限（令牌、用户名、密码错误）!',
     errMsg403: '用户得到授权，但是访问是被禁止的。!',
     errMsg404: '网络请求错误,未找到该资源!',

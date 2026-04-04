@@ -351,7 +351,6 @@ const handleLLMAnalysis = async () => {
 
   } catch (error) {
     console.error('AI分析请求失败:', error)
-    message.error('AI分析请求失败，请稍后重试')
   }
 }
 
@@ -376,7 +375,6 @@ const fetchPesticideOptions = async () => {
     pesticideOptions.value = formattedPesticides || []
   } catch (error) {
     console.error('获取农药列表失败:', error)
-    message.error('获取农药列表失败')
   }
 }
 
@@ -415,7 +413,6 @@ const savePesticideRecord = async () => {
     pesticideForm.value.method = '';
   } catch (error) {
     console.error('保存使用记录失败:', error)
-    message.error('保存使用记录失败')
   } finally {
     savingRecord.value = false
   }
@@ -445,7 +442,7 @@ const handleQueryHistory = async () => {
       message.info('该时间段内无虫情记录');
     }
   } catch (e) {
-    message.error('获取虫情记录失败');
+    console.error('获取虫情记录失败', e);
   }
 };
 
