@@ -6,6 +6,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
+import org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO;
 import org.jeecg.modules.youcai.entity.YoucaiLodgingRiskWarning;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
 
@@ -61,6 +62,41 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
         log.info("batchRiskData={}", batchRiskData);
         return Result.OK(batchRiskData);
     }
+
+	/**
+	 * 根据视频ID进行倒伏分析
+	 */
+	@AutoLog(value = "倒伏风险预警表-视频倒伏分析")
+	@Operation(summary="倒伏风险预警表-视频倒伏分析")
+	@GetMapping(value = "/analysisVideo/{videoId}")
+	public Result<VideoLodgingAnalysisResultDTO> videoLodgingAnalysis(@PathVariable String videoId) {
+		try {
+			VideoLodgingAnalysisResultDTO result = youcaiLodgingRiskWarningService.analyzeLodgingByVideoId(videoId);
+			return Result.OK(result);
+		} catch (Exception e) {
+			log.error("视频倒伏分析失败: {}", e.getMessage(), e);
+			return Result.error("视频倒伏分析失败: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * 批量根据视频ID进行倒伏分析
+	 */
+	@AutoLog(value = "倒伏风险预警表-批量视频倒伏分析")
+	@Operation(summary="倒伏风险预警表-批量视频倒伏分析")
+	@PostMapping(value = "/analysisVideo/batch")
+	public Result<VideoLodgingAnalysisResultDTO> batchVideoLodgingAnalysis(@RequestBody java.util.List<String> videoIds) {
+		try {
+			if (videoIds == null || videoIds.isEmpty()) {
+				return Result.error("视频ID列表不能为空");
+			}
+			VideoLodgingAnalysisResultDTO result = youcaiLodgingRiskWarningService.batchAnalyzeLodgingByVideoIds(videoIds);
+			return Result.OK(result);
+		} catch (Exception e) {
+			log.error("批量视频倒伏分析失败: {}", e.getMessage(), e);
+			return Result.error("批量视频倒伏分析失败: " + e.getMessage());
+		}
+	}
 
 
 

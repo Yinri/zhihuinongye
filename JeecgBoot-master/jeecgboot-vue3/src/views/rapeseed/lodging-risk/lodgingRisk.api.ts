@@ -19,6 +19,8 @@ enum Api {
   Import = '/youcai/lodgingRisk/importExcel',
   // 获取倒伏风险预警数据
   RiskData = '/youcai/lodgingRisk/riskData',
+  // 视频倒伏分析
+  LodgingAnalysis = '/youcai/lodgingRisk/analysisVideo',
 }
 
 // 获取倒伏风险预警列表
@@ -109,3 +111,32 @@ export interface BatchLodgingRiskAssessmentResponse {
   };
   calculationTime: string;
 }
+
+// 视频倒伏分析结果接口
+export interface VideoLodgingAnalysisResult {
+  videoId: string;
+  imageUrl: string;
+  analysisTime: string;
+  lodgingRatio: number;
+  lodgingArea: number;
+  totalArea: number;
+  riskLevel: string;
+  confidence: number;
+  details: {
+    healthyArea: number;
+    mildLodgingArea: number;
+    moderateLodgingArea: number;
+    severeLodgingArea: number;
+  };
+  suggestions: string[];
+}
+
+// 获取视频截图并进行倒伏分析（单个视频）
+export const getVideoLodgingAnalysis = (videoId: string) => {
+  return defHttp.get({ url: `${Api.LodgingAnalysis}/${videoId}` });
+};
+
+// 批量获取多个视频的倒伏分析结果
+export const getBatchVideoLodgingAnalysis = (videoIds: string[]) => {
+  return defHttp.post({ url: `${Api.LodgingAnalysis}/batch`, data: videoIds });
+};

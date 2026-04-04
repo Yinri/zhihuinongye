@@ -811,6 +811,240 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
         
         return statistics;
     }
+
+    @Override
+    public org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO analyzeLodgingByVideoId(String videoId) {
+        log.info("开始视频倒伏分析，视频ID: {}", videoId);
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO result = 
+                new org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO();
+            result.setVideoId(videoId);
+            result.setAnalysisTime(new Date());
+            
+            String imageUrl = fetchVideoPhoto(videoId);
+            if (imageUrl == null || imageUrl.isEmpty()) {
+                log.warn("获取视频截图失败，视频ID: {}", videoId);
+                throw new JeecgBootException("获取视频截图失败");
+            }
+            result.setImageUrl(imageUrl);
+            log.info("获取到视频截图地址: {}", imageUrl);
+            
+            org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO analysisResult = 
+                callPythonLodgingAnalysis(imageUrl);
+            if (analysisResult != null) {
+                result.setLodgingRatio(analysisResult.getLodgingRatio());
+                result.setLodgingArea(analysisResult.getLodgingArea());
+                result.setTotalArea(analysisResult.getTotalArea());
+                result.setRiskLevel(analysisResult.getRiskLevel());
+                result.setConfidence(analysisResult.getConfidence());
+                result.setDetails(analysisResult.getDetails());
+                result.setSuggestions(analysisResult.getSuggestions());
+            }
+            
+            long endTime = System.currentTimeMillis();
+            log.info("视频倒伏分析完成，视频ID: {}, 耗时: {}ms", videoId, endTime - startTime);
+            return result;
+            
+        } catch (Exception e) {
+            log.error("视频倒伏分析失败，视频ID: {}, 错误: {}", videoId, e.getMessage(), e);
+            throw new JeecgBootException("视频倒伏分析失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO batchAnalyzeLodgingByVideoIds(List<String> videoIds) {
+        log.info("开始批量视频倒伏分析，视频数量: {}", videoIds.size());
+        long startTime = System.currentTimeMillis();
+        
+        org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO combinedResult = 
+            new org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO();
+        combinedResult.setAnalysisTime(new Date());
+        
+        double totalLodgingRatio = 0.0;
+        double totalLodgingArea = 0.0;
+        double totalArea = 0.0;
+        double totalConfidence = 0.0;
+        int successCount = 0;
+        
+        org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO.DetailsDTO combinedDetails = 
+            new org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO.DetailsDTO();
+        combinedDetails.setHealthyArea(0.0);
+        combinedDetails.setMildLodgingArea(0.0);
+        combinedDetails.setModerateLodgingArea(0.0);
+        combinedDetails.setSevereLodgingArea(0.0);
+        
+        List<String> allSuggestions = new java.util.ArrayList<>();
+        String highestRiskLevel = "低风险";
+        String firstImageUrl = null;
+        
+        for (String videoId : videoIds) {
+            try {
+                org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO singleResult = 
+                    analyzeLodgingByVideoId(videoId);
+                
+                if (singleResult != null) {
+                    successCount++;
+                    
+                    if (firstImageUrl == null && singleResult.getImageUrl() != null) {
+                        firstImageUrl = singleResult.getImageUrl();
+                    }
+                    
+                    if (singleResult.getLodgingRatio() != null) {
+                        totalLodgingRatio += singleResult.getLodgingRatio();
+                    }
+                    if (singleResult.getLodgingArea() != null) {
+                        totalLodgingArea += singleResult.getLodgingArea();
+                    }
+                    if (singleResult.getTotalArea() != null) {
+                        totalArea += singleResult.getTotalArea();
+                    }
+                    if (singleResult.getConfidence() != null) {
+                        totalConfidence += singleResult.getConfidence();
+                    }
+                    
+                    if (singleResult.getDetails() != null) {
+                        if (singleResult.getDetails().getHealthyArea() != null) {
+                            combinedDetails.setHealthyArea(
+                                combinedDetails.getHealthyArea() + singleResult.getDetails().getHealthyArea());
+                        }
+                        if (singleResult.getDetails().getMildLodgingArea() != null) {
+                            combinedDetails.setMildLodgingArea(
+                                combinedDetails.getMildLodgingArea() + singleResult.getDetails().getMildLodgingArea());
+                        }
+                        if (singleResult.getDetails().getModerateLodgingArea() != null) {
+                            combinedDetails.setModerateLodgingArea(
+                                combinedDetails.getModerateLodgingArea() + singleResult.getDetails().getModerateLodgingArea());
+                        }
+                        if (singleResult.getDetails().getSevereLodgingArea() != null) {
+                            combinedDetails.setSevereLodgingArea(
+                                combinedDetails.getSevereLodgingArea() + singleResult.getDetails().getSevereLodgingArea());
+                        }
+                    }
+                    
+                    if (singleResult.getSuggestions() != null) {
+                        allSuggestions.addAll(singleResult.getSuggestions());
+                    }
+                    
+                    if (singleResult.getRiskLevel() != null) {
+                        highestRiskLevel = getHigherRiskLevel(highestRiskLevel, singleResult.getRiskLevel());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("单个视频分析失败，视频ID: {}, 错误: {}", videoId, e.getMessage());
+            }
+        }
+        
+        if (successCount > 0) {
+            combinedResult.setVideoId(String.join(",", videoIds));
+            combinedResult.setImageUrl(firstImageUrl);
+            combinedResult.setLodgingRatio(totalLodgingRatio / successCount);
+            combinedResult.setLodgingArea(totalLodgingArea);
+            combinedResult.setTotalArea(totalArea);
+            combinedResult.setRiskLevel(highestRiskLevel);
+            combinedResult.setConfidence(totalConfidence / successCount);
+            combinedResult.setDetails(combinedDetails);
+            
+            java.util.Set<String> uniqueSuggestions = new java.util.LinkedHashSet<>(allSuggestions);
+            combinedResult.setSuggestions(new java.util.ArrayList<>(uniqueSuggestions));
+        } else {
+            combinedResult = createDefaultAnalysisResult();
+        }
+        
+        long endTime = System.currentTimeMillis();
+        log.info("批量视频倒伏分析完成，成功数量: {}/{}, 耗时: {}ms", 
+            successCount, videoIds.size(), endTime - startTime);
+        
+        return combinedResult;
+    }
+    
+    private String getHigherRiskLevel(String currentLevel, String newLevel) {
+        java.util.Map<String, Integer> riskOrder = new java.util.HashMap<>();
+        riskOrder.put("低风险", 1);
+        riskOrder.put("中低风险", 2);
+        riskOrder.put("中等风险", 3);
+        riskOrder.put("高风险", 4);
+        riskOrder.put("极高风险", 5);
+        
+        int currentOrder = riskOrder.getOrDefault(currentLevel, 0);
+        int newOrder = riskOrder.getOrDefault(newLevel, 0);
+        
+        return newOrder > currentOrder ? newLevel : currentLevel;
+    }
+    
+    private String fetchVideoPhoto(String videoId) {
+        try {
+            String photoUrl = "http://opencv.aheagle.com/videoOpenCv/wlwPhoto?videoId=" + videoId;
+            log.debug("请求视频截图: {}", photoUrl);
+            
+            org.springframework.web.reactive.function.client.WebClient webClient = 
+                org.springframework.web.reactive.function.client.WebClient.builder()
+                    .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
+                    .build();
+            
+            String response = webClient.get()
+                .uri(photoUrl)
+                .retrieve()
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+            
+            if (response != null) {
+                JSONObject jsonResponse = JSONObject.parseObject(response);
+                if (jsonResponse.getInteger("code") == 200) {
+                    String imagePath = jsonResponse.getString("data");
+                    if (imagePath != null && !imagePath.isEmpty()) {
+                        String fullImageUrl = "https://img.aheagle.com/preview/yg-iot/" + 
+                            imagePath + "?tk=cd1528943bae170aa6bc1450b5d78afa";
+                        return fullImageUrl;
+                    }
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("获取视频截图失败: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    private org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO callPythonLodgingAnalysis(String imageUrl) {
+        try {
+            log.debug("调用Python服务进行倒伏分析，图片URL: {}", imageUrl);
+            
+            org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO result = 
+                pythonApiUtil.analyzeLodgingFromImage(imageUrl)
+                    .doOnError(e -> log.warn("Python倒伏分析服务调用失败: {}", e.getMessage()))
+                    .onErrorReturn(createDefaultAnalysisResult())
+                    .block();
+            
+            return result;
+        } catch (Exception e) {
+            log.error("调用Python倒伏分析服务异常: {}", e.getMessage(), e);
+            return createDefaultAnalysisResult();
+        }
+    }
+    
+    private org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO createDefaultAnalysisResult() {
+        org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO result = 
+            new org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO();
+        result.setLodgingRatio(0.0);
+        result.setLodgingArea(0.0);
+        result.setTotalArea(0.0);
+        result.setRiskLevel("未知");
+        result.setConfidence(0.0);
+        
+        org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO.DetailsDTO details = 
+            new org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO.DetailsDTO();
+        details.setHealthyArea(0.0);
+        details.setMildLodgingArea(0.0);
+        details.setModerateLodgingArea(0.0);
+        details.setSevereLodgingArea(0.0);
+        result.setDetails(details);
+        
+        result.setSuggestions(java.util.Arrays.asList("暂无分析结果，请稍后重试"));
+        return result;
+    }
 }
 
 
