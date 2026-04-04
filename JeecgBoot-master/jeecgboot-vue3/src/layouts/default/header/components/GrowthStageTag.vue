@@ -21,7 +21,7 @@
         </div>
 
         <!-- 地块下拉框（已与基地下拉框结构对齐） -->
-        <div class="custom-select" @click="toggleDropdown('plot')">
+        <div class="custom-select" v-if="!hidePlotDropdown" @click="toggleDropdown('plot')">
           <div class="select-value">{{ selectedPlot?.plotName || '请选择地块' }}</div>
           <div class="select-icon" :class="{ open: isDropdownOpen.plot }">▼</div>
           <div class="select-options" v-if="isDropdownOpen.plot">
@@ -39,14 +39,13 @@
         </div>
       </div>
 
-      <div class="stage-tag-group" v-if="!hideGrowthStage">
+      <div class="stage-tag-group" v-if="!hideGrowthStage && selectedPlot?.plotId && selectedPlot?.plotId !== 'all'">
         <div
           class="stage-tag"
           v-for="(stage, index) in stageList"
           :key="stage"
           :style="{'--index': index}"
           :class="{ active: currentGrowthStage === stage }"
-          v-show="selectedPlot?.plotId !== 'all'"
         >
           {{ stage }}
         </div>
@@ -71,6 +70,15 @@ const hideGrowthStage = computed(() => {
   const currentPath = route.path;
   return currentPath.includes('/rapeseed/production-plan/plot-production-plan') ||
          currentPath.includes('/rapeseed/production-plan/base-production-plan');
+});
+
+const hidePlotDropdown = computed(() => {
+  const currentPath = route.path;
+  return currentPath.includes('/dashboard/rapeseed') ||
+         currentPath.includes('/rapeseed/work-area') ||
+         currentPath.includes('/rapeseed/lodging-risk') ||
+         currentPath.includes('/rapeseed/harvest/index') ||
+         currentPath.includes('/rapeseed/farming-records');
 });
 
 // 定义基地类型接口
@@ -356,7 +364,7 @@ watch(
         border: 1px solid #e0e0e0;
         border-radius: 6px;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-        height: 200px;
+        max-height: 200px;
         display: flex;
         flex-direction: column;
         z-index: 1002;
