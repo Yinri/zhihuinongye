@@ -8,4 +8,6 @@ public class UnifiedDeviceDto {
     private String lat;
     private String lng;
     private String deviceType;
+    private String deviceName;
+    private Integer state;
 }

@@ -12,9 +12,13 @@ import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.common.util.oConvertUtils;
 import org.jeecg.modules.youcai.dto.UnifiedDeviceDto;
+import org.jeecg.modules.youcai.entity.YoucaiAgriculturalMachine;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
+import org.jeecg.modules.youcai.mapper.YoucaiAgriculturalMachineMapper;
+import org.jeecg.modules.youcai.mapper.YoucaiBasesMapper;
+import org.jeecg.modules.youcai.service.IYoucaiAgriculturalMachineService;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
 import org.jeecg.modules.youcai.task.SensorDataSyncTask;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
@@ -61,7 +65,11 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
 	
 	@Autowired
 	private SensorDataSyncTask sensorDataSyncTask;
-	
+
+     @Autowired
+     private IYoucaiAgriculturalMachineService agriculturalMachineService;
+
+
 	/**
 	 * 分页列表查询
 	 *
@@ -281,6 +289,41 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
         return youcaiSensorInfoService.getAllDevices(baseId);
     }
 
+    @AutoLog(value = "传感器信息表-获取视频设备列表")
+    @Operation(summary="获取视频设备列表", description="根据基地ID获取视频设备列表")
+    @GetMapping(value = "/getVideoDevices")
+    public Result<List<Map<String, Object>>> getVideoDevices(
+            @Parameter(name="baseId", description="基地ID") @RequestParam(name="baseId") String baseId) {
+        try {
+            log.info("获取基地ID {} 的视频设备列表", baseId);
+            return youcaiSensorInfoService.getVideoDevicesByBaseId(baseId);
+        } catch (Exception e) {
+            log.error("获取视频设备列表异常", e);
+            return Result.error("获取视频设备列表异常：" + e.getMessage());
+        }
+    }
+
+    @AutoLog(value = "传感器信息表-获取视频播放地址")
+    @Operation(summary="获取视频播放地址", description="根据设备编码和通道号获取视频播放地址")
+    @PostMapping(value = "/getVideoStream")
+    public Result<String> getVideoStream(
+            @Parameter(name="equipmentCode", description="设备编码") @RequestParam(name="equipmentCode") String equipmentCode,
+            @Parameter(name="channelNum", description="通道号") @RequestParam(name="channelNum") String channelNum) {
+        try {
+            log.info("获取视频播放地址，设备编码: {}, 通道号: {}", equipmentCode, channelNum);
+            ApiResponse response = ioTApiUtil.getVideoStrem(equipmentCode, channelNum).block();
+            if (response != null && response.getCode() == 1 && response.getData() != null) {
+                return Result.OK(response.getData().toString());
+            } else {
+                log.error("获取视频播放地址失败: {}", response != null ? response.getMsg() : "响应为空");
+                return Result.error("获取视频播放地址失败");
+            }
+        } catch (Exception e) {
+            log.error("获取视频播放地址异常", e);
+            return Result.error("获取视频播放地址异常：" + e.getMessage());
+        }
+    }
+
     /**
      * 获取设备状态信息
      *
@@ -316,5 +359,41 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
             return Result.error("获取设备状态异常：" + e.getMessage());
         }
     }
+
+
+
+     @Operation(summary = "农机设备列表查询")
+     @GetMapping(value = "/machine/list")
+     public Result<List<YoucaiAgriculturalMachine>> getMachineList() {
+         List<YoucaiAgriculturalMachine> list = agriculturalMachineService.getMachineList();
+         return Result.OK(list);
+     }
+
+     @Operation(summary = "根据农机列表获取作业记录")
+    @GetMapping(value = "/records")
+    public Result<List<Map<String, Object>>> getOperationRecords(
+            @RequestParam(name = "beidouSnList") String beidouSnList,
+            @RequestParam(name = "startDate") String startDate,
+            @RequestParam(name = "endDate") String endDate) {
+        return agriculturalMachineService.getOperationRecordsByBeidouSnList(beidouSnList, startDate, endDate);
+    }
+
+     @Operation(summary = "同步作业数据")
+     @PostMapping(value = "/sync")
+     public Result<Map<String, Object>> syncOperationData(
+             @RequestParam(name = "baseId") String baseId,
+             @RequestParam(name = "startDate") String startDate,
+             @RequestParam(name = "endDate") String endDate) {
+         return agriculturalMachineService.syncOperationData(baseId, startDate, endDate);
+     }
+
+     @Operation(summary = "获取轨迹数据")
+     @GetMapping(value = "/track")
+     public Result<List<Map<String, Object>>> getTrackData(
+             @RequestParam(name = "beidouSn") String beidouSn,
+             @RequestParam(name = "startDate") String startDate,
+             @RequestParam(name = "endDate") String endDate) {
+         return agriculturalMachineService.getTrackData(beidouSn, startDate, endDate);
+     }
 
 }

@@ -194,6 +194,22 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     private void fetchIoTSensorData(LodgingRiskAssessmentRequestDTO requestDTO, String plotId) {
         try {
             log.debug("开始获取IoT传感器数据，地块ID: {}", plotId);
+
+
+            YoucaiPlots plot = youcaiPlotsMapper.selectById(plotId);
+            if (plot == null) {
+                log.warn("地块不存在，地块ID: {}", plotId);
+                requestDTO.setDailyWeather(List.of());
+                return;
+            }
+            
+            YoucaiBases base = youcaiBasesMapper.selectById(plot.getBaseId());
+            //只获取基地名称的前2个字符
+            String baseName = base != null ? base.getBaseName().substring(0, 2) : "未知基地";
+            if (base == null) {
+                log.warn("基地不存在，基地ID: {}", plot.getBaseId());
+                return;
+            }
             
             // 1. 优先查询本地数据库中的项目信息
             LambdaQueryWrapper<YoucaiProjectInfo> projectQuery = new LambdaQueryWrapper<>();
@@ -271,25 +287,28 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
                     log.warn("获取IoT传感器列表失败，地块ID: {}", plotId);
                     return;
                 }
-                
-                // 解析传感器列表，获取第一个传感器
+            
+                // 解析传感器列表
                 List<SensorInfo> sensorList = parseSensorList(sensorListResponse.getData());
                 if (sensorList.isEmpty()) {
                     log.warn("IoT传感器列表为空，地块ID: {}", plotId);
                     return;
                 }
-                
-                deviceCode = sensorList.get(0).getQ() != null ? 
-                    sensorList.get(0).getQ().getSensorSerial() : null;
-                
+
+                //比较传感器名称是否以基地名称开头 这里不只是只比较第一个传感器
+                for (SensorInfo sensor : sensorList) {
+                    if (sensor.getQ().getSensorName().startsWith(baseName)) {
+                        log.debug("从IoT传感器列表获取到传感器设备编码: {}", sensor.getQ().getSensorSerial());
+                        deviceCode = sensor.getQ().getSensorSerial();
+                        break;
+                    }
+                }
                 if (deviceCode == null) {
-                    log.warn("传感器设备编码为空，地块ID: {}", plotId);
+                    log.warn("IoT传感器列表中未找到以基地名称开头的传感器，地块ID: {}", plotId);
                     return;
                 }
-                
-                // 保存传感器信息到本地数据库
-                saveSensorInfoToLocalDB(sensorList.get(0), projectId);
             }
+                
             
             // 7. 获取传感器实时数据
             ApiResponse sensorDataResponse = ioTApiUtil.getSensorRealTimeData(deviceCode).block();
@@ -305,6 +324,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             log.debug("IoT传感器数据获取完成，地块ID: {}", plotId);
             
         } catch (Exception e) {
+
             log.error("获取IoT传感器数据异常，地块ID: {}, 错误: {}", plotId, e.getMessage(), e);
         }
     }

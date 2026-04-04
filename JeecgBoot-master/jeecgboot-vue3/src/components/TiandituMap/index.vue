@@ -337,8 +337,9 @@ const loadSensorData = async () => {
     console.log('获取传感器数据:', result);
     if (result ) {
       sensorData.value = result.map(device => ({
-        id: device.deviceCode,
-        name: device.deviceCode,
+        id: device.id,
+        name: device.deviceName,
+        status: device.state,
         longitude: parseFloat(device.lng),
         latitude: parseFloat(device.lat),
         type: device.deviceType || '未知设备'
@@ -602,196 +603,124 @@ const displaySensors = () => {
   
   // 根据设备类型获取对应的图标
   const getDeviceIcon = (deviceType: string) => {
-    // 定义不同设备类型的图标颜色
-    const iconColors = {
-      '虫情设备': '#FF6B6B',      // 红色
-      '孢子仪设备': '#4ECDC4',    // 青色
-      '杀虫灯设备': '#FFD93D',    // 黄色
-      '气象传感器': '#6BCF7F',     // 绿色
-      '土壤传感器': '#8B4513',     // 棕色
-      '水质传感器': '#4682B4',     // 蓝色
-      '光谱设备': '#9B59B6',      // 紫色
-      '视频设备': '#FF6347',      // 番茄红
-      '未知设备': '#95A5A6'       // 灰色
+    const s = 28;
+    const hs = s / 2;
+    const r = hs - 2;
+    const iconColors: Record<string, string> = {
+      '虫情测报设备': '#FF6B6B',
+      '孢子仪设备': '#4ECDC4',
+      '杀虫灯设备': '#FFD93D',
+      '气象传感器': '#6BCF7F',
+      '土壤传感器': '#8B4513',
+      '光谱设备': '#9B59B6',
+      '视频设备': '#FF6347',
+      '未知设备': '#95A5A6'
     };
-    
     const color = iconColors[deviceType] || iconColors['未知设备'];
-    
-    // 根据设备类型创建不同的SVG图标
+
+    const makeSvg = (inner: string) => `
+      <svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="${hs}" cy="${hs}" r="${r}" fill="${color}" stroke="#fff" stroke-width="1.5" opacity="0.92"/>
+        ${inner}
+      </svg>`;
+
+    const label = (text: string) => {
+      const ty = hs + r * 0.38;
+      return `
+        <text x="${hs}" y="${ty}" text-anchor="middle" fill="#fff" font-size="7" font-weight="700" font-family="sans-serif"
+          stroke="${color}" stroke-width="0.4" paint-order="stroke">${text}</text>`;
+    };
+
     let svgIcon = '';
-    
-    switch(deviceType) {
-      case '虫情设备':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <rect x="10" y="15" width="20" height="10" rx="5" fill="#FFFFFF"/>
-            <circle cx="15" cy="20" r="3" fill="${color}"/>
-            <circle cx="25" cy="20" r="3" fill="${color}"/>
-            <path d="M12 12 L20 7 L28 12" stroke="${color}" stroke-width="2" fill="none"/>
-            <path d="M17 23 L23 23" stroke="${color}" stroke-width="2"/>
-            <circle cx="20" cy="10" r="2" fill="${color}"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">虫情</text>
-          </svg>
-        `;
+    switch (deviceType) {
+      case '虫情测报设备':
+        svgIcon = makeSvg(`
+          <circle cx="${hs}" cy="${hs - 3}" r="4" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <circle cx="${hs - 2}" cy="${hs - 4}" r="1.2" fill="#fff"/>
+          <circle cx="${hs + 2}" cy="${hs - 2}" r="1.2" fill="#fff"/>
+          <line x1="${hs}" y1="${hs - 7}" x2="${hs}" y2="${hs - 9}" stroke="#fff" stroke-width="1.2"/>
+          <circle cx="${hs}" cy="${hs - 10}" r="1.5" fill="#fff"/>
+          ${label('虫情')}
+        `);
         break;
-        
       case '孢子仪设备':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <circle cx="20" cy="20" r="10" fill="#FFFFFF"/>
-            <circle cx="15" cy="15" r="4" fill="${color}"/>
-            <circle cx="25" cy="15" r="4" fill="${color}"/>
-            <circle cx="20" cy="25" r="4" fill="${color}"/>
-            <circle cx="20" cy="20" r="3" fill="${color}"/>
-            <path d="M15 15 L25 25 M25 15 L15 25" stroke="${color}" stroke-width="2"/>
-            <circle cx="12" cy="12" r="1.5" fill="${color}"/>
-            <circle cx="28" cy="12" r="1.5" fill="${color}"/>
-            <circle cx="12" cy="28" r="1.5" fill="${color}"/>
-            <circle cx="28" cy="28" r="1.5" fill="${color}"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">孢子</text>
-          </svg>
-        `;
+        svgIcon = makeSvg(`
+          <circle cx="${hs}" cy="${hs - 3}" r="5" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <circle cx="${hs}" cy="${hs - 3}" r="2" fill="#fff" opacity="0.5"/>
+          <circle cx="${hs - 3}" cy="${hs - 6}" r="1" fill="#fff"/>
+          <circle cx="${hs + 3}" cy="${hs - 4}" r="1" fill="#fff"/>
+          <circle cx="${hs - 2}" cy="${hs}" r="1" fill="#fff"/>
+          <circle cx="${hs + 2}" cy="${hs - 1}" r="1" fill="#fff"/>
+          ${label('孢子')}
+        `);
         break;
-        
       case '杀虫灯设备':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <rect x="15" y="7" width="10" height="5" fill="#FFFFFF"/>
-            <path d="M12 12 L28 12" stroke="#FFFFFF" stroke-width="3"/>
-            <rect x="13" y="12" width="14" height="12" fill="#FFFFFF"/>
-            <path d="M16 24 L24 24 L24 30 L16 30 Z" fill="#FFFFFF"/>
-            <circle cx="20" cy="18" r="4" fill="${color}"/>
-            <path d="M20 18 L20 23" stroke="#FFFFFF" stroke-width="2"/>
-            <path d="M17 18 L23 18" stroke="#FFFFFF" stroke-width="2"/>
-            <path d="M12 7 L20 3 L28 7" stroke="#FFFFFF" stroke-width="2"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">杀虫灯</text>
-          </svg>
-        `;
+        svgIcon = makeSvg(`
+          <path d="M${hs - 4} ${hs - 8} L${hs + 4} ${hs - 8}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="${hs - 3}" y="${hs - 8}" width="6" height="3" rx="1" fill="#fff" opacity="0.7"/>
+          <rect x="${hs - 4}" y="${hs - 5}" width="8" height="7" rx="1.5" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <circle cx="${hs}" cy="${hs - 1.5}" r="2.5" fill="#fff" opacity="0.5"/>
+          <line x1="${hs - 2}" y1="${hs - 1.5}" x2="${hs + 2}" y2="${hs - 1.5}" stroke="#fff" stroke-width="0.8"/>
+          <line x1="${hs}" y1="${hs - 3.5}" x2="${hs}" y2="${hs + 0.5}" stroke="#fff" stroke-width="0.8"/>
+          <line x1="${hs - 3}" y1="${hs + 2}" x2="${hs + 3}" y2="${hs + 2}" stroke="#fff" stroke-width="1.2"/>
+          ${label('杀虫灯')}
+        `);
         break;
-        
       case '气象传感器':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <path d="M20 10 L20 20" stroke="#FFFFFF" stroke-width="4"/>
-            <path d="M10 20 L30 20" stroke="#FFFFFF" stroke-width="4"/>
-            <path d="M13 13 L27 27" stroke="#FFFFFF" stroke-width="3"/>
-            <path d="M27 13 L13 27" stroke="#FFFFFF" stroke-width="3"/>
-            <circle cx="20" cy="20" r="4" fill="#FFFFFF"/>
-            <path d="M20 6 L23 3 L20 0 L17 3 Z" fill="#FFFFFF"/>
-            <path d="M34 20 L37 17 L40 20 L37 23 Z" fill="#FFFFFF"/>
-            <path d="M20 34 L17 37 L20 40 L23 37 Z" fill="#FFFFFF"/>
-            <path d="M6 20 L3 23 L0 20 L3 17 Z" fill="#FFFFFF"/>
-            <path d="M20 8 Q24 6 28 8" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-            <path d="M12 8 Q16 6 20 8" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">气象</text>
-          </svg>
-        `;
+        svgIcon = makeSvg(`
+          <circle cx="${hs}" cy="${hs - 4}" r="3" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <line x1="${hs}" y1="${hs - 7}" x2="${hs}" y2="${hs - 1}" stroke="#fff" stroke-width="1"/>
+          <line x1="${hs - 3}" y1="${hs - 4}" x2="${hs + 3}" y2="${hs - 4}" stroke="#fff" stroke-width="1"/>
+          <path d="M${hs - 5} ${hs - 7} Q${hs - 3} ${hs - 10} ${hs - 1} ${hs - 7}" fill="none" stroke="#fff" stroke-width="1"/>
+          <path d="M${hs - 3} ${hs - 9} Q${hs - 1} ${hs - 12} ${hs + 1} ${hs - 9}" fill="none" stroke="#fff" stroke-width="1"/>
+          ${label('气象')}
+        `);
         break;
-        
       case '土壤传感器':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <rect x="12" y="10" width="16" height="5" fill="#FFFFFF"/>
-            <rect x="14" y="15" width="12" height="3" fill="#FFFFFF"/>
-            <rect x="14" y="18" width="12" height="3" fill="#FFFFFF"/>
-            <rect x="14" y="21" width="12" height="3" fill="#FFFFFF"/>
-            <rect x="14" y="24" width="12" height="3" fill="#FFFFFF"/>
-            <path d="M17 27 L23 27 L23 32 L17 32 Z" fill="#FFFFFF"/>
-            <path d="M14 32 L26 32" stroke="#FFFFFF" stroke-width="3"/>
-            <path d="M11 35 L29 35" stroke="#FFFFFF" stroke-width="3"/>
-            <path d="M10 10 Q20 5 30 10" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">土壤</text>
-          </svg>
-        `;
+        svgIcon = makeSvg(`
+          <rect x="${hs - 4}" y="${hs - 8}" width="8" height="2" rx="0.5" fill="#fff" opacity="0.8"/>
+          <rect x="${hs - 3}" y="${hs - 5}" width="6" height="1.5" rx="0.5" fill="#fff" opacity="0.6"/>
+          <rect x="${hs - 3}" y="${hs - 3}" width="6" height="1.5" rx="0.5" fill="#fff" opacity="0.6"/>
+          <rect x="${hs - 3}" y="${hs - 1}" width="6" height="1.5" rx="0.5" fill="#fff" opacity="0.6"/>
+          <line x1="${hs - 2}" y1="${hs + 1}" x2="${hs + 2}" y2="${hs + 1}" stroke="#fff" stroke-width="1.2"/>
+          <line x1="${hs - 3}" y1="${hs + 3}" x2="${hs + 3}" y2="${hs + 3}" stroke="#fff" stroke-width="1.2"/>
+          ${label('土壤')}
+        `);
         break;
-        
-      case '水质传感器':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <path d="M12 22 Q20 10 28 22 Q20 34 12 22 Z" fill="#FFFFFF"/>
-            <circle cx="20" cy="22" r="3" fill="${color}"/>
-            <path d="M20 10 L20 12" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="3,3"/>
-            <path d="M14 12 Q20 8 26 12" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-            <path d="M12 15 Q20 11 28 15" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-            <circle cx="16" cy="18" r="1.5" fill="${color}"/>
-            <circle cx="24" cy="18" r="1.5" fill="${color}"/>
-            <circle cx="20" cy="26" r="1.5" fill="${color}"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">水质</text>
-          </svg>
-        `;
-        break;
-        
       case '光谱设备':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <rect x="10" y="12" width="20" height="12" fill="#FFFFFF"/>
-            <path d="M13 14 L13 22" stroke="${color}" stroke-width="3"/>
-            <path d="M17 14 L17 22" stroke="${color}" stroke-width="3"/>
-            <path d="M21 14 L21 22" stroke="${color}" stroke-width="3"/>
-            <path d="M25 14 L25 22" stroke="${color}" stroke-width="3"/>
-            <path d="M29 14 L29 22" stroke="${color}" stroke-width="3"/>
-            <path d="M10 10 L30 10" stroke="#FFFFFF" stroke-width="3"/>
-            <path d="M10 26 L30 26" stroke="#FFFFFF" stroke-width="3"/>
-            <path d="M20 12 L20 8" stroke="#FFFFFF" stroke-width="2"/>
-            <circle cx="20" cy="7" r="2" fill="${color}"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">光谱</text>
-          </svg>
-        `;
+        svgIcon = makeSvg(`
+          <rect x="${hs - 5}" y="${hs - 7}" width="10" height="8" rx="1.5" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <line x1="${hs - 3}" y1="${hs - 4}" x2="${hs - 3}" y2="${hs + 0}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="${hs - 1}" y1="${hs - 5}" x2="${hs - 1}" y2="${hs + 0}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="${hs + 1}" y1="${hs - 3}" x2="${hs + 1}" y2="${hs + 0}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="${hs + 3}" y1="${hs - 6}" x2="${hs + 3}" y2="${hs + 0}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="${hs}" cy="${hs - 9}" r="1.5" fill="#fff"/>
+          ${label('光谱')}
+        `);
         break;
-        
       case '视频设备':
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <rect x="10" y="12" width="15" height="10" fill="#FFFFFF"/>
-            <path d="M25 14 L33 8 L33 24 L25 18 Z" fill="#FFFFFF"/>
-            <circle cx="14" cy="17" r="3" fill="${color}"/>
-            <circle cx="14" cy="17" r="1.5" fill="#FFFFFF"/>
-            <path d="M18 14 L18 20" stroke="${color}" stroke-width="2"/>
-            <path d="M21 14 L21 20" stroke="${color}" stroke-width="2"/>
-            <path d="M10 10 Q20 5 30 10" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">视频</text>
-          </svg>
-        `;
+        svgIcon = makeSvg(`
+          <rect x="${hs - 5}" y="${hs - 6}" width="9" height="7" rx="1" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <path d="M${hs + 4} ${hs - 5} L${hs + 8} ${hs - 7.5} L${hs + 8} ${hs + 1.5} L${hs + 4} ${hs - 0.5} Z" fill="#fff" opacity="0.8"/>
+          <circle cx="${hs - 2}" cy="${hs - 2.5}" r="2" fill="none" stroke="#fff" stroke-width="0.8"/>
+          <circle cx="${hs - 2}" cy="${hs - 2.5}" r="0.8" fill="#fff"/>
+          ${label('视频')}
+        `);
         break;
-        
       default:
-        // 默认图标
-        svgIcon = `
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="#FFFFFF" stroke-width="3"/>
-            <circle cx="20" cy="20" r="10" fill="#FFFFFF"/>
-            <circle cx="20" cy="20" r="5" fill="${color}"/>
-            <path d="M20 10 Q25 5 30 10" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-            <rect x="10" y="28" width="20" height="8" rx="2" fill="#FFFFFF"/>
-            <text x="20" y="34" text-anchor="middle" fill="${color}" font-size="8" font-weight="bold">设备</text>
-          </svg>
-        `;
+        svgIcon = makeSvg(`
+          <circle cx="${hs}" cy="${hs - 3}" r="4" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <circle cx="${hs}" cy="${hs - 3}" r="1.5" fill="#fff"/>
+          ${label('设备')}
+        `);
         break;
     }
-    
-    // 转换为base64
+
     const base64Icon = btoa(unescape(encodeURIComponent(svgIcon)));
-    
     return new T.Icon({
       iconUrl: `data:image/svg+xml;base64,${base64Icon}`,
-      iconSize: new T.Point(40, 40),
-      iconAnchor: new T.Point(20, 20)
+      iconSize: new T.Point(s, s),
+      iconAnchor: new T.Point(hs, hs)
     });
   };
   
@@ -986,22 +915,12 @@ const showSensorInfo = (sensor, event) => {
     // 创建传感器信息弹窗内容
     const content = `
       <div style="padding: 10px; max-width: 280px;">
-        <p style="margin: 5px 0; font-size: 14px;"><strong>类型:</strong> ${sensor.type || '未知'}</p>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>类型:</strong> ${sensor.name || '未知'}</p>
         <p style="margin: 5px 0; font-size: 14px;"><strong>状态:</strong> 
-          <span style="color: ${sensor.status === 'online' ? '#52c41a' : '#ff4d4f'}; font-weight: bold;">
-            ${sensor.status === 'online' ? '在线' : '离线'}
+          <span style="color: ${sensor.status === 1 ? '#52c41a' : '#ff4d4f'}; font-weight: bold;">
+            ${sensor.status === 1 ? '在线' : '离线'}
           </span>
         </p>
-        <p style="margin: 5px 0; font-size: 14px;"><strong>最后更新:</strong> ${sensor.lastUpdate || '未知'}</p>
-        <p style="margin: 5px 0; font-size: 14px;"><strong>位置:</strong> ${sensor.longitude ? `${sensor.longitude.toFixed(6)}, ${sensor.latitude.toFixed(6)}` : '未知'}</p>
-        ${sensor.data ? `
-        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-          <p style="margin: 5px 0; font-size: 14px;"><strong>最新数据:</strong></p>
-          <p style="margin: 5px 0; font-size: 13px;">温度: ${sensor.data.temperature || 'N/A'}°C</p>
-          <p style="margin: 5px 0; font-size: 13px;">湿度: ${sensor.data.humidity || 'N/A'}%</p>
-          <p style="margin: 5px 0; font-size: 13px;">土壤湿度: ${sensor.data.soilMoisture || 'N/A'}%</p>
-        </div>
-        ` : ''}
       </div>
     `;
     

@@ -7,11 +7,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.modules.youcai.dto.UnifiedDeviceDto;
 import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
+import org.jeecg.modules.youcai.entity.YoucaiAgriculturalMachine;
+import org.jeecg.modules.youcai.entity.YoucaiBases;
+import org.jeecg.modules.youcai.entity.YoucaiProjectInfo;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import org.jeecg.modules.youcai.entity.iotEntity.sensor.SensorListRequest;
 import org.jeecg.modules.youcai.entity.iotEntity.sensor.SensorRealTimeData;
+import org.jeecg.modules.youcai.mapper.YoucaiBasesMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiSensorInfoMapper;
+import org.jeecg.modules.youcai.service.IYoucaiProjectInfoService;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +25,7 @@ import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,6 +45,12 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
     
     @Autowired
     private IoTApiUtil ioTApiUtil;
+
+    @Autowired
+    private YoucaiBasesMapper youcaiBasesMapper;
+
+    @Autowired
+    private IYoucaiProjectInfoService youcaiProjectInfoService;
     
     @Override
     public WeatherSensorDataDTO getWeatherSensorData(String baseId) {
@@ -122,81 +134,324 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
     public Result<List<UnifiedDeviceDto>> getAllDevices(String baseId) {
         List<UnifiedDeviceDto> result = new ArrayList<>();
 
-        //这里根据baseId查询项目ID
-        Integer projectId = 229;
+        YoucaiBases base = youcaiBasesMapper.selectById(baseId);
+        if (base == null || base.getBaseName() == null) {
+            log.warn("基地不存在或基地名称为空，baseId: {}", baseId);
+            return Result.OK(result);
+        }
+
+        String baseName = base.getBaseName();
+        String keyword = baseName.length() >= 2 ? baseName.substring(0, 2) : baseName;
+        log.info("基地名称: {}，匹配关键字: {}", baseName, keyword);
+
+        Integer projectId = getProjectId();
+        if (projectId == null) {
+            log.warn("获取项目ID失败");
+            return Result.OK(result);
+        }
+
+        ensureSensorDataForType(projectId, 1, "气象传感器");
+        ensureSensorDataForType(projectId, 2, "土壤传感器");
+        ensureDeviceDataForType(projectId, 3, "虫情测报设备");
+        ensureDeviceDataForType(projectId, 4, "孢子仪设备");
+        ensureDeviceDataForType(projectId, 5, "杀虫灯设备");
+        ensureSpectrumDeviceData(projectId);
+
+        QueryWrapper<YoucaiSensorInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.likeRight("sensor_name", keyword);
+        queryWrapper.eq("is_delete", 0);
+        List<YoucaiSensorInfo> sensorList = this.list(queryWrapper);
+
+        if (sensorList != null && !sensorList.isEmpty()) {
+            for (YoucaiSensorInfo sensor : sensorList) {
+                UnifiedDeviceDto dto = new UnifiedDeviceDto();
+                dto.setDeviceCode(sensor.getSensorSerial());
+                dto.setDeviceName(sensor.getSensorName());
+                dto.setLat(sensor.getLatitude());
+                dto.setLng(sensor.getLongitude());
+                dto.setState(sensor.getState());
+
+                Integer typeId = sensor.getSensorTypeId();
+                if (typeId != null) {
+                    switch (typeId) {
+                        case 1:
+                            dto.setDeviceType("气象传感器");
+                            break;
+                        case 2:
+                            dto.setDeviceType("土壤传感器");
+                            break;
+                        case 3:
+                            dto.setDeviceType("虫情测报设备");
+                            break;
+                        case 4:
+                            dto.setDeviceType("孢子仪设备");
+                            break;
+                        case 5:
+                            dto.setDeviceType("杀虫灯设备");
+                            break;
+                        case 6:
+                            dto.setDeviceType("光谱设备");
+                            break;
+                        default:
+                            dto.setDeviceType("未知设备");
+                            break;
+                    }
+                } else {
+                    dto.setDeviceType("未知设备");
+                }
+
+                result.add(dto);
+            }
+        }
 
         try {
-            // 1. 虫情设备 (eqType = 1)
-            ApiResponse pestResponse = ioTApiUtil.getDeviceList(projectId, 1).block();
-            if (pestResponse != null && pestResponse.getCode() == 1 && pestResponse.getData() != null) {
-                List<UnifiedDeviceDto> pestDevices = parseDeviceData(pestResponse.getData(), "虫情设备");
-                result.addAll(pestDevices);
-                log.info("获取到 {} 个虫情设备", pestDevices.size());
+            ApiResponse videoResponse = ioTApiUtil.getVideoDeviceList(projectId).block();
+            if (videoResponse != null && videoResponse.getCode() == 1 && videoResponse.getData() != null) {
+                JSONArray videoArray = convertToJsonArray(videoResponse.getData());
+                if (videoArray != null) {
+                    for (int i = 0; i < videoArray.size(); i++) {
+                        try {
+                            JSONObject item = videoArray.getJSONObject(i);
+                            String deviceName = item.getString("equipmentName");
+                            if (deviceName != null && deviceName.startsWith(keyword)) {
+                                UnifiedDeviceDto dto = new UnifiedDeviceDto();
+                                String deviceCode = item.getString("equipmentCode");
+                                dto.setDeviceCode(deviceCode);
+                                dto.setDeviceName(deviceName);
+                                dto.setLat(item.getString("lat"));
+                                dto.setLng(item.getString("lng"));
+                                dto.setState(item.getInteger("isOnline"));
+                                dto.setDeviceType("视频设备");
+                                result.add(dto);
+                            }
+                        } catch (Exception e) {
+                            log.error("解析视频设备第{}条数据失败: {}", i + 1, e.getMessage());
+                        }
+                    }
+                }
             }
-            
-            // 2. 孢子仪设备 (eqType = 2)
-            ApiResponse sporeResponse = ioTApiUtil.getDeviceList(projectId, 2).block();
-            if (sporeResponse != null && sporeResponse.getCode() == 1 && sporeResponse.getData() != null) {
-                List<UnifiedDeviceDto> sporeDevices = parseDeviceData(sporeResponse.getData(), "孢子仪设备");
-                result.addAll(sporeDevices);
-                log.info("获取到 {} 个孢子仪设备", sporeDevices.size());
-            }
-            
-            // 3. 杀虫灯设备 (eqType = 3)
-            ApiResponse lampResponse = ioTApiUtil.getDeviceList(projectId, 3).block();
-            if (lampResponse != null && lampResponse.getCode() == 1 && lampResponse.getData() != null) {
-                List<UnifiedDeviceDto> lampDevices = parseDeviceData(lampResponse.getData(), "杀虫灯设备");
-                result.addAll(lampDevices);
-                log.info("获取到 {} 个杀虫灯设备", lampDevices.size());
-            }
-            
-            // 4. 气象传感器 (sensorTypeId = 1)
-            SensorListRequest weatherRequest = new SensorListRequest();
-            weatherRequest.setProjectId(projectId);
-            weatherRequest.setSensorTypeId(1);
-            ApiResponse weatherResponse = ioTApiUtil.getSensorList(weatherRequest).block();
-            if (weatherResponse != null && weatherResponse.getCode() == 1 && weatherResponse.getData() != null) {
-                List<UnifiedDeviceDto> weatherDevices = parseDeviceData(weatherResponse.getData(), "气象传感器");
-                result.addAll(weatherDevices);
-                log.info("获取到 {} 个气象传感器", weatherDevices.size());
-            }
-            
-            // 5. 土壤传感器 (sensorTypeId = 2)
-            SensorListRequest soilRequest = new SensorListRequest();
-            soilRequest.setProjectId(projectId);
-            soilRequest.setSensorTypeId(2);
-            ApiResponse soilResponse = ioTApiUtil.getSensorList(soilRequest).block();
-            if (soilResponse != null && soilResponse.getCode() == 1 && soilResponse.getData() != null) {
-                List<UnifiedDeviceDto> soilDevices = parseDeviceData(soilResponse.getData(), "土壤传感器");
-                result.addAll(soilDevices);
-                log.info("获取到 {} 个土壤传感器", soilDevices.size());
-            }
-            
-            // 6. 水质传感器 (sensorTypeId = 4)
-            SensorListRequest waterRequest = new SensorListRequest();
-            waterRequest.setProjectId(projectId);
-            waterRequest.setSensorTypeId(4);
-            ApiResponse waterResponse = ioTApiUtil.getSensorList(waterRequest).block();
-            if (waterResponse != null && waterResponse.getCode() == 1 && waterResponse.getData() != null) {
-                List<UnifiedDeviceDto> waterDevices = parseDeviceData(waterResponse.getData(), "水质传感器");
-                result.addAll(waterDevices);
-                log.info("获取到 {} 个水质传感器", waterDevices.size());
-            }
-            
-            // 7. 光谱设备
-            ApiResponse spectrumResponse = ioTApiUtil.getSpectrumDeviceList(projectId).block();
-            if (spectrumResponse != null && spectrumResponse.getCode() == 1 && spectrumResponse.getData() != null) {
-                List<UnifiedDeviceDto> spectrumDevices = parseSpectrumDeviceData(spectrumResponse.getData());
-                result.addAll(spectrumDevices);
-                log.info("获取到 {} 个光谱设备", spectrumDevices.size());
-            }
-            
-            log.info("总共获取到 {} 个设备", result.size());
-            return Result.OK(result);
-            
         } catch (Exception e) {
-            log.error("获取设备列表失败", e);
-            return Result.error("获取设备列表失败：" + e.getMessage());
+            log.error("获取视频设备列表异常: {}", e.getMessage(), e);
+        }
+
+        log.info("基地 '{}' 共匹配到 {} 个设备", baseName, result.size());
+        return Result.OK(result);
+    }
+
+    private Integer getProjectId() {
+        QueryWrapper<YoucaiProjectInfo> query = new QueryWrapper<>();
+        query.eq("is_delete", 0).last("LIMIT 1");
+        YoucaiProjectInfo project = youcaiProjectInfoService.getOne(query);
+        return project != null ? project.getProjectId() : null;
+    }
+
+    private void ensureSensorDataForType(Integer projectId, int sensorTypeId, String typeName) {
+        QueryWrapper<YoucaiSensorInfo> query = new QueryWrapper<>();
+        query.eq("sensor_type_id", sensorTypeId).eq("is_delete", 0);
+        long count = this.count(query);
+        if (count > 0) {
+            log.info("{}本地已有 {} 条数据，跳过同步", typeName, count);
+            return;
+        }
+
+        log.info("{}本地无数据，开始从API同步", typeName);
+        try {
+            SensorListRequest request = new SensorListRequest();
+            request.setProjectId(projectId);
+            request.setSensorTypeId(sensorTypeId);
+           
+            
+            ApiResponse response = ioTApiUtil.getSensorList(request).block();
+
+            if (response == null || response.getCode() != 1 || response.getData() == null) {
+                log.warn("同步{}失败: {}", typeName, response != null ? response.getMsg() : "响应为空");
+                return;
+            }
+
+            JSONArray jsonArray = convertToJsonArray(response.getData());
+            if (jsonArray == null || jsonArray.isEmpty()) {
+                log.info("{}API无数据", typeName);
+                return;
+            }
+
+            int addCount = 0;
+            for (int j = 0; j < jsonArray.size(); j++) {
+                try {
+                    JSONObject item = jsonArray.getJSONObject(j);
+                    JSONObject q = item.getJSONObject("q");
+                    if (q == null) continue;
+
+                    YoucaiSensorInfo sensorInfo = new YoucaiSensorInfo();
+                    sensorInfo.setSensorId(q.getInteger("id"));
+                    sensorInfo.setSensorName(q.getString("sensorName"));
+                    sensorInfo.setSensorSerial(q.getString("sensorSerial"));
+                    sensorInfo.setSensorTypeId(sensorTypeId);
+                    sensorInfo.setSensorDataTypeIds(q.getString("sensorDataTypeIds"));
+                    sensorInfo.setSensorDataTypeNames(q.getString("sensorDataTypeNames"));
+                    sensorInfo.setNums(q.getInteger("nums"));
+                    sensorInfo.setTime(q.getInteger("time"));
+                    sensorInfo.setState(q.getInteger("state"));
+                    sensorInfo.setLongitude(q.getString("lng"));
+                    sensorInfo.setLatitude(q.getString("lat"));
+                    sensorInfo.setProtocolName(item.getString("traName"));
+                    sensorInfo.setIsDelete(q.getInteger("isDelete"));
+                    sensorInfo.setProjectId(projectId);
+                    sensorInfo.setSyncTime(LocalDateTime.now());
+
+                    this.save(sensorInfo);
+                    addCount++;
+                } catch (Exception e) {
+                    log.error("同步{}第{}条数据失败: {}", typeName, j + 1, e.getMessage());
+                }
+            }
+            log.info("同步{}完成，新增 {} 条", typeName, addCount);
+        } catch (Exception e) {
+            log.error("同步{}异常: {}", typeName, e.getMessage(), e);
+        }
+    }
+
+    private void ensureDeviceDataForType(Integer projectId, int eqType, String typeName) {
+        int sensorTypeId = eqType;
+        QueryWrapper<YoucaiSensorInfo> query = new QueryWrapper<>();
+        query.eq("sensor_type_id", sensorTypeId).eq("is_delete", 0);
+        long count = this.count(query);
+        if (count > 0) {
+            log.info("{}本地已有 {} 条数据，跳过同步", typeName, count);
+            return;
+        }
+
+        log.info("{}本地无数据，开始从API同步", typeName);
+        if (eqType == 3) {
+            sensorTypeId = 1;
+        }else if (eqType == 4) {
+            sensorTypeId = 2;
+        } else {
+            sensorTypeId = 3;
+        }
+        try {
+
+            ApiResponse response = ioTApiUtil.getDeviceList(projectId, sensorTypeId, 150).block();
+
+            if (response == null || response.getCode() != 1 || response.getData() == null) {
+                log.warn("同步{}失败: {}", typeName, response != null ? response.getMsg() : "响应为空");
+                return;
+            }
+
+            JSONArray jsonArray = convertToJsonArray(response.getData());
+            if (jsonArray == null || jsonArray.isEmpty()) {
+                log.info("{}API无数据", typeName);
+                return;
+            }
+
+            int addCount = 0;
+            for (int j = 0; j < jsonArray.size(); j++) {
+                try {
+                    JSONObject item = jsonArray.getJSONObject(j);
+                    String deviceCode = item.getString("deviceCode");
+                    if (deviceCode == null || deviceCode.isEmpty()) continue;
+
+                    YoucaiSensorInfo sensorInfo = new YoucaiSensorInfo();
+                    sensorInfo.setSensorId(item.getInteger("id"));
+                    sensorInfo.setSensorSerial(deviceCode);
+                    sensorInfo.setSensorName(item.getString("deviceName"));
+                    sensorInfo.setSensorTypeId(eqType);
+                    sensorInfo.setState(item.getInteger("isOnline"));
+                    sensorInfo.setLongitude(item.getString("lng"));
+                    sensorInfo.setLatitude(item.getString("lat"));
+                    sensorInfo.setProjectId(projectId);
+                    sensorInfo.setIsDelete(0);
+                    sensorInfo.setSyncTime(LocalDateTime.now());
+            
+
+                    this.save(sensorInfo);
+                    addCount++;
+                } catch (Exception e) {
+                    log.error("同步{}第{}条数据失败: {}", typeName, j + 1, e.getMessage());
+                }
+            }
+            log.info("同步{}完成，新增 {} 条", typeName, addCount);
+        } catch (Exception e) {
+            log.error("同步{}异常: {}", typeName, e.getMessage(), e);
+        }
+    }
+
+    private void ensureSpectrumDeviceData(Integer projectId) {
+        QueryWrapper<YoucaiSensorInfo> query = new QueryWrapper<>();
+        query.eq("sensor_type_id", 6).eq("is_delete", 0);
+        long count = this.count(query);
+        if (count > 0) {
+            log.info("光谱设备本地已有 {} 条数据，跳过同步", count);
+            return;
+        }
+
+        log.info("光谱设备本地无数据，开始从API同步");
+        try {
+            ApiResponse response = ioTApiUtil.getSpectrumDeviceList(projectId).block();
+
+            if (response == null || response.getCode() != 1 || response.getData() == null) {
+                log.warn("同步光谱设备失败: {}", response != null ? response.getMsg() : "响应为空");
+                return;
+            }
+
+            JSONArray jsonArray = convertToJsonArray(response.getData());
+            if (jsonArray == null || jsonArray.isEmpty()) {
+                log.info("光谱设备API无数据");
+                return;
+            }
+
+            int addCount = 0;
+            for (int j = 0; j < jsonArray.size(); j++) {
+                try {
+                    JSONObject item = jsonArray.getJSONObject(j);
+                    JSONObject q = item.getJSONObject("q");
+                    if (q == null) continue;
+
+                    String deviceCode = q.getString("sensorSerial");
+                    if (deviceCode == null || deviceCode.isEmpty()) continue;
+
+                    YoucaiSensorInfo sensorInfo = new YoucaiSensorInfo();
+                    sensorInfo.setSensorId(q.getInteger("id"));
+                    sensorInfo.setSensorDataTypeIds(q.getString("sensorDataTypeIds"));
+                    sensorInfo.setSensorDataTypeNames(q.getString("sensorDataTypeNames"));
+                    sensorInfo.setNums(q.getInteger("nums"));
+                    sensorInfo.setTime(q.getInteger("time"));
+                    sensorInfo.setState(q.getInteger("state"));
+                    sensorInfo.setSensorSerial(deviceCode);
+                    sensorInfo.setSensorName(q.getString("sensorName"));
+                    sensorInfo.setSensorTypeId(6);
+                    sensorInfo.setLongitude(q.getString("lng"));
+                    sensorInfo.setLatitude(q.getString("lat"));
+                    sensorInfo.setProjectId(projectId);
+                    sensorInfo.setIsDelete(0);
+                    sensorInfo.setSyncTime(LocalDateTime.now());
+
+                    this.save(sensorInfo);
+                    addCount++;
+                } catch (Exception e) {
+                    log.error("同步光谱设备第{}条数据失败: {}", j + 1, e.getMessage());
+                }
+            }
+            log.info("同步光谱设备完成，新增 {} 条", addCount);
+        } catch (Exception e) {
+            log.error("同步光谱设备异常: {}", e.getMessage(), e);
+        }
+    }
+
+    private JSONArray convertToJsonArray(Object data) {
+        if (data instanceof JSONArray) {
+            return (JSONArray) data;
+        } else if (data instanceof List) {
+            return new JSONArray((List<?>) data);
+        } else if (data instanceof String) {
+            return JSON.parseArray((String) data);
+        } else {
+            try {
+                String jsonString = JSON.toJSONString(data);
+                return JSON.parseArray(jsonString);
+            } catch (Exception e) {
+                log.error("转换JSON数组失败: {}", e.getMessage());
+                return null;
+            }
         }
     }
     
@@ -520,4 +775,67 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         
         return weatherData;
     }
+
+    @Override
+    public Result<List<Map<String, Object>>> getVideoDevicesByBaseId(String baseId) {
+        try {
+            log.info("获取基地ID {} 的视频设备列表", baseId);
+            
+            YoucaiBases base = youcaiBasesMapper.selectById(baseId);
+            if (base == null) {
+                log.warn("基地不存在: {}", baseId);
+                return Result.error("基地不存在");
+            }
+            
+            String baseName = base.getBaseName();
+            Integer projectId = 229;
+            ApiResponse response = ioTApiUtil.getVideoDeviceList(projectId).block();
+            
+            if (response == null || response.getCode() != 1 || response.getData() == null) {
+                log.warn("获取视频设备列表失败: {}", response != null ? response.getMsg() : "响应为空");
+                return Result.OK(new ArrayList<>());
+            }
+            
+            JSONArray jsonArray = convertToJsonArray(response.getData());
+            if (jsonArray == null || jsonArray.isEmpty()) {
+                log.info("视频设备API无数据");
+                return Result.OK(new ArrayList<>());
+            }
+            
+            List<Map<String, Object>> videoDevices = new ArrayList<>();
+
+            String keyword = baseName.length() >= 2 ? baseName.substring(0, 2) : baseName;
+            for (int i = 0; i < jsonArray.size(); i++) {
+                try {
+                    JSONObject item = jsonArray.getJSONObject(i);
+                    String equipmentName = item.getString("equipmentName");
+                    log.info("equipmentName: {}",equipmentName);
+                    if (equipmentName != null  && equipmentName.startsWith(keyword)) {
+                        Map<String, Object> device = new HashMap<>();
+                        device.put("id", item.getInteger("id"));
+                        device.put("equipmentName", equipmentName);
+                        device.put("equipmentCode", item.getString("equipmentCode"));
+                        device.put("channelNum", item.getString("channelNum"));
+                        device.put("lng", item.getString("lng"));
+                        device.put("lat", item.getString("lat"));
+                        device.put("isOnline", item.getInteger("isOnline"));
+                        device.put("videoUrl", item.getString("videoUrl"));
+                        device.put("imageUrl", item.getString("imageUrl"));
+                        videoDevices.add(device);
+                    }
+
+                } catch (Exception e) {
+                    log.error("解析视频设备第{}条数据失败: {}", i + 1, e.getMessage());
+                }
+            }
+            
+            log.info("基地 {} 共获取到 {} 个视频设备", baseName, videoDevices.size());
+            return Result.OK(videoDevices);
+        } catch (Exception e) {
+            log.error("获取视频设备列表异常", e);
+            return Result.error("获取视频设备列表异常：" + e.getMessage());
+        }
+    }
+
+
 }

@@ -7,6 +7,7 @@ import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @Description: 传感器信息表
@@ -40,4 +41,8 @@ public interface IYoucaiSensorInfoService extends IService<YoucaiSensorInfo> {
     List<WeatherSensorDataDTO> getSensorHistoryData(String sensorId, String startDate, String endDate);
 
     Result<List<UnifiedDeviceDto>> getAllDevices(String baseId);
+
+    Result<List<Map<String, Object>>> getVideoDevicesByBaseId(String baseId);
+
+
 }
