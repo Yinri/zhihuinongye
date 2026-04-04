@@ -45,11 +45,12 @@
   </div>
 </template>
 <script lang="ts">
-  import { defineComponent, reactive, ref } from 'vue';
+  import { defineComponent, reactive, ref, watch } from 'vue';
 
   import { BasicTable, useTable, TableAction } from '/@/components/Table';
   import { useModal } from '/@/components/Modal';
   import { useMessage } from '/@/hooks/web/useMessage';
+  import { useSelectStore } from '/@/store/selectStore';
 
   import { columns, searchFormSchema } from './fertilizerInfo.data';
   import FertilizerInfoModal from './FertilizerInfoModal.vue';
@@ -68,6 +69,7 @@
     setup() {
       const [registerModal, { openModal }] = useModal();
       const { createMessage } = useMessage();
+      const selectStore = useSelectStore();
       
       const searchInfo = reactive<Recordable>({});
       const selectedRowKeys = ref<string[]>([]);
@@ -98,6 +100,13 @@
           },
         },
       });
+
+      watch(
+        () => selectStore.selectedBase.baseId,
+        () => {
+          reload();
+        }
+      );
 
       function handleCreate() {
         openModal(true, {
