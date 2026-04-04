@@ -11,7 +11,7 @@
       <div class="map-wrapper">
         <TiandituMap
           :enableManagement="true"
-          :showSensors="true"
+          :showSensors="false"
         />
       </div>
     </a-card>

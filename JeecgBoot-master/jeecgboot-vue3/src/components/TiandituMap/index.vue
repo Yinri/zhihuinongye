@@ -76,7 +76,7 @@ import { Icon } from '/@/components/Icon';
 import PlotInfoModal from '../../views/rapeseed/plot-info/PlotInfoModal.vue';
 import { getPlotInfoList, savePlotInfo } from '../../views/rapeseed/plot-info/plotInfo.api';
 import { getBaseById } from '/@/views/rapeseed/production-plan/base-production-plan/base.api';
-import { getAllDevices } from '../../views/rapeseed/data-integration/dataIntegration.api';
+import { getAllDevices } from '../../views/rapeseed/work-area/workArea.api';
 import { useSelectStore } from '/@/store/selectStore';
 import { storeToRefs } from 'pinia';
 
@@ -2039,8 +2039,8 @@ onUnmounted(() => {
     position: absolute;
     top: 10px;
     right: 10px;
-    z-index: 5;
-    background: rgba(255, 255, 255, 0.8);
+    z-index: 999;
+    background: rgba(255, 255, 255, 0.9);
     padding: 8px;
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
