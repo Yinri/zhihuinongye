@@ -24,7 +24,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 //zrt 灌溉监控控制器
 @Tag(name="智慧灌溉(Penman)")
 @RestController
-@RequestMapping("/rapeseed/irrigation")
+@RequestMapping("/youcai/irrigation")
 @Slf4j
 public class RapeseedIrrigationController {
     @Autowired

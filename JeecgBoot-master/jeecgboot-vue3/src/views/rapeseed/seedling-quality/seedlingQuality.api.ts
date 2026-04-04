@@ -4,21 +4,21 @@ import { AxiosRequestConfig } from 'axios';
 // 枚举API地址
 enum Api {
   // 列表
-  List = '/rapeseed/seedlingQuality/list',
+  List = '/youcai/seedlingQuality/list',
   // 保存
-  Save = '/rapeseed/seedlingQuality/save',
+  Save = '/youcai/seedlingQuality/save',
   // 编辑
-  Edit = '/rapeseed/seedlingQuality/edit',
+  Edit = '/youcai/seedlingQuality/edit',
   // 删除
-  Delete = '/rapeseed/seedlingQuality/delete',
+  Delete = '/youcai/seedlingQuality/delete',
   // 批量删除
-  BatchDelete = '/rapeseed/seedlingQuality/batchDelete',
+  BatchDelete = '/youcai/seedlingQuality/batchDelete',
   // 详情
-  Detail = '/rapeseed/seedlingQuality/queryById',
+  Detail = '/youcai/seedlingQuality/queryById',
   // 导出
-  Export = '/rapeseed/seedlingQuality/export',
+  Export = '/youcai/seedlingQuality/export',
   // 导入
-  Import = '/rapeseed/seedlingQuality/importExcel',
+  Import = '/youcai/seedlingQuality/importExcel',
 }
 
 // 获取油菜苗素质列表

@@ -4,18 +4,18 @@ import { AxiosRequestConfig } from 'axios';
 
 // 枚举API地址
 enum Api {
-  List = '/rapeseed/irrigation/list',
-  Save = '/rapeseed/irrigation/save',
-  Edit = '/rapeseed/irrigation/edit',
-  Delete = '/rapeseed/irrigation/delete',
-  BatchDelete = '/rapeseed/irrigation/batchDelete',
-  Detail = '/rapeseed/irrigation/queryById',
-  Export = '/rapeseed/irrigation/export',
-  Import = '/rapeseed/irrigation/importExcel',
-  PlotStatus = '/rapeseed/irrigation/plotStatus',
-  PlotStatusByBase = '/rapeseed/irrigation/plotStatusByBase',
-  PenmanPredict = '/rapeseed/irrigation/penmanPredict',
-  InterventionComparison = '/rapeseed/irrigation/interventionComparison',
+  List = '/youcai/irrigation/list',
+  Save = '/youcai/irrigation/save',
+  Edit = '/youcai/irrigation/edit',
+  Delete = '/youcai/irrigation/delete',
+  BatchDelete = '/youcai/irrigation/batchDelete',
+  Detail = '/youcai/irrigation/queryById',
+  Export = '/youcai/irrigation/export',
+  Import = '/youcai/irrigation/importExcel',
+  PlotStatus = '/youcai/irrigation/plotStatus',
+  PlotStatusByBase = '/youcai/irrigation/plotStatusByBase',
+  PenmanPredict = '/youcai/irrigation/penmanPredict',
+  InterventionComparison = '/youcai/irrigation/interventionComparison',
   FarmingAdd = '/youcai/farmingRecords/add',
 }
 
@@ -40,7 +40,7 @@ export const saveFarmingRecord = (params: any) => {
 
 export const saveIrrigationDirect = (params: any) => {
   const { domainUrl } = useGlobSetting();
-  return defHttp.post({ url: `${domainUrl}/rapeseed/irrigation/save`, data: params });
+  return defHttp.post({ url: `${domainUrl}/youcai/irrigation/save`, data: params });
 };
 
 // 删除智慧灌溉

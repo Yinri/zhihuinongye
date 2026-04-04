@@ -4,23 +4,23 @@ import { AxiosRequestConfig } from 'axios';
 // 生产计划管理API接口
 enum Api {
   // 获取生产计划列表
-  ProductionPlanList = '/rapeseed/productionPlan/list',
+  ProductionPlanList = '/youcai/productionPlan/list',
   // 保存生产计划
-  ProductionPlanSave = '/rapeseed/productionPlan/add',
+  ProductionPlanSave = '/youcai/productionPlan/add',
   // 编辑生产计划
-  ProductionPlanEdit = '/rapeseed/productionPlan/edit',
+  ProductionPlanEdit = '/youcai/productionPlan/edit',
   // 删除生产计划
-  ProductionPlanDelete = '/rapeseed/productionPlan/delete',
+  ProductionPlanDelete = '/youcai/productionPlan/delete',
   // 批量删除生产计划
-  ProductionPlanDeleteBatch = '/rapeseed/productionPlan/deleteBatch',
+  ProductionPlanDeleteBatch = '/youcai/productionPlan/deleteBatch',
   // 根据ID获取生产计划详情
-  ProductionPlanGetById = '/rapeseed/productionPlan/queryById',
+  ProductionPlanGetById = '/youcai/productionPlan/queryById',
   // 导出生产计划
-  ProductionPlanExportXls = '/rapeseed/productionPlan/exportXls',
+  ProductionPlanExportXls = '/youcai/productionPlan/exportXls',
   // 导入生产计划
-  ProductionPlanImportExcel = '/rapeseed/productionPlan/importExcel',
+  ProductionPlanImportExcel = '/youcai/productionPlan/importExcel',
   // 根据基地ID获取生产计划列表
-  ProductionPlanGetByBaseId = '/rapeseed/productionPlan/listByBaseId',
+  ProductionPlanGetByBaseId = '/youcai/productionPlan/listByBaseId',
 }
 
 // 获取生产计划列表

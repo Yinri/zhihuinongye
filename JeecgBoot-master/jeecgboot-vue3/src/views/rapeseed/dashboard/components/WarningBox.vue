@@ -119,7 +119,6 @@ const loadWarnings = async () => {
     warningList.value = pendingData || [];
   } catch (error) {
     console.error('加载预警失败:', error);
-    message.error('加载预警信息失败');
   } finally {
     loading.value = false;
   }
@@ -159,7 +158,6 @@ const handleWarning = async (item: FarmingWarning, action: string) => {
     }
   } catch (error) {
     console.error('处理预警失败:', error);
-    message.error('操作失败');
   }
 };
 
@@ -187,7 +185,6 @@ const goToDetail = async (item: FarmingWarning) => {
     }
   } catch (error) {
     console.error('更新预警状态失败:', error);
-    message.error('操作失败，请重试');
   }
 };
 

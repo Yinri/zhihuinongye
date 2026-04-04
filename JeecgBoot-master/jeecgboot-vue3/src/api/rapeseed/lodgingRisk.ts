@@ -134,21 +134,21 @@ export interface BatchLodgingRiskAssessmentResponse {
 // 获取基地列表
 export const getBaseList = () => {
   return defHttp.get<BaseInfo[]>({
-    url: '/rapeseed/base/list',
+    url: '/youcai/base/list',
   });
 };
 
 // 获取地块列表
 export const getPlotList = (baseId: string) => {
   return defHttp.get<PlotInfo[]>({
-    url: `/rapeseed/plot/list/${baseId}`,
+    url: `/youcai/plot/list/${baseId}`,
   });
 };
 
 // 获取风险因子数据
 export const getRiskFactors = (params: { baseId: string; plotId?: string; timeRange?: [string, string] }) => {
   return defHttp.get<RiskFactor[]>({
-    url: '/rapeseed/risk/factors',
+    url: '/youcai/risk/factors',
     params,
   });
 };
@@ -181,7 +181,7 @@ export const getWarningRecordList = (params: BasePageParams & {
   status?: string;
 }) => {
   return defHttp.get<BaseListResponse<WarningRecord>>({
-    url: '/rapeseed/warning/record/list',
+    url: '/youcai/warning/record/list',
     params,
   });
 };
@@ -193,7 +193,7 @@ export const getHistoryEvents = (params: {
   timeRange?: [string, string] 
 }) => {
   return defHttp.get<HistoryEvent[]>({
-    url: '/rapeseed/history/events',
+    url: '/youcai/history/events',
     params,
   });
 };
@@ -207,7 +207,7 @@ export const getPreventionMeasures = (params: {
     emergency: PreventionMeasure[];
     management: PreventionMeasure[];
   }>({
-    url: '/rapeseed/prevention/measures',
+    url: '/youcai/prevention/measures',
     params,
   });
 };
@@ -220,7 +220,7 @@ export const getFactorTrendData = (params: {
   timeRange?: [string, string];
 }) => {
   return defHttp.get<FactorTrendData[]>({
-    url: '/rapeseed/factor/trend',
+    url: '/youcai/factor/trend',
     params,
   });
 };
@@ -228,7 +228,7 @@ export const getFactorTrendData = (params: {
 // 创建预警记录
 export const createWarningRecord = (data: Omit<WarningRecord, 'id' | 'createTime' | 'updateTime'>) => {
   return defHttp.post<WarningRecord>({
-    url: '/rapeseed/warning/record/create',
+    url: '/youcai/warning/record/create',
     data,
   });
 };
@@ -236,7 +236,7 @@ export const createWarningRecord = (data: Omit<WarningRecord, 'id' | 'createTime
 // 更新预警记录
 export const updateWarningRecord = (id: string, data: Partial<WarningRecord>) => {
   return defHttp.put<WarningRecord>({
-    url: `/rapeseed/warning/record/update/${id}`,
+    url: `/youcai/warning/record/update/${id}`,
     data,
   });
 };
@@ -244,7 +244,7 @@ export const updateWarningRecord = (id: string, data: Partial<WarningRecord>) =>
 // 删除预警记录
 export const deleteWarningRecord = (id: string) => {
   return defHttp.delete<boolean>({
-    url: `/rapeseed/warning/record/delete/${id}`,
+    url: `/youcai/warning/record/delete/${id}`,
   });
 };
 

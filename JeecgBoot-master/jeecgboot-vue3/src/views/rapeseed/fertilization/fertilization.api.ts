@@ -1,9 +1,9 @@
 import { defHttp } from '/@/utils/http/axios';
 
 enum Api {
-  PlotStatusByBase = '/rapeseed/fertilization/plotStatusByBase',
-  BaseSoilSeries = '/rapeseed/fertilization/baseSoilSeries',
-  BaseRecommend = '/rapeseed/fertilization/baseRecommend',
+  PlotStatusByBase = '/youcai/fertilization/plotStatusByBase',
+  BaseSoilSeries = '/youcai/fertilization/baseSoilSeries',
+  BaseRecommend = '/youcai/fertilization/baseRecommend',
 }
 
 export const getPlotStatusByBase = (baseId: string | number) => {

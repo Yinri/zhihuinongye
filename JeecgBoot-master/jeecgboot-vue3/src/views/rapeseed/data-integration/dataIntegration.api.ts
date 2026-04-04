@@ -2,14 +2,14 @@ import { defHttp } from '/@/utils/http/axios';
 import { AxiosRequestConfig } from 'axios';
 
 enum Api {
-  GetDataIntegrationList = '/rapeseed/data-integration/list',
-  SaveDataIntegration = '/rapeseed/data-integration/save',
-  EditDataIntegration = '/rapeseed/data-integration/edit',
-  DeleteDataIntegration = '/rapeseed/data-integration/delete',
-  DeleteBatch = '/rapeseed/data-integration/deleteBatch',
-  GetDataIntegrationById = '/rapeseed/data-integration/queryById',
-  ExportDataIntegration = '/rapeseed/data-integration/export',
-  ImportDataIntegration = '/rapeseed/data-integration/import',
+  GetDataIntegrationList = '/youcai/data-integration/list',
+  SaveDataIntegration = '/youcai/data-integration/save',
+  EditDataIntegration = '/youcai/data-integration/edit',
+  DeleteDataIntegration = '/youcai/data-integration/delete',
+  DeleteBatch = '/youcai/data-integration/deleteBatch',
+  GetDataIntegrationById = '/youcai/data-integration/queryById',
+  ExportDataIntegration = '/youcai/data-integration/export',
+  ImportDataIntegration = '/youcai/data-integration/import',
   GetDeviceStatus = '/youcai/sensorInfo/deviceStatus',
   GetAllDevices = '/youcai/sensorInfo/getAllDevices',
 }

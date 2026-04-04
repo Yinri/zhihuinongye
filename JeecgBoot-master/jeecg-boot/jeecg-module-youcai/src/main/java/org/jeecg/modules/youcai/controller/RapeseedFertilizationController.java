@@ -12,7 +12,7 @@ import java.util.Map;
 
 @Tag(name="智慧施肥(基地切换)")
 @RestController
-@RequestMapping("/rapeseed/fertilization")
+@RequestMapping("/youcai/fertilization")
 @Slf4j
 public class RapeseedFertilizationController {
 
