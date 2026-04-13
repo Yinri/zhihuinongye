@@ -271,7 +271,7 @@ import { defHttp } from '/@/utils/http/axios';
 // ---------------- 核心修改：替换为真实数据库接口 ----------------
 // 导入真实的基地/地块接口（与下方验证过的接口一致）
 import { useSelectStore } from '/@/store/selectStore';
-import { getBaseList, getPlotsByBaseId, getPlotById } from '/@/views/rapeseed/production-plan/plot-production-plan/base.api';
+import { getBaseList, getPlotsByBaseId, getPlotById } from '/@/views/rapeseed/production-plan/center/base.api';
 
 // 定义与数据库表结构一致的类型
 interface BaseItem {
