@@ -75,7 +75,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { Icon } from '/@/components/Icon';
 import PlotInfoModal from '../../views/rapeseed/plot-info/PlotInfoModal.vue';
 import { getPlotInfoList, savePlotInfo } from '../../views/rapeseed/plot-info/plotInfo.api';
-import { getBaseById } from '/@/views/rapeseed/production-plan/base-production-plan/base.api';
+import { getBaseById } from '/@/views/rapeseed/production-plan/center/base.api';
 import { getAllDevices } from '../../views/rapeseed/work-area/workArea.api';
 import { useSelectStore } from '/@/store/selectStore';
 import { storeToRefs } from 'pinia';

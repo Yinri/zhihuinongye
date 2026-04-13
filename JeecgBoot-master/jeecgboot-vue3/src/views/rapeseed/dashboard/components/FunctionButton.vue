@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useSelectStore } from '/@/store/selectStore'; // 全局状态
 // 导入基地/地块查询接口（根据实际API路径调整）
-import { getBaseById } from '/src/views/rapeseed/production-plan/plot-production-plan/base.api';
+import { getBaseById } from '/src/views/rapeseed/production-plan/center/base.api';
 // 导入天地图组件
 import TiandituMap from '/@/components/TiandituMap/index.vue';
 

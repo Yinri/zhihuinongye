@@ -61,15 +61,14 @@
 <script setup lang="ts">
 import {ref, reactive, onMounted, watch, computed} from 'vue';
 import { useSelectStore } from '../../../../store/selectStore';
-import {getBaseList, getPlotsByBaseId,getPlotById} from '../../../../views/rapeseed/production-plan/plot-production-plan/base.api';
+import {getBaseList, getPlotsByBaseId,getPlotById} from '../../../../views/rapeseed/production-plan/center/base.api';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
 
 const hideGrowthStage = computed(() => {
   const currentPath = route.path;
-  return currentPath.includes('/rapeseed/production-plan/plot-production-plan') ||
-         currentPath.includes('/rapeseed/production-plan/base-production-plan');
+  return currentPath.includes('/rapeseed/production-plan/center');
 });
 
 const hidePlotDropdown = computed(() => {
