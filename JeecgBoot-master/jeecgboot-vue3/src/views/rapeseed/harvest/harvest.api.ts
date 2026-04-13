@@ -15,7 +15,7 @@ enum Api {
   GetYieldChart = '/youcai/harvest/yieldChart',
   GetPlotSummary = '/youcai/harvest/plotSummary',
   MachineList = '/youcai/sensorInfo/machine/list',
-  OperationRecords = '/youcai/sensorInfo/records',
+  OperationRecords = '/youcai/sensorInfo/records', 
 }
 
 export const getHarvestList = (params?: any) => {

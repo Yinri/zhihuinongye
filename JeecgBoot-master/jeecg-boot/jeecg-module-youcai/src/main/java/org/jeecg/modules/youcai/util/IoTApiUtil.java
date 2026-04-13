@@ -237,7 +237,7 @@ public class IoTApiUtil {
                 webClient.post()
                         .uri(BASE_URL + "/SensorData/GetVideoStrem")
                         .header("Authorization", "Bearer " + token)
-                        .body(BodyInserters.fromValue(java.util.Map.of("DeviceCode", DeviceCode, "ChannelNum", ChannelNum)))
+                        .body(BodyInserters.fromValue(java.util.Map.of("DeviceCode", DeviceCode, "ChannelNum", ChannelNum,"protocol","https_flv")))
                         .retrieve()
                         .bodyToMono(ApiResponse.class)
         );

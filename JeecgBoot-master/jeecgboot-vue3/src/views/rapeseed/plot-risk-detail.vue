@@ -313,8 +313,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { 
   ArrowLeftOutlined, 
   ExclamationCircleOutlined, 
-  BarChartOutlined, 
-  CloudOutlined, 
+  CloudOutlined,
   BulbOutlined,
   InfoCircleOutlined,
   FormOutlined,
