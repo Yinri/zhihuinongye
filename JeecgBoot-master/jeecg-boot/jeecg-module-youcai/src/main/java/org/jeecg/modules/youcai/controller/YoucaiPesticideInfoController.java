@@ -173,5 +173,21 @@ public class YoucaiPesticideInfoController extends JeecgController<YoucaiPestici
          }
      }
 
+     /**
+      * 查询所有农药信息数据
+      * @return 全部农药信息列表
+      */
+     @Operation(summary="农药信息表-查询所有数据")
+     @GetMapping(value = "/queryAll")
+     public Result<List<YoucaiPesticideInfo>> queryAll() {
+         QueryWrapper<YoucaiPesticideInfo> queryWrapper = new QueryWrapper<>();
+         queryWrapper.orderByDesc("update_time");
+         List<YoucaiPesticideInfo> list = youcaiPesticideInfoService.list(queryWrapper);
+         if(list.isEmpty()) {
+             return Result.error("暂无农药信息数据");
+         }
+         return Result.OK(list);
+     }
+
 
  }

@@ -113,7 +113,7 @@ public class YoucaiProductionPlansController extends JeecgController<YoucaiProdu
 	 */
 	@AutoLog(value = "生产计划表-编辑")
 	@Operation(summary="生产计划表-编辑")
-	@RequiresPermissions("youcai:youcai_production_plans:edit")
+	//@RequiresPermissions("youcai:youcai_production_plans:edit")
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<String> edit(@RequestBody YoucaiProductionPlans youcaiProductionPlans) {
 		youcaiProductionPlansService.updateById(youcaiProductionPlans);

@@ -146,75 +146,255 @@
       </a-col>
     </a-row>
 
-    <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="900">
-      <div style="padding:16px" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
-        <!-- 报告头部 -->
-        <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #1890ff;padding-bottom:16px">
-          <h2 style="color:#1890ff;margin:0">智慧灌溉分析报告</h2>
-          <p style="color:#666;margin:8px 0 0">生成时间：{{ new Date().toLocaleString() }}</p>
+    <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="900" class="irrigation-report-modal">
+      <div class="report-container" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
+        <div class="report-header">
+          <div class="report-icon"><Icon icon="ant-design:property-safety-outlined" /></div>
+          <h2 class="report-title">智慧灌溉分析报告</h2>
+          <div class="report-meta">
+            <div class="meta-item">
+              <span class="meta-label">基地名称</span>
+              <span class="meta-value">{{ selectStore.selectedBase.baseName || '-' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">数据来源</span>
+              <span class="meta-value">物联网实时传感器</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">生成时间</span>
+              <span class="meta-value">{{ new Date().toLocaleString() }}</span>
+            </div>
+          </div>
         </div>
-        
-        <!-- 基本信息 -->
-        <a-divider orientation="left">基本信息</a-divider>
-        <a-descriptions :column="2" bordered size="small">
-          <a-descriptions-item label="基地名称">{{ selectStore.selectedBase.baseName || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="地块名称">{{ selectedPlotName || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="当前土壤含水率">{{ soilMoisturePercent }}%</a-descriptions-item>
-          <a-descriptions-item label="数据更新时间">{{ lastUpdatedText }}</a-descriptions-item>
-        </a-descriptions>
-        
-        <!-- 土壤分层数据 -->
-        <a-divider orientation="left">土壤分层监测数据</a-divider>
-        <a-row :gutter="16">
-          <a-col :span="8">
-            <div style="background:linear-gradient(135deg,#8B5A2B,#A0522D);color:#fff;padding:12px;border-radius:8px;text-align:center">
-              <div style="font-weight:bold;margin-bottom:8px">上层 (浅层)</div>
-              <div>温度：{{ soilTemp1 || '-' }}℃</div>
-              <div>湿度：{{ soilMoisture1 || '-' }}%</div>
+
+        <a-divider class="report-divider" />
+
+        <div class="report-section">
+          <div class="section-header">
+            <Icon icon="ant-design:database-outlined" />
+            <h4>一、土壤环境监测</h4>
+          </div>
+          <div class="section-content">
+            <a-row :gutter="16" class="overview-row">
+              <a-col :span="24">
+                <div class="overview-summary water">
+                  <div class="summary-item">
+                    <div class="summary-icon">
+                      <Icon icon="ant-design:water-outlined" />
+                    </div>
+                    <div class="summary-info">
+                      <div class="summary-label">当前土壤含水率</div>
+                      <div class="summary-value">
+                        <span class="value-big">{{ soilMoisturePercent || '-' }}</span>
+                        <span class="value-unit">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </a-col>
+            </a-row>
+
+            <a-row :gutter="16" style="margin-top: 16px;">
+              <a-col :span="24">
+                <div class="percent-card">
+                  <div class="percent-card-title">土壤分层监测数据</div>
+                  <a-row :gutter="12" class="layer-grid">
+                    <a-col :span="8">
+                      <div class="layer-card upper">
+                        <div class="layer-icon"><Icon icon="ant-design:sunrise-outlined" /></div>
+                        <div class="layer-name">上层 (浅层)</div>
+                        <div class="layer-data-grid">
+                          <div class="layer-data-item">
+                            <span class="layer-data-label">温度</span>
+                            <span class="layer-data-value">{{ soilTemp1 || '-' }}<span class="unit">℃</span></span>
+                          </div>
+                          <div class="layer-data-item">
+                            <span class="layer-data-label">湿度</span>
+                            <span class="layer-data-value">{{ soilMoisture1 || '-' }}<span class="unit">%</span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </a-col>
+                    <a-col :span="8">
+                      <div class="layer-card middle">
+                        <div class="layer-icon"><Icon icon="ant-design:cluster-outlined" /></div>
+                        <div class="layer-name">中层</div>
+                        <div class="layer-data-grid">
+                          <div class="layer-data-item">
+                            <span class="layer-data-label">温度</span>
+                            <span class="layer-data-value">{{ soilTemp2 || '-' }}<span class="unit">℃</span></span>
+                          </div>
+                          <div class="layer-data-item">
+                            <span class="layer-data-label">湿度</span>
+                            <span class="layer-data-value">{{ soilMoisture2 || '-' }}<span class="unit">%</span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </a-col>
+                    <a-col :span="8">
+                      <div class="layer-card deep">
+                        <div class="layer-icon"><Icon icon="ant-design:environment-outlined" /></div>
+                        <div class="layer-name">深层</div>
+                        <div class="layer-data-grid">
+                          <div class="layer-data-item">
+                            <span class="layer-data-label">温度</span>
+                            <span class="layer-data-value">{{ soilTemp3 || '-' }}<span class="unit">℃</span></span>
+                          </div>
+                          <div class="layer-data-item">
+                            <span class="layer-data-label">湿度</span>
+                            <span class="layer-data-value">{{ soilMoisture3 || '-' }}<span class="unit">%</span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </a-col>
+                  </a-row>
+                </div>
+              </a-col>
+            </a-row>
+          </div>
+        </div>
+
+        <a-divider class="report-divider" />
+
+        <div class="report-section">
+          <div class="section-header">
+            <Icon icon="ant-design:cloud-outlined" />
+            <h4>二、气象环境数据</h4>
+          </div>
+          <div class="section-content">
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <div class="weather-card">
+                  <div class="weather-icon"><Icon icon="ant-design:thermometer-outlined" /></div>
+                  <div class="weather-info">
+                    <div class="weather-label">空气温度</div>
+                    <div class="weather-value">{{ penmanInputs.temp?.[0] || '-' }}<span class="unit">℃</span></div>
+                  </div>
+                </div>
+              </a-col>
+              <a-col :span="12">
+                <div class="weather-card">
+                  <div class="weather-icon humidity"><Icon icon="ant-design:humidity-outlined" /></div>
+                  <div class="weather-info">
+                    <div class="weather-label">空气湿度</div>
+                    <div class="weather-value">{{ penmanInputs.humidity?.[0] || '-' }}<span class="unit">%</span></div>
+                  </div>
+                </div>
+              </a-col>
+            </a-row>
+          </div>
+        </div>
+
+        <a-divider class="report-divider" />
+
+        <div class="report-section">
+          <div class="section-header">
+            <Icon icon="ant-design:experiment-outlined" />
+            <h4>三、灌溉建议</h4>
+          </div>
+          <div class="section-content">
+            <div class="recommend-header">
+              <Tag :color="penmanSuggestion.needIrrigation ? 'warning' : 'success'" class="need-fertilizer-tag large">
+                <Icon :icon="penmanSuggestion.needIrrigation ? 'ant-design:warning-outlined' : 'ant-design:check-circle-outlined'" />
+                {{ penmanSuggestion.needIrrigation ? '需要灌溉' : '暂不需要灌溉' }}
+              </Tag>
+              <span class="recommend-subtitle" v-if="penmanSuggestion.needIrrigation">根据当前土壤水分状况，建议及时灌溉</span>
+              <span class="recommend-subtitle success" v-else>当前土壤水分充足，状况良好</span>
             </div>
-          </a-col>
-          <a-col :span="8">
-            <div style="background:linear-gradient(135deg,#6B4423,#8B4513);color:#fff;padding:12px;border-radius:8px;text-align:center">
-              <div style="font-weight:bold;margin-bottom:8px">中层</div>
-              <div>温度：{{ soilTemp2 || '-' }}℃</div>
-              <div>湿度：{{ soilMoisture2 || '-' }}%</div>
+
+            <a-row :gutter="16" class="recommend-info-row">
+              <a-col :span="8">
+                <div class="info-card">
+                  <div class="info-card-icon water"><Icon icon="ant-design:calendar-outlined" /></div>
+                  <div class="info-card-content">
+                    <div class="info-card-label">建议灌溉时间</div>
+                    <div class="info-card-value">{{ penmanSuggestion.recommendedTime || '暂无' }}</div>
+                  </div>
+                </div>
+              </a-col>
+              <a-col :span="8">
+                <div class="info-card">
+                  <div class="info-card-icon water"><Icon icon="ant-design:tool-outlined" /></div>
+                  <div class="info-card-content">
+                    <div class="info-card-label">推荐灌溉方式</div>
+                    <div class="info-card-value">{{ penmanSuggestion.method || '暂无' }}</div>
+                  </div>
+                </div>
+              </a-col>
+              <a-col :span="8">
+                <div class="info-card">
+                  <div class="info-card-icon water"><Icon icon="ant-design:drop-outlined" /></div>
+                  <div class="info-card-content">
+                    <div class="info-card-label">推荐灌水量</div>
+                    <div class="info-card-value">
+                      {{ recommendedVolumeMm > 0 ? recommendedVolumeMm + ' mm' : '暂无' }}
+                    </div>
+                  </div>
+                </div>
+              </a-col>
+            </a-row>
+
+            <a-row :gutter="16" class="recommend-info-row" v-if="recommendedVolumeMm > 0">
+              <a-col :span="24">
+                <div class="volume-card">
+                  <div class="volume-icon"><Icon icon="ant-design:bank-outlined" /></div>
+                  <div class="volume-info">
+                    <div class="volume-label">折合面积用水量</div>
+                    <div class="volume-value">{{ mmToM3PerMu(recommendedVolumeMm) }} <span class="volume-unit">m³/亩</span></div>
+                  </div>
+                </div>
+              </a-col>
+            </a-row>
+
+            <div class="reason-box" v-if="penmanSuggestion.reason">
+              <div class="reason-header">
+                <Icon icon="ant-design:bulb-outlined" />
+                <span>分析建议</span>
+              </div>
+              <p class="reason-content">{{ penmanSuggestion.reason }}</p>
             </div>
-          </a-col>
-          <a-col :span="8">
-            <div style="background:linear-gradient(135deg,#4A3520,#5D4037);color:#fff;padding:12px;border-radius:8px;text-align:center">
-              <div style="font-weight:bold;margin-bottom:8px">深层</div>
-              <div>温度：{{ soilTemp3 || '-' }}℃</div>
-              <div>湿度：{{ soilMoisture3 || '-' }}%</div>
+          </div>
+        </div>
+
+        <a-divider class="report-divider" />
+
+        <div class="report-section">
+          <div class="section-header">
+            <Icon icon="ant-design:info-circle-outlined" />
+            <h4>四、灌溉注意事项</h4>
+          </div>
+          <div class="section-content">
+            <div class="tips-grid">
+              <div class="tip-item">
+                <div class="tip-icon"><Icon icon="ant-design:clock-circle-outlined" /></div>
+                <div class="tip-content">
+                  <div class="tip-title">灌溉时机</div>
+                  <div class="tip-text">建议在清晨或傍晚进行灌溉，避免高温时段水分蒸发过快</div>
+                </div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-icon"><Icon icon="ant-design:calculator-outlined" /></div>
+                <div class="tip-content">
+                  <div class="tip-title">水量控制</div>
+                  <div class="tip-text">根据土壤墒情和作物需水规律，合理控制灌溉量，避免过度灌溉</div>
+                </div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-icon"><Icon icon="ant-design:safety-outlined" /></div>
+                <div class="tip-content">
+                  <div class="tip-title">设备维护</div>
+                  <div class="tip-text">定期检查灌溉设备，确保正常运行，及时清理堵塞的喷头</div>
+                </div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-icon"><Icon icon="ant-design:warning-outlined" /></div>
+                <div class="tip-content">
+                  <div class="tip-title">排水防涝</div>
+                  <div class="tip-text">注意及时排水，防止积水造成根系缺氧，影响作物生长</div>
+                </div>
+              </div>
             </div>
-          </a-col>
-        </a-row>
-        
-        <!-- 气象数据 -->
-        <a-divider orientation="left">气象数据</a-divider>
-        <a-descriptions :column="2" bordered size="small">
-          <a-descriptions-item label="空气温度">{{ penmanInputs.temp?.[0] || '-' }}℃</a-descriptions-item>
-          <a-descriptions-item label="空气湿度">{{ penmanInputs.humidity?.[0] || '-' }}%</a-descriptions-item>
-        </a-descriptions>
-        
-        <!-- 灌溉建议 -->
-        <a-divider orientation="left">灌溉建议分析</a-divider>
-        <a-alert
-          :message="penmanSuggestion.needIrrigation ? '需要灌溉' : '暂不需要灌溉'"
-          :type="penmanSuggestion.needIrrigation ? 'warning' : 'success'"
-          show-icon
-          style="margin-bottom:16px"
-        />
-        <a-descriptions :column="1" bordered size="small">
-          <a-descriptions-item label="建议灌溉时间">{{ penmanSuggestion.recommendedTime || '暂无' }}</a-descriptions-item>
-          <a-descriptions-item label="推荐灌溉方式">{{ penmanSuggestion.method || '暂无' }}</a-descriptions-item>
-          <a-descriptions-item label="推荐灌水量">{{ recommendedVolumeMm > 0 ? recommendedVolumeMm + ' mm（约 ' + mmToM3PerMu(recommendedVolumeMm) + ' m³/亩）' : '暂无' }}</a-descriptions-item>
-          <a-descriptions-item label="详细分析建议">{{ penmanSuggestion.reason || '暂无' }}</a-descriptions-item>
-        </a-descriptions>
-        
-        <!-- 底部说明 -->
-        <div style="margin-top:24px;padding:12px;background:#f5f5f5;border-radius:4px;font-size:12px;color:#666">
-          <p style="margin:0">※ 本报告基于实时传感器数据生成，仅供参考。具体灌溉方案请根据实际情况调整。</p>
-          <p style="margin:4px 0 0">※ 如有疑问，请联系农业技术专家咨询。</p>
+          </div>
         </div>
       </div>
       <div style="padding:16px" v-if="reportType==='risk' && hasData" id="riskReport">
@@ -1649,19 +1829,540 @@ function exportReport() {
   .data-item {
     gap: 24px;
   }
-  
+
   .data-icon {
     width: 70px;
     height: 70px;
     font-size: 28px;
   }
-  
+
   .data-value {
     font-size: 36px;
   }
-  
+
   .weather-card :deep(.ant-card-body) {
     padding: 24px;
+  }
+}
+
+.irrigation-report-modal {
+  :deep(.ant-modal-content) {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  :deep(.ant-modal-header) {
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    padding: 16px 24px;
+
+    .ant-modal-title {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+    }
+  }
+
+  :deep(.ant-modal-close) {
+    color: #fff;
+
+    &:hover {
+      color: #f0f0f0;
+    }
+  }
+}
+
+.report-container {
+  padding: 8px 4px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.report-header {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.report-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 28px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.report-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #262626;
+  margin: 0 0 16px;
+}
+
+.report-meta {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.meta-value {
+  font-size: 14px;
+  color: #262626;
+  font-weight: 600;
+}
+
+.report-divider {
+  margin: 20px 0;
+  border-color: #e8e8e8;
+}
+
+.report-section {
+  margin-bottom: 8px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #262626;
+  }
+
+  .anticon {
+    font-size: 18px;
+    color: #1890ff;
+  }
+}
+
+.section-content {
+  padding-left: 4px;
+}
+
+.overview-summary {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border: 1px solid #91d5ff;
+  border-radius: 12px;
+  padding: 16px 20px;
+
+  &.water {
+    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+    border-color: #91d5ff;
+  }
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.summary-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.summary-info {
+  flex: 1;
+}
+
+.summary-label {
+  font-size: 14px;
+  color: #595959;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.summary-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.value-big {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1890ff;
+}
+
+.value-unit {
+  font-size: 16px;
+  color: #8c8c8c;
+}
+
+.percent-card {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.percent-card-title {
+  font-size: 14px;
+  color: #595959;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.layer-grid {
+  margin-top: 8px;
+}
+
+.layer-card {
+  border-radius: 10px;
+  padding: 16px 12px;
+  text-align: center;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &.upper {
+    background: linear-gradient(135deg, #8B5A2B 0%, #A0522D 100%);
+    color: #fff;
+  }
+
+  &.middle {
+    background: linear-gradient(135deg, #6B4423 0%, #8B4513 100%);
+    color: #fff;
+  }
+
+  &.deep {
+    background: linear-gradient(135deg, #4A3520 0%, #5D4037 100%);
+    color: #fff;
+  }
+}
+
+.layer-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+  font-size: 16px;
+}
+
+.layer-name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.layer-data-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.layer-data-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.layer-data-label {
+  opacity: 0.8;
+}
+
+.layer-data-value {
+  font-weight: 600;
+
+  .unit {
+    font-size: 11px;
+    opacity: 0.8;
+  }
+}
+
+.weather-card {
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.weather-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ffa502 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+
+  &.humidity {
+    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+  }
+}
+
+.weather-info {
+  flex: 1;
+}
+
+.weather-label {
+  font-size: 13px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.weather-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #262626;
+
+  .unit {
+    font-size: 14px;
+    color: #8c8c8c;
+    font-weight: normal;
+  }
+}
+
+.recommend-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.need-fertilizer-tag.large {
+  font-size: 15px;
+  padding: 6px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recommend-subtitle {
+  font-size: 13px;
+  color: #8c8c8c;
+
+  &.success {
+    color: #52c41a;
+  }
+}
+
+.recommend-info-row {
+  margin-bottom: 16px;
+}
+
+.info-card {
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.3s;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+}
+
+.info-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  flex-shrink: 0;
+
+  &.water {
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  }
+}
+
+.info-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.info-card-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.info-card-value {
+  font-size: 13px;
+  color: #262626;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.volume-card {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border: 1px solid #91d5ff;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.volume-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+}
+
+.volume-info {
+  flex: 1;
+}
+
+.volume-label {
+  font-size: 13px;
+  color: #595959;
+  margin-bottom: 4px;
+}
+
+.volume-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1890ff;
+}
+
+.volume-unit {
+  font-size: 14px;
+  color: #8c8c8c;
+  font-weight: normal;
+}
+
+.reason-box {
+  background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+  border: 1px solid #ffe58f;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.reason-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #d48806;
+
+  .anticon {
+    font-size: 16px;
+  }
+}
+
+.reason-content {
+  color: #595959;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.3s;
+
+  &:hover {
+    background: #f0f0f0;
+    transform: translateX(4px);
+  }
+}
+
+.tip-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.tip-content {
+  flex: 1;
+}
+
+.tip-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.tip-text {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .tips-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recommend-info-row .ant-col {
+    margin-bottom: 12px;
   }
 }
 </style>
