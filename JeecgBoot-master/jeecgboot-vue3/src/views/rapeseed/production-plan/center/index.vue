@@ -69,13 +69,36 @@
           <a-col :span="12">
             <a-card class="stat-card">
               <template #title>土壤养分概览</template>
-              <div class="soil-grid" v-if="soilData && soilData.hasData">
-                <div><span>日均氮(N)</span><b>{{ soilData.n || '-' }}</b><span>mg/kg</span></div>
-                <div><span>日均磷(P)</span><b>{{ soilData.p || '-' }}</b><span>mg/kg</span></div>
-                <div><span>日均钾(K)</span><b>{{ soilData.k || '-' }}</b><span>mg/kg</span></div>
-                <div><span>pH值</span><b>{{ soilData.ph || '-' }}</b></div>
-                <div><span>有机质</span><b>{{ soilData.organicMatter || '-' }}</b><span>g/kg</span></div>
+              <div v-if="soilData && soilData.hasData">
+                <div style="margin-bottom: 12px; font-size: 12px; color: #999;">
+                  更新时间: {{ soilData.latestDate || '-' }}
+                </div>
+                <div style="margin-bottom: 8px; font-weight: 600; color: #333;">养分含量</div>
+                <div class="soil-grid">
+                  <div><span>氮(N)</span><b>{{ soilData.nPercent || '-' }}</b><span>%</span></div>
+                  <div><span>磷(P)</span><b>{{ soilData.pPercent || '-' }}</b><span>%</span></div>
+                  <div><span>钾(K)</span><b>{{ soilData.kPercent || '-' }}</b><span>%</span></div>
+                </div>
+                <div style="margin: 8px 0; font-weight: 600; color: #333;">估算施肥量</div>
+                <div class="soil-grid">
+                  <div><span>氮肥</span><b>{{ soilData.estimatedN || '-' }}</b><span>kg/亩</span></div>
+                  <div><span>磷肥</span><b>{{ soilData.estimatedP || '-' }}</b><span>kg/亩</span></div>
+                  <div><span>钾肥</span><b>{{ soilData.estimatedK || '-' }}</b><span>kg/亩</span></div>
+                </div>
+                <div style="margin: 8px 0; font-weight: 600; color: #333;">土壤环境</div>
+                <div class="soil-grid">
+                  <div><span>土壤温度1</span><b>{{ soilData.soilTemp1 || '-' }}</b><span>℃</span></div>
+                  <div><span>土壤温度2</span><b>{{ soilData.soilTemp2 || '-' }}</b><span>℃</span></div>
+                  <div><span>土壤温度3</span><b>{{ soilData.soilTemp3 || '-' }}</b><span>℃</span></div>
+                  <div><span>土壤湿度1</span><b>{{ soilData.soilMoist1 || '-' }}</b><span>%</span></div>
+                  <div><span>土壤湿度2</span><b>{{ soilData.soilMoist2 || '-' }}</b><span>%</span></div>
+                  <div><span>土壤湿度3</span><b>{{ soilData.soilMoist3 || '-' }}</b><span>%</span></div>
+                  <div><span>EC值1</span><b>{{ soilData.ec1 || '-' }}</b><span>mS/cm</span></div>
+                  <div><span>EC值2</span><b>{{ soilData.ec2 || '-' }}</b><span>mS/cm</span></div>
+                  <div><span>EC值3</span><b>{{ soilData.ec3 || '-' }}</b><span>mS/cm</span></div>
+                </div>
               </div>
+              <div class="no-data" v-else-if="soilData && soilData.deviceNotConfigured">设备未配置</div>
               <div class="no-data" v-else>暂无数据</div>
             </a-card>
           </a-col>

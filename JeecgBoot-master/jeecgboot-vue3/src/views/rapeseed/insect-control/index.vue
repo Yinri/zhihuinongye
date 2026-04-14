@@ -257,7 +257,7 @@ const fetchLatestImageAndData = async () => {
     if (images && images.length > 0) {
       const latest = images[0]
       currentImageUrl.value = latest.image_url
-      lastUpdateTime.value = latest.analysis_time.replace('T', ' ')
+      lastUpdateTime.value = new Date().toLocaleString()
       // 提取 insects 对象并转为数组形式
       const insects = latest.insects || {}
       insectReportData.value = Object.entries(insects).map(([name, value]) => ({
@@ -351,6 +351,7 @@ const handleLLMAnalysis = async () => {
 
   } catch (error) {
     console.error('AI分析请求失败:', error)
+    message.error('AI分析请求失败，请稍后重试')
   }
 }
 
@@ -375,6 +376,7 @@ const fetchPesticideOptions = async () => {
     pesticideOptions.value = formattedPesticides || []
   } catch (error) {
     console.error('获取农药列表失败:', error)
+    message.error('获取农药列表失败')
   }
 }
 
@@ -413,6 +415,7 @@ const savePesticideRecord = async () => {
     pesticideForm.value.method = '';
   } catch (error) {
     console.error('保存使用记录失败:', error)
+    message.error('保存使用记录失败')
   } finally {
     savingRecord.value = false
   }
@@ -442,7 +445,7 @@ const handleQueryHistory = async () => {
       message.info('该时间段内无虫情记录');
     }
   } catch (e) {
-    console.error('获取虫情记录失败', e);
+    message.error('获取虫情记录失败');
   }
 };
 
