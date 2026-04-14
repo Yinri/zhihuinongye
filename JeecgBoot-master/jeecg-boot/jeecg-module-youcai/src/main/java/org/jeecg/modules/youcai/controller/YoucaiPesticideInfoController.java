@@ -1,6 +1,7 @@
 package org.jeecg.modules.youcai.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
@@ -161,4 +162,16 @@ public class YoucaiPesticideInfoController extends JeecgController<YoucaiPestici
         return super.importExcel(request, response, YoucaiPesticideInfo.class);
     }
 
-}
+     @GetMapping("/name/list")
+     public Result<List<String>> queryPesticideNameList() {
+         try {
+             List<String> nameList = youcaiPesticideInfoService.getAllNames();
+             return Result.OK(nameList);
+         } catch (Exception e) {
+             log.error("查询农药名称失败", e);
+             return Result.error("查询农药名称失败");
+         }
+     }
+
+
+ }

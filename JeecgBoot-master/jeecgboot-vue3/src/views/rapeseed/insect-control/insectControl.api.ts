@@ -7,7 +7,7 @@ import { AxiosRequestConfig } from 'axios';
 
 enum Api {
   // 农药列表
-  PesticideList = '/youcai/youcaiPesticideInputs/name/list',
+  PesticideList = '/youcai/youcaiPesticideInfo/name/list',
   AddPestControl = '/youcai/youcaiPestControl/add',
   GetPest='/youcai/youcaiPestControl/images',
   AIAnalysis = '/youcai/youcaiPestControl/aiAnalysis',

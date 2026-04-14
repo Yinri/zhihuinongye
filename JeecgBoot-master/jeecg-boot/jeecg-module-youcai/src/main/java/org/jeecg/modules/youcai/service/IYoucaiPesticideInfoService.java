@@ -11,5 +11,6 @@ import java.util.List;
  * @Version: V1.0
  */
 public interface IYoucaiPesticideInfoService extends IService<YoucaiPesticideInfo> {
+    List<String> getAllNames();
 
 }

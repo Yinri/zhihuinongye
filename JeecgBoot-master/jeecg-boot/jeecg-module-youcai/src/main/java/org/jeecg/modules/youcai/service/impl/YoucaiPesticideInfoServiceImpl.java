@@ -1,5 +1,7 @@
 package org.jeecg.modules.youcai.service.impl;
 
+import java.util.List;
+
 import org.jeecg.modules.youcai.entity.YoucaiPesticideInfo;
 import org.jeecg.modules.youcai.mapper.YoucaiPesticideInfoMapper;
 import org.jeecg.modules.youcai.service.IYoucaiPesticideInfoService;
@@ -15,5 +17,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
  */
 @Service
 public class YoucaiPesticideInfoServiceImpl extends ServiceImpl<YoucaiPesticideInfoMapper, YoucaiPesticideInfo> implements IYoucaiPesticideInfoService {
+
+    @Override
+    public List<String> getAllNames() {
+        return this.baseMapper.getAllPesticideNames();
+    }
 
 }

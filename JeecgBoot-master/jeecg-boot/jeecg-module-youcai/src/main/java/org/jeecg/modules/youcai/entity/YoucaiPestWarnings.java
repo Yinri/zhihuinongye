@@ -34,47 +34,47 @@ public class YoucaiPestWarnings extends JeecgEntity {
 	/**地块ID*/
 	@Excel(name = "地块ID", width = 15)
     @Schema(description = "地块ID")
-    private java.lang.String plotId;
+    private String plotId;
 	/**预警日期*/
 	@Excel(name = "预警日期", width = 15, format = "yyyy-MM-dd")
 	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
     @DateTimeFormat(pattern="yyyy-MM-dd")
     @Schema(description = "预警日期")
-    private java.util.Date warningDate;
+    private Date warningDate;
 	/**虫害类型*/
 	@Excel(name = "虫害类型", width = 15)
     @Schema(description = "虫害类型")
-    private java.lang.String pestType;
+    private String pestType;
 	/**虫害名称*/
 	@Excel(name = "虫害名称", width = 15)
     @Schema(description = "虫害名称")
-    private java.lang.String pestName;
+    private String pestName;
 	/**严重程度*/
 	@Excel(name = "严重程度", width = 15)
     @Schema(description = "严重程度")
-    private java.lang.String severity;
+    private String severity;
 	/**危害症状*/
 	@Excel(name = "危害症状", width = 15)
     @Schema(description = "危害症状")
-    private java.lang.String symptoms;
+    private String symptoms;
 	/**防治建议*/
 	@Excel(name = "防治建议", width = 15)
     @Schema(description = "防治建议")
-    private java.lang.String recommendation;
+    private String recommendation;
 	/**预警状态*/
 	@Excel(name = "预警状态", width = 15)
     @Schema(description = "预警状态")
-    private java.lang.String warningStatus;
+    private String warningStatus;
 	/**虫害影像*/
 	@Excel(name = "虫害影像", width = 15)
     @Schema(description = "虫害影像")
-    private java.lang.String imageUrl;
+    private String imageUrl;
 	/**所属部门*/
     @Schema(description = "所属部门")
-    private java.lang.String sysOrgCode;
+    private String sysOrgCode;
 	/**删除标志（0-正常，1-删除）*/
 	@Excel(name = "删除标志（0-正常，1-删除）", width = 15)
     @Schema(description = "删除标志（0-正常，1-删除）")
     @TableLogic
-    private java.lang.Integer delFlag;
+    private Integer delFlag;
 }

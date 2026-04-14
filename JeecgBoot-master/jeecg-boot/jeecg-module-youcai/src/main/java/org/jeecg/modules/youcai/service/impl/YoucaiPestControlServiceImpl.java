@@ -37,7 +37,7 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
         String deviceCode = "860048073163923";
         Integer countType = 1;
         LocalDate EndDate = LocalDate.now();
-        LocalDate StartDate = EndDate.minusDays(10);
+        LocalDate StartDate = EndDate.minusDays(100);
         String startDate = StartDate.toString();
         String endDate = EndDate.toString();
         return ioTApiUtil.getPestPhotos(deviceCode, countType, startDate, endDate)

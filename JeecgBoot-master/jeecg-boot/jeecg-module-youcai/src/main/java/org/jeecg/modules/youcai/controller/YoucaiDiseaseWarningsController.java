@@ -1,11 +1,17 @@
 package org.jeecg.modules.youcai.controller;
 
+import java.util.Date;
 import java.util.Arrays;
+
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Base64;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jeecg.common.api.vo.Result;
+import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.modules.youcai.entity.YoucaiDiseaseWarnings;
 import org.jeecg.modules.youcai.service.IYoucaiDiseaseWarningsService;
@@ -17,7 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.jeecg.common.system.base.controller.JeecgController;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import org.springframework.web.servlet.ModelAndView;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,17 +37,18 @@ import reactor.core.publisher.Mono;
 /**
  * @Description: 病害预警表
  * @Author: jeecg-boot
- * @Date:   2025-10-18
+ * @Date: 2025-10-18
  * @Version: V1.0
  */
-@Tag(name="病害预警表")
+@Tag(name = "病害预警表")
 @RestController
 @RequestMapping("/youcai/youcaiDiseaseWarnings")
 @Slf4j
-public class YoucaiDiseaseWarningsController extends JeecgController<YoucaiDiseaseWarnings, IYoucaiDiseaseWarningsService> {
+public class YoucaiDiseaseWarningsController
+		extends JeecgController<YoucaiDiseaseWarnings, IYoucaiDiseaseWarningsService> {
 	@Autowired
 	private IYoucaiDiseaseWarningsService youcaiDiseaseWarningsService;
-	
+
 	/**
 	 * 分页列表查询
 	 *
@@ -48,123 +58,123 @@ public class YoucaiDiseaseWarningsController extends JeecgController<YoucaiDisea
 	 * @param req
 	 * @return
 	 */
-	//@AutoLog(value = "病害预警表-分页列表查询")
-	@Operation(summary="病害预警表-分页列表查询")
+	// @AutoLog(value = "病害预警表-分页列表查询")
+	@Operation(summary = "病害预警表-分页列表查询")
 	@GetMapping(value = "/list")
 	public Result<IPage<YoucaiDiseaseWarnings>> queryPageList(YoucaiDiseaseWarnings youcaiDiseaseWarnings,
-								   @RequestParam(name="pageNo", defaultValue="1") Integer pageNo,
-								   @RequestParam(name="pageSize", defaultValue="10") Integer pageSize,
-								   HttpServletRequest req) {
+			@RequestParam(name = "pageNo", defaultValue = "1") Integer pageNo,
+			@RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+			HttpServletRequest req) {
 
-
-        QueryWrapper<YoucaiDiseaseWarnings> queryWrapper = QueryGenerator.initQueryWrapper(youcaiDiseaseWarnings, req.getParameterMap());
+		QueryWrapper<YoucaiDiseaseWarnings> queryWrapper = QueryGenerator.initQueryWrapper(youcaiDiseaseWarnings,
+				req.getParameterMap());
 		Page<YoucaiDiseaseWarnings> page = new Page<YoucaiDiseaseWarnings>(pageNo, pageSize);
 		IPage<YoucaiDiseaseWarnings> pageList = youcaiDiseaseWarningsService.page(page, queryWrapper);
 		return Result.OK(pageList);
 	}
-	
+
 	/**
-	 *   添加
+	 * 添加
 	 *
 	 * @param youcaiDiseaseWarnings
 	 * @return
 	 */
 	@AutoLog(value = "病害预警表-添加")
-	@Operation(summary="病害预警表-添加")
-	@RequiresPermissions("youcai:youcai_disease_warnings:add")
+	@Operation(summary = "病害预警表-添加")
+
 	@PostMapping(value = "/add")
 	public Result<String> add(@RequestBody YoucaiDiseaseWarnings youcaiDiseaseWarnings) {
 		youcaiDiseaseWarningsService.save(youcaiDiseaseWarnings);
 
 		return Result.OK("添加成功！");
 	}
-	
+
 	/**
-	 *  编辑
+	 * 编辑
 	 *
 	 * @param youcaiDiseaseWarnings
 	 * @return
 	 */
 	@AutoLog(value = "病害预警表-编辑")
-	@Operation(summary="病害预警表-编辑")
+	@Operation(summary = "病害预警表-编辑")
 	@RequiresPermissions("youcai:youcai_disease_warnings:edit")
-	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
+	@RequestMapping(value = "/edit", method = { RequestMethod.PUT, RequestMethod.POST })
 	public Result<String> edit(@RequestBody YoucaiDiseaseWarnings youcaiDiseaseWarnings) {
 		youcaiDiseaseWarningsService.updateById(youcaiDiseaseWarnings);
 		return Result.OK("编辑成功!");
 	}
-	
+
 	/**
-	 *   通过id删除
+	 * 通过id删除
 	 *
 	 * @param id
 	 * @return
 	 */
 	@AutoLog(value = "病害预警表-通过id删除")
-	@Operation(summary="病害预警表-通过id删除")
+	@Operation(summary = "病害预警表-通过id删除")
 	@RequiresPermissions("youcai:youcai_disease_warnings:delete")
 	@DeleteMapping(value = "/delete")
-	public Result<String> delete(@RequestParam(name="id",required=true) String id) {
+	public Result<String> delete(@RequestParam(name = "id", required = true) String id) {
 		youcaiDiseaseWarningsService.removeById(id);
 		return Result.OK("删除成功!");
 	}
-	
+
 	/**
-	 *  批量删除
+	 * 批量删除
 	 *
 	 * @param ids
 	 * @return
 	 */
 	@AutoLog(value = "病害预警表-批量删除")
-	@Operation(summary="病害预警表-批量删除")
+	@Operation(summary = "病害预警表-批量删除")
 	@RequiresPermissions("youcai:youcai_disease_warnings:deleteBatch")
 	@DeleteMapping(value = "/deleteBatch")
-	public Result<String> deleteBatch(@RequestParam(name="ids",required=true) String ids) {
+	public Result<String> deleteBatch(@RequestParam(name = "ids", required = true) String ids) {
 		this.youcaiDiseaseWarningsService.removeByIds(Arrays.asList(ids.split(",")));
 		return Result.OK("批量删除成功!");
 	}
-	
+
 	/**
 	 * 通过id查询
 	 *
 	 * @param id
 	 * @return
 	 */
-	//@AutoLog(value = "病害预警表-通过id查询")
-	@Operation(summary="病害预警表-通过id查询")
+	// @AutoLog(value = "病害预警表-通过id查询")
+	@Operation(summary = "病害预警表-通过id查询")
 	@GetMapping(value = "/queryById")
-	public Result<YoucaiDiseaseWarnings> queryById(@RequestParam(name="id",required=true) String id) {
+	public Result<YoucaiDiseaseWarnings> queryById(@RequestParam(name = "id", required = true) String id) {
 		YoucaiDiseaseWarnings youcaiDiseaseWarnings = youcaiDiseaseWarningsService.getById(id);
-		if(youcaiDiseaseWarnings==null) {
+		if (youcaiDiseaseWarnings == null) {
 			return Result.error("未找到对应数据");
 		}
 		return Result.OK(youcaiDiseaseWarnings);
 	}
 
-    /**
-    * 导出excel
-    *
-    * @param request
-    * @param youcaiDiseaseWarnings
-    */
-    @RequiresPermissions("youcai:youcai_disease_warnings:exportXls")
-    @RequestMapping(value = "/exportXls")
-    public ModelAndView exportXls(HttpServletRequest request, YoucaiDiseaseWarnings youcaiDiseaseWarnings) {
-        return super.exportXls(request, youcaiDiseaseWarnings, YoucaiDiseaseWarnings.class, "病害预警表");
-    }
+	/**
+	 * 导出excel
+	 *
+	 * @param request
+	 * @param youcaiDiseaseWarnings
+	 */
+	@RequiresPermissions("youcai:youcai_disease_warnings:exportXls")
+	@RequestMapping(value = "/exportXls")
+	public ModelAndView exportXls(HttpServletRequest request, YoucaiDiseaseWarnings youcaiDiseaseWarnings) {
+		return super.exportXls(request, youcaiDiseaseWarnings, YoucaiDiseaseWarnings.class, "病害预警表");
+	}
 
-    /**
-      * 通过excel导入数据
-    *
-    * @param request
-    * @param response
-    * @return
-    */
-    @RequiresPermissions("youcai:youcai_disease_warnings:importExcel")
-    @RequestMapping(value = "/importExcel", method = RequestMethod.POST)
-    public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
-        return super.importExcel(request, response, YoucaiDiseaseWarnings.class);
-    }
+	/**
+	 * 通过excel导入数据
+	 *
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@RequiresPermissions("youcai:youcai_disease_warnings:importExcel")
+	@RequestMapping(value = "/importExcel", method = RequestMethod.POST)
+	public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
+		return super.importExcel(request, response, YoucaiDiseaseWarnings.class);
+	}
 
 	@GetMapping("/allImages")
 	public Mono<Result<List<Map<String, Object>>>> getDiseaseImages() {
@@ -173,6 +183,66 @@ public class YoucaiDiseaseWarningsController extends JeecgController<YoucaiDisea
 				.onErrorReturn(Result.error("Failed to retrieve pest images"));
 	}
 
+	@Operation(summary = "图片上传")
+	@PostMapping("/upload")
+	public Result<String> uploadDiseaseImage(@RequestBody Map<String, String> body) {
+		try {
+			String base64 = body.get("file");
+			if (base64 == null) {
+				return Result.error("缺少 file 字段");
+			}
 
+			// 清洗掉 data:image/jpeg;base64,xxxx
+			if (base64.contains(",")) {
+				base64 = base64.substring(base64.indexOf(",") + 1);
+			}
+
+			// Base64 解码成 byte[]
+			byte[] imageBytes = Base64.getDecoder().decode(base64);
+
+			// 🔥 直接送给模型，不用 MultipartFile
+			String pythonResult = youcaiDiseaseWarningsService.predict(imageBytes);
+
+			// 解析 JSON
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode jsonNode = mapper.readTree(pythonResult);
+			String predictedClass = jsonNode.get("predicted_class").asText();
+
+			Result<String> result = new Result<>();
+			result.setCode(CommonConstant.SC_OK_200);
+			result.setSuccess(true);
+			result.setResult(predictedClass);
+			result.setTimestamp(System.currentTimeMillis());
+
+			return result;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Result.error("图像上传失败: " + e.getMessage());
+		}
+	}
+
+	@PostMapping("/diseaseAnalysis")
+	public ResponseEntity<String> getDiseaseAnalysis(@RequestBody Map<String, String> payload) {
+		try {
+			String disease = payload.get("disease");
+			String analysis = youcaiDiseaseWarningsService.analyzeDisease(disease);
+			return ResponseEntity.ok(analysis);
+		} catch (Exception e) {
+			return ResponseEntity.status(500).body("分析失败: " + e.getMessage());
+		}
+	}
+
+	@GetMapping("/history")
+	public Result<List<YoucaiDiseaseWarnings>> queryHistory(
+			@RequestParam("startTime") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm") Date startTime,
+			@RequestParam("endTime") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm") Date endTime,
+			@RequestParam("plotId") String plotId) {
+
+		List<YoucaiDiseaseWarnings> list = youcaiDiseaseWarningsService
+				.getHistoryByTimeRangeAndPlot(startTime, endTime, plotId);
+
+		return Result.OK(list);
+	}
 
 }

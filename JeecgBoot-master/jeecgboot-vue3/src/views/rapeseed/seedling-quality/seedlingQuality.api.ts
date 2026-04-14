@@ -1,62 +1,63 @@
-import { defHttp } from '/@/utils/http/axios';
+// src/api/youcai.ts
+import { defHttp } from "/@/utils/http/axios";
 import { AxiosRequestConfig } from 'axios';
 
-// 枚举API地址
-enum Api {
-  // 列表
-  List = '/youcai/seedlingQuality/list',
-  // 保存
-  Save = '/youcai/seedlingQuality/save',
-  // 编辑
-  Edit = '/youcai/seedlingQuality/edit',
-  // 删除
-  Delete = '/youcai/seedlingQuality/delete',
-  // 批量删除
-  BatchDelete = '/youcai/seedlingQuality/batchDelete',
-  // 详情
-  Detail = '/youcai/seedlingQuality/queryById',
-  // 导出
-  Export = '/youcai/seedlingQuality/export',
-  // 导入
-  Import = '/youcai/seedlingQuality/importExcel',
+/**
+ * 后端接口地址统一管理
+ */
+export enum Api {
+  OilQuality = "/youcai/youcaiColorQuality/midu",   // 油菜苗密度 
+  Density = "/youcai/youcaiColorQuality/color", 
+  GetGrowthAdvice ="/youcai/youcaiColorQuality/advice",
+  PesticideList = '/youcai/youcaiPesticideInfo/name/list',
+  AddPestControl ='/youcai/youcaiColorQuality/add'
+    // 油菜颜色指数
 }
 
-// 获取油菜苗素质列表
-export const getSeedlingQualityList = (params?: AxiosRequestConfig) => {
-  return defHttp.get({ url: Api.List, params });
+/**
+ * 图片类型 → 接口映射
+ */
+export const youcaiApiMap: Record<string, string> = {
+  oil_quality: Api.OilQuality,
+  density: Api.Density,
 };
 
-// 保存油菜苗素质
-export const saveSeedlingQuality = (params: any) => {
-  return defHttp.post({ url: Api.Save, params });
+/**
+ * Base64 图片上传（JSON 方式）
+ */
+export const uploadYoucaiImage = (
+  url: string,
+  base64Image: string,
+) => {
+  return defHttp.post(
+    {
+      url:url,
+      data: {
+        file: base64Image, // Base64 字符串            // 图片类型
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
 };
 
-// 编辑油菜苗素质
-export const editSeedlingQuality = (params: any) => {
-  return defHttp.put({ url: Api.Edit, params });
+export const addControlRecord = (data: any, config?: AxiosRequestConfig) => {
+  return defHttp.post({ url: Api.AddPestControl, data }, config);
+}
+
+export const getGrowthAdvice = (analysisResult: any) => {
+  return defHttp.post({
+    url:Api.GetGrowthAdvice,
+    data: analysisResult,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 };
 
-// 删除油菜苗素质
-export const deleteSeedlingQuality = (id: string, params?: AxiosRequestConfig) => {
-  return defHttp.delete({ url: `${Api.Delete}/${id}`, params });
+export const getPesticideList = (params?: AxiosRequestConfig) => {
+  return defHttp.get({ url: Api.PesticideList, params });
 };
 
-// 批量删除油菜苗素质
-export const batchDeleteSeedlingQuality = (ids: string[], params?: AxiosRequestConfig) => {
-  return defHttp.delete({ url: Api.BatchDelete, data: { ids } });
-};
 
-// 获取油菜苗素质详情
-export const getSeedlingQualityById = (id: string) => {
-  return defHttp.get({ url: `${Api.Detail}/${id}` });
-};
-
-// 导出油菜苗素质
-export const exportSeedlingQuality = (params?: any) => {
-  return defHttp.post({ url: Api.Export, params }, { isTransformResponse: false });
-};
-
-// 导入油菜苗素质
-export const importSeedlingQuality = (params: any) => {
-  return defHttp.uploadFile({ url: Api.Import }, params );
-};
