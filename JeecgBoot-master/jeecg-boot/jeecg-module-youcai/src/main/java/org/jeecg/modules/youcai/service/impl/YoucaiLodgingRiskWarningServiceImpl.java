@@ -3,6 +3,7 @@ package org.jeecg.modules.youcai.service.impl;
 import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentRequestDTO;
 import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
 import org.jeecg.modules.youcai.dto.DailyWeatherDTO;
+import org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO;
 import org.jeecg.modules.youcai.entity.YoucaiBases;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
 import org.jeecg.modules.youcai.entity.YoucaiLodgingRiskWarning;
@@ -32,7 +33,6 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +42,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Mono;
 
 /**
  * @Description: 倒伏风险预警表（优化版本）
@@ -813,7 +812,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     }
 
     @Override
-    public org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO analyzeLodgingByVideoId(String videoId) {
+    public VideoLodgingAnalysisResultDTO analyzeLodgingByVideoId(String videoId) {
         log.info("开始视频倒伏分析，视频ID: {}", videoId);
         long startTime = System.currentTimeMillis();
         
