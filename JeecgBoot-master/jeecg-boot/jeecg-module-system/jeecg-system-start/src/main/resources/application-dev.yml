@@ -170,11 +170,11 @@ spring:
     host: 127.0.0.1
     port: 6379
     password: ''
-# Python算法服务配置
+# Python算法服务配置（统一服务）
 python:
   service:
-    # Python服务地址（同一服务器）
-    url: http://localhost:8000
+    # Python统一服务地址
+    url: http://localhost:8090
     # API密钥
     api-key: dev-test-key-123
     # 是否启用
