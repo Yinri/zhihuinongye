@@ -1,6 +1,7 @@
 package org.jeecg.modules.youcai.mapper;
 
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -13,6 +14,7 @@ import java.util.List;
  * @Date:   2025-10-18
  * @Version: V1.0
  */
+@Mapper
 public interface YoucaiPestControlMapper extends BaseMapper<YoucaiPestControl> {
 
       @Select("""
