@@ -2,21 +2,31 @@ package org.jeecg.modules.youcai.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
-import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
+import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.mapper.YoucaiPestControlMapper;
 import org.jeecg.modules.youcai.service.IYoucaiPestControlService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Description: 虫害防控表
@@ -30,57 +40,23 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
         implements IYoucaiPestControlService {
     @Autowired
     private IoTApiUtil ioTApiUtil;
+
     @Autowired
     private YoucaiPestControlMapper youcaiPestControlMapper;
 
-    public Mono<List<Map<String, Object>>> getPestImages() {
-        String deviceCode = "860048073163923";
-        Integer countType = 1;
-        LocalDate EndDate = LocalDate.now();
-        LocalDate StartDate = EndDate.minusDays(100);
-        String startDate = StartDate.toString();
-        String endDate = EndDate.toString();
-        return ioTApiUtil.getPestPhotos(deviceCode, countType, startDate, endDate)
-                .map(response -> {
-                    // 假设 response.getData() 返回 Map
-                    Map<String, Object> data = (Map<String, Object>) response.getData();
-                    if (data == null || !data.containsKey("imageDetailList")) {
-                        return Collections.emptyList();
-                    }
-                    List<Map<String, Object>> imageDetailList = (List<Map<String, Object>>) data.get("imageDetailList");
-                    List<Map<String, Object>> parsedList = new ArrayList<>();
-
-                    for (Map<String, Object> record : imageDetailList) {
-                        Map<String, Object> q = (Map<String, Object>) record.get("q");
-                        List<Map<String, Object>> insectDetails = (List<Map<String, Object>>) record
-                                .get("imageDetailList");
-                        // insects = { name: count }
-                        Map<String, Object> insects = new HashMap<>();
-                        if (insectDetails != null) {
-                            for (Map<String, Object> insect : insectDetails) {
-                                String name = (String) insect.get("name");
-                                Object count = insect.get("count");
-                                if (name != null) {
-                                    insects.put(name, count);
-                                }
-                            }
-                        }
-                        Map<String, Object> parsed = new HashMap<>();
-                        parsed.put("dateCreated", q != null ? q.get("dateCreated") : null);
-                        parsed.put("analysis_time", q != null ? q.get("analysisTime") : null);
-                        parsed.put("image_url", q != null ? q.get("url") : null);
-                        parsed.put("thumbnail", q != null ? q.get("thumbnail") : null);
-                        parsed.put("total_count", record.getOrDefault("countSum", 0));
-                        parsed.put("species_count", record.getOrDefault("harmTypeCount", 0));
-                        parsed.put("insects", insects);
-                        parsedList.add(parsed);
-                    }
-                    return parsedList;
-                });
-    }
+    @Autowired
+    private IYoucaiSensorInfoService youcaiSensorInfoService;
 
     private static final String API_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-    private static final String API_KEY = "sk-5f775477a8c04db4893d8a39d308e151";
+
+    @Value("${dashscope.api-key:${DASHSCOPE_API_KEY:}}")
+    private String dashscopeApiKey;
+
+    @Override
+    public Mono<List<Map<String, Object>>> getPestImages(String baseName, String startDate, String endDate) {
+        return getAllPestImages(baseName, startDate, endDate)
+                .map(records -> records.isEmpty() ? Collections.emptyList() : Collections.singletonList(records.get(0)));
+    }
 
     @Override
     public String aiAnalysis(AnalysisRequestDTO req) throws Exception {
@@ -123,7 +99,7 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
 
         String result = client.post()
                 .uri(API_URL)
-                .header("Authorization", "Bearer " + API_KEY)
+                .header("Authorization", "Bearer " + dashscopeApiKey)
                 .header("Content-Type", "application/json")
                 .bodyValue(requestBody.toJSONString())
                 .retrieve()
@@ -134,51 +110,96 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
         return json.getJSONObject("output").getString("text");
     }
 
-    public Mono<List<Map<String, Object>>> getAllPestImages(String startDate, String endDate) {
-        // 固定设备码和 countType
-        String deviceCode = "860048073163923";
+    @Override
+    public Mono<List<Map<String, Object>>> getAllPestImages(String baseName, String startDate, String endDate) {
+        String deviceCode = resolvePestDeviceCode(baseName);
+        if (!StringUtils.hasText(deviceCode)) {
+            return Mono.just(Collections.emptyList());
+        }
+
         Integer countType = 1;
         return ioTApiUtil.getPestPhotos(deviceCode, countType, startDate, endDate)
-                .map(response -> {
-                    Map<String, Object> data = (Map<String, Object>) response.getData();
-                    if (data == null || !data.containsKey("imageDetailList")) {
-                        return Collections.emptyList();
-                    }
-                    List<Map<String, Object>> imageDetailList = (List<Map<String, Object>>) data.get("imageDetailList");
-                    List<Map<String, Object>> parsedList = new ArrayList<>();
-
-                    for (Map<String, Object> record : imageDetailList) {
-                        Map<String, Object> q = (Map<String, Object>) record.get("q");
-                        List<Map<String, Object>> insectDetails = (List<Map<String, Object>>) record
-                                .get("imageDetailList");
-                        Map<String, Object> insects = new HashMap<>();
-                        if (insectDetails != null) {
-                            for (Map<String, Object> insect : insectDetails) {
-                                String name = (String) insect.get("name");
-                                Object count = insect.get("count");
-                                if (name != null) {
-                                    insects.put(name, count);
-                                }
-                            }
-                        }
-
-                        Map<String, Object> parsed = new HashMap<>();
-                        parsed.put("dateCreated", q != null ? q.get("dateCreated") : null);
-                        parsed.put("analysis_time", q != null ? q.get("analysisTime") : null);
-                        parsed.put("image_url", q != null ? q.get("url") : null);
-                        parsed.put("thumbnail", q != null ? q.get("thumbnail") : null);
-                        parsed.put("total_count", record.getOrDefault("countSum", 0));
-                        parsed.put("species_count", record.getOrDefault("harmTypeCount", 0));
-                        parsed.put("insects", insects);
-                        parsedList.add(parsed);
-                    }
-                    return parsedList;
-                });
+                .map(response -> parsePestImageList(response != null ? response.getData() : null));
     }
 
     @Override
     public List<YoucaiPestControl> findControl(String plotId, String start, String end) {
         return youcaiPestControlMapper.queryControlHistory(plotId, start, end);
+    }
+
+    /**
+     * 根据基地名称匹配“性诱测报灯”传感器，并返回其 DeviceCode。
+     */
+    private String resolvePestDeviceCode(String baseName) {
+        if (!StringUtils.hasText(baseName)) {
+            return null;
+        }
+
+        String baseNamePrefix = normalizeBaseName(baseName);
+        LambdaQueryWrapper<YoucaiSensorInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(YoucaiSensorInfo::getIsDelete, 0)
+                .likeRight(YoucaiSensorInfo::getSensorName, baseNamePrefix)
+                .like(YoucaiSensorInfo::getSensorName, "虫情测报灯")
+                .last("limit 1");
+
+        YoucaiSensorInfo sensor = youcaiSensorInfoService.getOne(queryWrapper, false);
+        return sensor != null ? sensor.getSensorSerial() : null;
+    }
+
+    /**
+     * 将 IoT 返回的复杂结构压平为前端直接可展示的数据结构。
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> parsePestImageList(Object data) {
+        if (!(data instanceof Map)) {
+            return Collections.emptyList();
+        }
+
+        Map<String, Object> dataMap = (Map<String, Object>) data;
+        Object rawList = dataMap.get("imageDetailList");
+        if (!(rawList instanceof List)) {
+            return Collections.emptyList();
+        }
+
+        List<Map<String, Object>> parsedList = new ArrayList<>();
+        for (Object item : (List<?>) rawList) {
+            if (!(item instanceof Map)) {
+                continue;
+            }
+
+            Map<String, Object> record = (Map<String, Object>) item;
+            Map<String, Object> q = record.get("q") instanceof Map ? (Map<String, Object>) record.get("q") : Collections.emptyMap();
+            List<Map<String, Object>> insectDetails = record.get("imageDetailList") instanceof List
+                    ? (List<Map<String, Object>>) record.get("imageDetailList")
+                    : Collections.emptyList();
+
+            Map<String, Object> insects = new LinkedHashMap<>();
+            for (Map<String, Object> insect : insectDetails) {
+                String name = insect.get("name") != null ? String.valueOf(insect.get("name")) : null;
+                if (StringUtils.hasText(name)) {
+                    insects.put(name, insect.getOrDefault("count", 0));
+                }
+            }
+
+            Map<String, Object> parsed = new HashMap<>();
+            parsed.put("dateCreated", q.get("dateCreated"));
+            parsed.put("analysis_time", q.get("analysisTime"));
+            parsed.put("image_url", q.get("url"));
+            parsed.put("thumbnail", q.get("thumbnail"));
+            parsed.put("sthumbnail", q.get("sthumbnail"));
+            parsed.put("total_count", record.getOrDefault("countSum", 0));
+            parsed.put("species_count", record.getOrDefault("harmTypeCount", 0));
+            parsed.put("insects", insects);
+            parsedList.add(parsed);
+        }
+
+        // 将最新一条记录放在最前面，便于首页直接展示最近图片和统计信息。
+        parsedList.sort(Comparator.comparing(item -> String.valueOf(item.getOrDefault("analysis_time", "")), Comparator.reverseOrder()));
+        return parsedList;
+    }
+
+    private String normalizeBaseName(String baseName) {
+        return baseName.endsWith("基地") ? baseName.substring(0, baseName.length() - 2) : baseName;
     }
 
 }

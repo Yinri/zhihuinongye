@@ -168,8 +168,14 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
         return super.importExcel(request, response, YoucaiPestControl.class);
     }
 	@GetMapping("/images")
-	public Mono<Result<List<Map<String, Object>>>> getPestImages() {
-		return youcaiPestControlService.getPestImages()
+	public Mono<Result<List<Map<String, Object>>>> getPestImages(
+			@RequestParam("baseName") String baseName,
+			@RequestParam(name = "StarDate", required = false) String starDate,
+			@RequestParam(name = "EndDate", required = false) String endDate) {
+		// 首页首次加载默认查询“前一天到当天”，避免开始时间和结束时间落在同一天。
+		String finalStartDate = starDate != null && !starDate.isEmpty() ? starDate : LocalDate.now().minusDays(1).toString();
+		String finalEndDate = endDate != null && !endDate.isEmpty() ? endDate : LocalDate.now().toString();
+		return youcaiPestControlService.getPestImages(baseName, finalStartDate, finalEndDate)
 				.map(parsedData -> Result.OK(parsedData))
 				.onErrorReturn(Result.error("Failed to retrieve pest images"));
 	}
@@ -189,11 +195,13 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 		}
 	}
 	@GetMapping("/findImages")
-	public Mono<Result<List<Map<String, Object>>>> getPestImages(
-			@RequestParam("start_date") @DateTimeFormat(pattern = "yyyy-MM-dd") String startDate,
-			@RequestParam("end_date") @DateTimeFormat(pattern = "yyyy-MM-dd") String endDate
+	public Mono<Result<List<Map<String, Object>>>> getPestImagesByRange(
+			@RequestParam("baseName") String baseName,
+			@RequestParam("StarDate") String startDate,
+			@RequestParam("EndDate") String endDate
 	) {
-		return youcaiPestControlService.getAllPestImages(startDate, endDate)
+		// 历史虫情查询保留时间范围，由前端按用户选择传入。
+		return youcaiPestControlService.getAllPestImages(baseName, startDate, endDate)
 				.map(Result::OK)
 				.onErrorReturn(Result.error("Failed to retrieve pest images"));
 	}

@@ -16,6 +16,12 @@ enum Api {
 
 }
 
+export interface PestImageQueryParams {
+  baseName: string;
+  StarDate: string;
+  EndDate: string;
+}
+
 /**
  * 获取农药列表
  *
@@ -24,8 +30,11 @@ enum Api {
 export const getPesticideList = (params?: AxiosRequestConfig) => {
   return defHttp.get({ url: Api.PesticideList, params });
 };
-export const getFirstPest = (params?: AxiosRequestConfig) => {
-  return defHttp.get({ url: Api.GetPest, params });
+/**
+ * 获取当前基地最近一条虫情图片数据。
+ */
+export const getFirstPest = (params: PestImageQueryParams) => {
+  return defHttp.get({ url: Api.GetPest, params, timeout: 30 * 1000 });
 };
 export const addPestControlRecord = (data: any, config?: AxiosRequestConfig) => {
   return defHttp.post({ url: Api.AddPestControl, data }, config);
@@ -33,10 +42,14 @@ export const addPestControlRecord = (data: any, config?: AxiosRequestConfig) => 
 export const analyzePestWithAI = (data: any) => {
   return defHttp.post({ url: Api.AIAnalysis, data });
 };
-export const getAllPest = (params) => {
+/**
+ * 获取当前基地指定时间范围内的虫情图片明细。
+ */
+export const getAllPest = (params: PestImageQueryParams) => {
   return defHttp.get({
     url: Api.FindPest,
-    params: params
+    params,
+    timeout: 30 * 1000,
   });
 };
 export const getControlHistory = (params) => {
