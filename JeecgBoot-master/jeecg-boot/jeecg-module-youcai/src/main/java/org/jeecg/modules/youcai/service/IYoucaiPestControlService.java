@@ -17,9 +17,9 @@ import java.util.Map;
  * @Version: V1.0
  */
 public interface IYoucaiPestControlService extends IService<YoucaiPestControl> {
-       Mono <List<Map<String, Object>>> getPestImages();
+       Mono<List<Map<String, Object>>> getPestImages(String baseName, String startDate, String endDate);
        String aiAnalysis(AnalysisRequestDTO req) throws Exception;
-       Mono<List<Map<String, Object>>> getAllPestImages(String startDate, String endDate);
+       Mono<List<Map<String, Object>>> getAllPestImages(String baseName, String startDate, String endDate);
        List<YoucaiPestControl> findControl(String plotId, String start, String end);
 
 }
