@@ -84,7 +84,12 @@ const hidePlotDropdown = computed(() => {
          currentPath.includes('/rapeseed/pesticide-info') ||
          currentPath.includes('/rapeseed/harvest/machine') ||
          currentPath.includes('/rapeseed/harvest/task') ||
-         currentPath.includes('/rapeseed/farming-records');
+         currentPath.includes('/rapeseed/farming-records')||
+         currentPath.includes('/rapeseed/pest-control')||
+         currentPath.includes('/rapeseed/disease-control')||
+         currentPath.includes('/rapeseed/production-plan')
+         ;
+
 });
 
 // 定义基地类型接口
