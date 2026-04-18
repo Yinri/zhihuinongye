@@ -12,4 +12,36 @@ public class ApiResponse<T> {
     private String msg;       // 提示信息（失败时非空）
     private int count;        // 数据总数（列表接口用）
     private T data;           // 业务数据（成功时非空）
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
 }
