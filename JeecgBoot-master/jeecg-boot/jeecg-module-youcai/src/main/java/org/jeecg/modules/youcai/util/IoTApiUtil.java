@@ -13,11 +13,15 @@ import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import com.alibaba.fastjson.JSONObject;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 易刚物联网API核心调用类（封装所有接口）
@@ -28,12 +32,19 @@ public class IoTApiUtil {
     // API基础地址（统一配置，避免硬编码）
     private static final String BASE_URL = "http://zhny.aheagle.com:8887";
     private static final String HD_BASE_URL = "http://zxcyy.aheagle.com";
+    private static final String ZX_IRRIGATION_BASE_URL = "http://rtuyun.net:18999/gwmanageNew/thirdparty/restful";
     private static final long TOKEN_EXPIRE_SECONDS = 7200;
+    private static final long ZX_IRRIGATION_TOKEN_EXPIRE_SECONDS = 7200;
+    private static final String ZX_IRRIGATION_USERNAME = "钟祥测试";
+    private static final String ZX_IRRIGATION_PASSWORD = "@q123456";
 
     private final WebClient webClient;
     private volatile String token;
     private volatile long tokenExpireTime;
     private final Object tokenLock = new Object();
+    private volatile String zxIrrigationToken;
+    private volatile long zxIrrigationTokenExpireTime;
+    private final Object zxIrrigationTokenLock = new Object();
 
     @Autowired
     public IoTApiUtil(WebClient.Builder webClientBuilder) {
@@ -320,6 +331,307 @@ public class IoTApiUtil {
                 .header("Content-Type", "application/json;charset=utf-8")
                 .retrieve()
                 .bodyToMono(ApiResponse.class);
+    }
+
+    // ------------------------------ 6. 钟祥灌溉设备接口 ------------------------------
+    /**
+     * 钟祥灌溉系统登录并缓存token（自动刷新）
+     */
+    public Mono<String> loginZxIrrigation() {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("grant_type", "password");
+        requestBody.put("username", ZX_IRRIGATION_USERNAME);
+        requestBody.put("password", ZX_IRRIGATION_PASSWORD);
+
+        return webClient.post()
+                .uri(ZX_IRRIGATION_BASE_URL + "/login")
+                .header("Content-Type", "application/json;charset=utf-8")
+                .body(BodyInserters.fromValue(requestBody))
+                .retrieve()
+                .bodyToMono(ApiResponse.class)
+                .map(response -> {
+                    if (response != null && response.getCode() == 200 && response.getData() != null) {
+                        JSONObject dataObj = JSONObject.parseObject(JSONObject.toJSONString(response.getData()));
+                        String accessToken = dataObj.getString("accessToken");
+                        if (accessToken == null || accessToken.isBlank()) {
+                            throw new RuntimeException("钟祥灌溉系统登录成功但accessToken为空");
+                        }
+                        this.zxIrrigationToken = accessToken;
+                        this.zxIrrigationTokenExpireTime = System.currentTimeMillis() + ZX_IRRIGATION_TOKEN_EXPIRE_SECONDS * 1000;
+                        log.info("钟祥灌溉系统登录成功，Token已更新");
+                        return accessToken;
+                    }
+                    throw new RuntimeException("钟祥灌溉系统登录失败：" + (response != null ? response.getMsg() : "空响应"));
+                })
+                .retryWhen(Retry.fixedDelay(2, Duration.ofSeconds(3))
+                        .filter(e -> e instanceof RuntimeException))
+                .doOnError(e -> log.error("钟祥灌溉系统登录异常：", e));
+    }
+
+    /**
+     * 获取闸门列表
+     */
+    public Mono<ApiResponse> getZxWaterGateList() {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            return postZxIrrigation("/getter/waterGateList", requestBody);
+        });
+    }
+
+    /**
+     * 获取闸门最新监测数据
+     */
+    public Mono<ApiResponse> getZxWaterGateLatestMonitorDataList(List<String> ids) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("ids", ids);
+        return postZxIrrigation("/getter/waterGateLatestMonitorDataList", requestBody);
+    }
+
+    /**
+     * 获取闸门最新工况
+     */
+    public Mono<ApiResponse> getZxWaterGateLatestWorkInfoList(List<String> ids) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("ids", ids);
+        return postZxIrrigation("/getter/waterGateLatestWorkInfoList", requestBody);
+    }
+
+    /**
+     * 获取闸门报警信息
+     */
+    public Mono<ApiResponse> getZxWaterGateAlertList(List<String> ids, Long startTimestamp, Long endTimestamp, Integer page, Integer rows) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("ids", ids);
+        requestBody.put("startTimestamp", String.valueOf(startTimestamp));
+        requestBody.put("endTimestamp", String.valueOf(endTimestamp));
+        if (page != null) {
+            requestBody.put("page", page);
+        }
+        if (rows != null) {
+            requestBody.put("rows", rows);
+        }
+        return postZxIrrigation("/getter/waterGateAlertList", requestBody);
+    }
+
+    /**
+     * 获取闸门历史数据
+     */
+    public Mono<ApiResponse> getZxWaterGateHistoryRecordList(List<String> ids, Long startTimestamp, Long endTimestamp, Integer page, Integer rows) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("ids", ids);
+            requestBody.put("startTimestamp", String.valueOf(startTimestamp));
+            requestBody.put("endTimestamp", String.valueOf(endTimestamp));
+            requestBody.put("token", token);
+            if (page != null) {
+                requestBody.put("page", page);
+            }
+            if (rows != null) {
+                requestBody.put("rows", rows);
+            }
+            return postZxIrrigation("/getter/waterGateHistoryRecordList", requestBody);
+        });
+    }
+
+    /**
+     * 获取闸门操作日志
+     */
+    public Mono<ApiResponse> getZxWaterGateOperateRecordList(List<String> ids, Long startTimestamp, Long endTimestamp, Integer page, Integer rows) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("ids", ids);
+            requestBody.put("startTimestamp", String.valueOf(startTimestamp));
+            requestBody.put("endTimestamp", String.valueOf(endTimestamp));
+            requestBody.put("token", token);
+            if (page != null) {
+                requestBody.put("page", page);
+            }
+            if (rows != null) {
+                requestBody.put("rows", rows);
+            }
+            return postZxIrrigation("/getter/waterGateOperateRecordList", requestBody);
+        });
+    }
+
+    /**
+     * 获取RTU测站列表（用于水泵站）
+     */
+    public Mono<ApiResponse> getZxRtuInfoList(String stationType) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("stationType", stationType);
+            return postZxIrrigation("/getter/rtuInfoList", requestBody);
+        });
+    }
+
+    /**
+     * 获取RTU最新多要素数据
+     */
+    public Mono<ApiResponse> getZxRtuLatestMonitorDataListMultiFactor(String stationId, String elementType) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("stationId", stationId);
+            requestBody.put("elementType", elementType);
+            return postZxIrrigation("/getter/rtuLatestMonitorDataListMultiFactor", requestBody);
+        });
+    }
+
+    /**
+     * 获取RTU历史多要素数据
+     */
+    public Mono<ApiResponse> getZxRtuHistoryRecordListMultiFactor(String stationId, String elementType, Long startTimestamp, Long endTimestamp, Integer page, Integer rows) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("stationId", stationId);
+            requestBody.put("elementType", elementType);
+            requestBody.put("startTimestamp", String.valueOf(startTimestamp));
+            requestBody.put("endTimestamp", String.valueOf(endTimestamp));
+            if (page != null) {
+                requestBody.put("page", page);
+            }
+            if (rows != null) {
+                requestBody.put("rows", rows);
+            }
+            return postZxIrrigation("/getter/rtuHistoryRecordListMultiFactor", requestBody);
+        });
+    }
+
+    /**
+     * 获取田间水位计最新数据（RTU单要素）
+     */
+    public Mono<ApiResponse> getZxRtuLatestMonitorDataList(String stationId, String elementType) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("stationId", stationId);
+            requestBody.put("elementType", elementType);
+            return postZxIrrigation("/getter/rtuLatestMonitorDataList", requestBody);
+        });
+    }
+
+    /**
+     * 获取摄像头列表
+     */
+    public Mono<ApiResponse> getZxVideoInfoList(Integer page, Integer rows) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            if (page != null) {
+                requestBody.put("page", String.valueOf(page));
+            }
+            if (rows != null) {
+                requestBody.put("rows", String.valueOf(rows));
+            }
+            return postZxIrrigation("/getter/videoInfoList", requestBody);
+        });
+    }
+
+    /**
+     * 闸门开度控制
+     */
+    public Mono<ApiResponse> setZxWaterGateOpenPos(String id, String setVal) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("id", id);
+            requestBody.put("setVal", setVal);
+            return postZxIrrigation("/setter/waterGateOpenPos", requestBody);
+        });
+    }
+
+    /**
+     * 闸门控制停止
+     */
+    public Mono<ApiResponse> setZxGateStop(String id) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("id", id);
+            return postZxIrrigation("/setter/gateStop", requestBody);
+        });
+    }
+
+    /**
+     * 闸门控制关闭
+     */
+    public Mono<ApiResponse> setZxGateClose(String id) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("id", id);
+            return postZxIrrigation("/setter/gateClose", requestBody);
+        });
+    }
+
+    /**
+     * 闸门设备重启
+     */
+    public Mono<ApiResponse> setZxGateReset(String id) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("id", id);
+            return postZxIrrigation("/setter/reset", requestBody);
+        });
+    }
+
+    /**
+     * 水泵控制
+     */
+    public Mono<ApiResponse> setZxPumpStationControl3033(String id, String type) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("id", id);
+            requestBody.put("type", type);
+            return postZxIrrigation("/setter/pumpStationControl3033", requestBody);
+        });
+    }
+
+    /**
+     * 水泵控制详情
+     */
+    public Mono<ApiResponse> getZxPumpData3033(String id, String time) {
+        return checkZxIrrigationTokenAndRequest(token -> {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("token", token);
+            requestBody.put("id", id);
+            requestBody.put("time", time);
+            return postZxIrrigation("/setter/pumpData3033", requestBody);
+        });
+    }
+
+    private Mono<ApiResponse> postZxIrrigation(String path, Map<String, Object> requestBody) {
+        return webClient.post()
+                .uri(ZX_IRRIGATION_BASE_URL + path)
+                .header("Content-Type", "application/json;charset=utf-8")
+                .body(BodyInserters.fromValue(requestBody))
+                .retrieve()
+                .bodyToMono(ApiResponse.class);
+    }
+
+    private <T> Mono<T> checkZxIrrigationTokenAndRequest(java.util.function.Function<String, Mono<T>> requestSupplier) {
+        return Mono.fromCallable(() -> {
+            synchronized (zxIrrigationTokenLock) {
+                if (zxIrrigationToken == null || System.currentTimeMillis() > zxIrrigationTokenExpireTime) {
+                    log.info("钟祥灌溉系统Token未初始化或已过期，自动刷新Token");
+                    zxIrrigationToken = loginZxIrrigation().block();
+                    if (zxIrrigationToken == null) {
+                        throw new RuntimeException("钟祥灌溉系统Token刷新失败");
+                    }
+                }
+                return zxIrrigationToken;
+            }
+        }).flatMap(requestSupplier::apply)
+                .timeout(Duration.ofSeconds(30))
+                .onErrorResume(e -> {
+                    log.error("钟祥灌溉系统请求失败，返回空响应: {}", e.getMessage());
+                    return Mono.empty();
+                });
     }
 
     /**
