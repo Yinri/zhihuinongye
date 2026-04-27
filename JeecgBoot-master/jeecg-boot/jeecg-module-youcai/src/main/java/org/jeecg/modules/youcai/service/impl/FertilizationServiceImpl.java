@@ -222,10 +222,9 @@ public class FertilizationServiceImpl implements IFertilizationService {
     }
 
     private String getSoilDeviceCodeByBaseId(String baseId) {
-        String hardcodedCode = getHardcodedDeviceCode(baseId);
-        if (hardcodedCode != null) {
-            log.info("通过硬编码映射获取土壤设备: baseId={}, code={}", baseId, hardcodedCode);
-            return hardcodedCode;
+        if (baseId == null || baseId.isEmpty()) {
+            log.warn("查询土壤传感器设备失败：baseId为空");
+            return null;
         }
 
         try {
@@ -234,57 +233,106 @@ public class FertilizationServiceImpl implements IFertilizationService {
                 log.warn("基地{}不存在", baseId);
                 return null;
             }
-            BigDecimal baseLat = base.getLatitude();
-            BigDecimal baseLon = base.getLongitude();
-            if (baseLat == null || baseLon == null) {
-                return getSensorSerialByNameMatch(base.getBaseName());
-            }
-
-            QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
-            qw.lambda()
-                .eq(YoucaiSensorInfo::getIsDelete, 0)
-                .eq(YoucaiSensorInfo::getSensorTypeId, 2)
-                .apply("ABS(CAST(latitude AS DECIMAL(10,6)) - CAST({0} AS DECIMAL(10,6))) < 0.01", baseLat.toPlainString())
-                .apply("ABS(CAST(longitude AS DECIMAL(10,6)) - CAST({0} AS DECIMAL(10,6))) < 0.01", baseLon.toPlainString())
-                .last("limit 1");
-
-            YoucaiSensorInfo sensor = sensorInfoMapper.selectOne(qw);
-            if (sensor != null && sensor.getSensorSerial() != null) {
-                return sensor.getSensorSerial();
-            }
-
-            return getSensorSerialByNameMatch(base.getBaseName());
+            return getSensorSerialByBaseName(base.getBaseName());
         } catch (Exception e) {
             log.warn("查询土壤传感器设备失败: {}", e.getMessage());
             return null;
         }
     }
 
-    private String getSensorSerialByNameMatch(String baseName) {
-        if (baseName == null) return null;
-        try {
-            QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
-            qw.lambda()
-                .eq(YoucaiSensorInfo::getIsDelete, 0)
-                .eq(YoucaiSensorInfo::getSensorTypeId, 2)
-                .like(YoucaiSensorInfo::getSensorName, baseName);
-            List<YoucaiSensorInfo> sensors = sensorInfoMapper.selectList(qw);
-            if (sensors != null && !sensors.isEmpty()) {
-                return sensors.get(0).getSensorSerial();
-            }
-        } catch (Exception e) {
-            log.warn("名称匹配传感器失败: {}", e.getMessage());
+    private String getSensorSerialByBaseName(String baseName) {
+        List<String> keywords = buildBaseNameKeywords(baseName);
+        if (keywords.isEmpty()) {
+            log.warn("土壤传感器查询失败：基地名为空");
+            return null;
         }
+
+        for (String keyword : keywords) {
+            String sensorSerial = querySensorSerialByKeyword(keyword, true);
+            if (sensorSerial != null) {
+                log.info("通过基地名关键词前缀匹配到土壤设备: baseName={}, keyword={}, code={}", baseName, keyword, sensorSerial);
+                return sensorSerial;
+            }
+        }
+
+        for (String keyword : keywords) {
+            String sensorSerial = querySensorSerialByKeyword(keyword, false);
+            if (sensorSerial != null) {
+                log.info("通过基地名关键词模糊匹配到土壤设备: baseName={}, keyword={}, code={}", baseName, keyword, sensorSerial);
+                return sensorSerial;
+            }
+        }
+
+        log.warn("未找到匹配的土壤传感器设备: baseName={}, keywords={}", baseName, keywords);
         return null;
     }
 
-    private String getHardcodedDeviceCode(String baseId) {
-        Map<String, String> deviceMap = new HashMap<>();
-        deviceMap.put("1992822087463333889", "862635068101757");
-        deviceMap.put("1992821962494046210", "862635068112473");
-        deviceMap.put("1992821272807862273", "862635068112416");
-        deviceMap.put("1992821484976730114", "862635068112390");
-        return deviceMap.get(baseId);
+    private String querySensorSerialByKeyword(String keyword, boolean prefixMatch) {
+        if (keyword == null || keyword.isEmpty()) {
+            return null;
+        }
+
+        QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
+        qw.lambda()
+            .eq(YoucaiSensorInfo::getIsDelete, 0)
+            .eq(YoucaiSensorInfo::getSensorTypeId, 2)
+            .isNotNull(YoucaiSensorInfo::getSensorSerial)
+            .ne(YoucaiSensorInfo::getSensorSerial, "")
+            .orderByAsc(YoucaiSensorInfo::getSensorName);
+        if (prefixMatch) {
+            qw.lambda().likeRight(YoucaiSensorInfo::getSensorName, keyword);
+        } else {
+            qw.lambda().like(YoucaiSensorInfo::getSensorName, keyword);
+        }
+        qw.last("limit 1");
+
+        YoucaiSensorInfo sensor = sensorInfoMapper.selectOne(qw);
+        return sensor != null ? sensor.getSensorSerial() : null;
+    }
+
+    private List<String> buildBaseNameKeywords(String baseName) {
+        LinkedHashSet<String> keywords = new LinkedHashSet<>();
+        if (baseName == null) {
+            return new ArrayList<>(keywords);
+        }
+
+        String normalized = baseName.replaceAll("\\s+", "");
+        if (normalized.isEmpty()) {
+            return new ArrayList<>(keywords);
+        }
+
+        keywords.add(normalized);
+
+        String withoutProjectSuffix = normalized.replaceAll("(基地|示范区|核心区)$", "");
+        if (!withoutProjectSuffix.isEmpty()) {
+            keywords.add(withoutProjectSuffix);
+        }
+
+        int firstRegionSuffixIndex = indexOfFirstRegionSuffix(normalized);
+        if (firstRegionSuffixIndex > 0) {
+            keywords.add(normalized.substring(0, firstRegionSuffixIndex));
+        }
+
+        String[] parts = normalized.split("[乡镇街道村社区]");
+        for (String part : parts) {
+            if (part != null && part.length() >= 2) {
+                keywords.add(part);
+            }
+        }
+
+        return new ArrayList<>(keywords);
+    }
+
+    private int indexOfFirstRegionSuffix(String baseName) {
+        char[] suffixes = {'乡', '镇', '街', '道', '村', '社', '区'};
+        int index = -1;
+        for (char suffix : suffixes) {
+            int currentIndex = baseName.indexOf(suffix);
+            if (currentIndex > 0 && (index == -1 || currentIndex < index)) {
+                index = currentIndex;
+            }
+        }
+        return index;
     }
 
     private Map<String, Object> fetchRealtimeSensorData(String deviceCode) {

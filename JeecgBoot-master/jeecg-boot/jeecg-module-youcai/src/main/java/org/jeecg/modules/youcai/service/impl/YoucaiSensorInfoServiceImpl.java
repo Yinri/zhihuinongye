@@ -141,7 +141,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         }
 
         String baseName = base.getBaseName();
-        String keyword = baseName.length() >= 2 ? baseName.substring(0, 2) : baseName;
+        String keyword = extractSensorNamePrefix(baseName);
         log.info("基地名称: {}，匹配关键字: {}", baseName, keyword);
 
         Integer projectId = getProjectId();
@@ -804,7 +804,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
             
             List<Map<String, Object>> videoDevices = new ArrayList<>();
 
-            String keyword = baseName.length() >= 2 ? baseName.substring(0, 2) : baseName;
+            String keyword = extractSensorNamePrefix(baseName);
             for (int i = 0; i < jsonArray.size(); i++) {
                 try {
                     JSONObject item = jsonArray.getJSONObject(i);
@@ -837,5 +837,20 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         }
     }
 
+    private String extractSensorNamePrefix(String baseName) {
+        if (baseName == null) {
+            return "";
+        }
+
+        String normalized = baseName.trim();
+        String[] separators = {"镇", "乡", "街道"};
+        for (String separator : separators) {
+            int index = normalized.indexOf(separator);
+            if (index > 0) {
+                return normalized.substring(0, index);
+            }
+        }
+        return normalized;
+    }
 
 }

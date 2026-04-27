@@ -16,7 +16,25 @@ enum Api {
   TrackData = '/youcai/sensorInfo/track',
   VideoList = '/youcai/sensorInfo/getVideoDevices',
   VideoStream = '/youcai/sensorInfo/getVideoStream',
+  VideoControl = '/youcai/sensorInfo/controlVideoStream',
   AllDevices = '/youcai/sensorInfo/getAllDevices',
+}
+
+export type VideoPtzCommand = 'stop' | 'up' | 'down' | 'left' | 'right' | 'zoomin' | 'zoomout';
+
+export interface VideoStreamControlParams {
+  DeviceCode: string;
+  ChannelNum: string;
+  command: VideoPtzCommand;
+  speed?: string;
+}
+
+export interface VideoStreamControlResponse {
+  code: number;
+  msg: string;
+  count: number;
+  data: string | null;
+  other: unknown;
 }
 
 export const getWorkAreaList = (params?: AxiosRequestConfig) => {
@@ -80,6 +98,22 @@ export const getVideoDevices = (baseId: string) => {
 
 export const getVideoStream = (equipmentCode: string, channelNum: string) => {
   return defHttp.post({ url: `${Api.VideoStream}?equipmentCode=${equipmentCode}&channelNum=${channelNum}` }, { successMessageMode: 'none' });
+};
+
+export const controlVideoStream = (params: VideoStreamControlParams) => {
+  return defHttp.post<VideoStreamControlResponse>(
+    {
+      url: Api.VideoControl,
+      params: {
+        ...params,
+        speed: params.speed || '33',
+      },
+    },
+    {
+      errorMessageMode: 'none',
+      successMessageMode: 'none',
+    }
+  );
 };
 
 export const getAllDevices = (baseId: string) => {

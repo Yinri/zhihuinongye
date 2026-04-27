@@ -3,10 +3,8 @@ package org.jeecg.modules.youcai.service;
 import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import com.baomidou.mybatisplus.extension.service.IService;
-import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -19,7 +17,4 @@ import java.util.Map;
 public interface IYoucaiPestControlService extends IService<YoucaiPestControl> {
        Mono<List<Map<String, Object>>> getPestImages(String baseName, String startDate, String endDate);
        String aiAnalysis(AnalysisRequestDTO req) throws Exception;
-       Mono<List<Map<String, Object>>> getAllPestImages(String baseName, String startDate, String endDate);
-       List<YoucaiPestControl> findControl(String plotId, String start, String end);
-
 }

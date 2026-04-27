@@ -1,17 +1,22 @@
 package org.jeecg.modules.youcai.controller;
 
+import com.alibaba.fastjson.JSON;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
+import org.jeecg.modules.youcai.dto.AiTaskRecordDTO;
+import org.jeecg.modules.youcai.dto.AiTaskResultDTO;
+import org.jeecg.modules.youcai.dto.AiTaskSubmitResponseDTO;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
+import org.jeecg.modules.youcai.service.IAiAnalysisTaskService;
 import org.jeecg.modules.youcai.service.IYoucaiPestControlService;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -22,13 +27,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.jeecg.common.system.base.controller.JeecgController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.jeecg.common.aspect.annotation.AutoLog;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import reactor.core.publisher.Mono;
 
 /**
@@ -44,6 +49,9 @@ import reactor.core.publisher.Mono;
 public class YoucaiPestControlController extends JeecgController<YoucaiPestControl, IYoucaiPestControlService> {
 	@Autowired
 	private IYoucaiPestControlService youcaiPestControlService;
+
+	@Autowired
+	private IAiAnalysisTaskService aiAnalysisTaskService;
 	
 	/**
 	 * 分页列表查询
@@ -172,8 +180,8 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 			@RequestParam("baseName") String baseName,
 			@RequestParam(name = "StarDate", required = false) String starDate,
 			@RequestParam(name = "EndDate", required = false) String endDate) {
-		// 首页首次加载默认查询“前一天到当天”，避免开始时间和结束时间落在同一天。
-		String finalStartDate = starDate != null && !starDate.isEmpty() ? starDate : LocalDate.now().minusDays(1).toString();
+		// 统一使用时间范围查询，默认近 7 天。
+		String finalStartDate = starDate != null && !starDate.isEmpty() ? starDate : LocalDate.now().minusDays(6).toString();
 		String finalEndDate = endDate != null && !endDate.isEmpty() ? endDate : LocalDate.now().toString();
 		return youcaiPestControlService.getPestImages(baseName, finalStartDate, finalEndDate)
 				.map(parsedData -> Result.OK(parsedData))
@@ -194,23 +202,52 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 			return Result.error("AI 分析失败: " + e.getMessage());
 		}
 	}
-	@GetMapping("/findImages")
-	public Mono<Result<List<Map<String, Object>>>> getPestImagesByRange(
-			@RequestParam("baseName") String baseName,
-			@RequestParam("StarDate") String startDate,
-			@RequestParam("EndDate") String endDate
-	) {
-		// 历史虫情查询保留时间范围，由前端按用户选择传入。
-		return youcaiPestControlService.getAllPestImages(baseName, startDate, endDate)
-				.map(Result::OK)
-				.onErrorReturn(Result.error("Failed to retrieve pest images"));
+
+	@Operation(summary = "提交虫情AI分析任务")
+	@PostMapping("/aiAnalysis/submit")
+	public Result<AiTaskSubmitResponseDTO> submitAiAnalysis(@RequestBody AnalysisRequestDTO req) {
+		if (req == null || req.getImageUrls() == null || req.getImageUrls().isEmpty()) {
+			return Result.error("图片URL列表不能为空");
+		}
+		try {
+			String cacheKey = "pest:" + DigestUtils.md5DigestAsHex(
+					JSON.toJSONString(req).getBytes(StandardCharsets.UTF_8));
+			AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
+					"pest",
+					cacheKey,
+					() -> {
+						try {
+							return JSON.toJSONString(youcaiPestControlService.aiAnalysis(req));
+						} catch (Exception e) {
+							throw new IllegalStateException(e.getMessage(), e);
+						}
+					}
+			);
+			return Result.OK(submitResponse);
+		} catch (Exception e) {
+			return Result.error("提交AI分析任务失败: " + e.getMessage());
+		}
 	}
-	@PostMapping("findControl")
-    public Result<?> findControl(@RequestBody Map<String, Object> params) {
-        String plotId = (String) params.get("plotId");
-        String start = (String) params.get("start_date");
-        String end = (String) params.get("end_date");
-        List<YoucaiPestControl> list = youcaiPestControlService.findControl(plotId, start, end);
-        return Result.OK(list);
-    }
+
+	@Operation(summary = "查询虫情AI分析任务状态")
+	@GetMapping("/aiAnalysis/task/{taskId}")
+	public Result<AiTaskResultDTO<String>> getAiAnalysisTask(@PathVariable String taskId) {
+		AiTaskRecordDTO taskRecord = aiAnalysisTaskService.getTask(taskId);
+		if (taskRecord == null || !"pest".equals(taskRecord.getTaskType())) {
+			return Result.error("任务不存在");
+		}
+		AiTaskResultDTO<String> response = new AiTaskResultDTO<>();
+		response.setTaskId(taskRecord.getTaskId());
+		response.setTaskType(taskRecord.getTaskType());
+		response.setStatus(taskRecord.getStatus());
+		response.setErrorMessage(taskRecord.getErrorMessage());
+		response.setCached(taskRecord.isCached());
+		response.setCreatedTime(taskRecord.getCreatedTime());
+		response.setFinishedTime(taskRecord.getFinishedTime());
+		if (AiTaskRecordDTO.STATUS_SUCCESS.equals(taskRecord.getStatus())
+				&& taskRecord.getResultJson() != null) {
+			response.setResult(JSON.parseObject(taskRecord.getResultJson(), String.class));
+		}
+		return Result.OK(response);
+	}
 }

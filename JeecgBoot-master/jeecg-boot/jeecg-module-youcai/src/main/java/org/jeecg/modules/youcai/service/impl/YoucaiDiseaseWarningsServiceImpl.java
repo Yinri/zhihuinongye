@@ -116,11 +116,13 @@ public class YoucaiDiseaseWarningsServiceImpl extends ServiceImpl<YoucaiDiseaseW
         }
         // ---- 构建 Prompt ----
         StringBuilder prompt = new StringBuilder();
-        prompt.append("你是油菜农业专家。请基于以下病害名称给出具体的防治建议：\n")
-                .append("1. 病害危害程度分析\n")
-                .append("2. 防治建议与最佳时期\n")
-                .append("3. 推荐适用农药及剂量\n")
-                .append("4. 给出一份非常简短的防治总结\n\n")
+        prompt.append("你是一名油菜病害防控专家。请仅围绕给定的油菜病害名称给出针对性建议，不要输出泛化作物内容。\n")
+                .append("输出内容要求：\n")
+                .append("1. 说明该病害在油菜上的主要危害部位、典型症状和风险点。\n")
+                .append("2. 给出与油菜生产直接相关的防治建议，并说明较合适的防治时期。\n")
+                .append("3. 推荐常见有效成分或药剂组合及使用注意事项，避免写无关药剂。\n")
+                .append("4. 最后给出一段非常简短的防治总结。\n")
+                .append("5. 不要输出 Markdown 代码块，不要编造与该病害无关的虫害、施肥或倒伏内容。\n\n")
                 .append("病害名称：").append(disease).append("\n");
 
         // ---- 构建请求体 ----

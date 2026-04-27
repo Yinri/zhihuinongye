@@ -16,11 +16,11 @@ import org.jeecg.modules.youcai.entity.YoucaiAgriculturalMachine;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.dto.WeatherSensorDataDTO;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
+import org.springframework.util.StringUtils;
 import org.jeecg.modules.youcai.mapper.YoucaiAgriculturalMachineMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiBasesMapper;
 import org.jeecg.modules.youcai.service.IYoucaiAgriculturalMachineService;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
-import org.jeecg.modules.youcai.task.SensorDataSyncTask;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -63,9 +63,6 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
 	@Autowired
 	private IoTApiUtil ioTApiUtil;
 	
-	@Autowired
-	private SensorDataSyncTask sensorDataSyncTask;
-
      @Autowired
      private IYoucaiAgriculturalMachineService agriculturalMachineService;
 
@@ -195,26 +192,6 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
     }
     
     /**
-     * 同步传感器数据
-     *
-     * @param projectId 项目ID
-     * @return
-     */
-    @AutoLog(value = "传感器信息表-同步传感器数据")
-    @Operation(summary="传感器信息表-同步传感器数据", description="传感器信息表-同步传感器数据")
-    @PostMapping(value = "/syncSensorData")
-    public Result<String> syncSensorData(@Parameter(name="projectId", description="项目ID") @RequestParam(name="projectId") Integer projectId) {
-        try {
-            // 调用定时任务的同步方法
-            sensorDataSyncTask.syncSensorData();
-            return Result.OK("同步成功!");
-        } catch (Exception e) {
-            log.error("同步传感器数据失败", e);
-            return Result.error("同步失败: " + e.getMessage());
-        }
-    }
-    
-    /**
      * 获取基地的气象传感器实时数据
      *
      * @param baseId 基地ID
@@ -321,6 +298,42 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
         } catch (Exception e) {
             log.error("获取视频播放地址异常", e);
             return Result.error("获取视频播放地址异常：" + e.getMessage());
+        }
+    }
+
+    @AutoLog(value = "传感器信息表-云台控制")
+    @Operation(summary="视频云台控制", description="根据设备编码、通道号和指令控制视频云台")
+    @PostMapping(value = "/controlVideoStream")
+    public Result<Object> controlVideoStream(@RequestBody Map<String, Object> params) {
+        try {
+            String deviceCode = params.get("DeviceCode") == null ? null : params.get("DeviceCode").toString();
+            String channelNum = params.get("ChannelNum") == null ? null : params.get("ChannelNum").toString();
+            String command = params.get("command") == null ? null : params.get("command").toString();
+            String speed = params.get("speed") == null ? "33" : params.get("speed").toString();
+
+            if (!StringUtils.hasText(deviceCode) || !StringUtils.hasText(channelNum) || !StringUtils.hasText(command)) {
+                return Result.error("设备编码、通道号和控制指令不能为空");
+            }
+
+            log.info("视频云台控制，请求参数 deviceCode={}, channelNum={}, command={}, speed={}",
+                    deviceCode, channelNum, command, speed);
+
+            ApiResponse response = ioTApiUtil.controlVideoStream(deviceCode, channelNum, command, speed).block();
+            if (response != null && response.getCode() == 1) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", response.getCode());
+                result.put("msg", response.getMsg());
+                result.put("count", response.getCount());
+                result.put("data", response.getData());
+                return Result.OK(result);
+            }
+
+            String errorMsg = response != null ? response.getMsg() : "响应为空";
+            log.error("视频云台控制失败: {}", errorMsg);
+            return Result.error("视频云台控制失败: " + errorMsg);
+        } catch (Exception e) {
+            log.error("视频云台控制异常", e);
+            return Result.error("视频云台控制异常：" + e.getMessage());
         }
     }
 

@@ -6,14 +6,12 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.jeecg.modules.youcai.entity.YoucaiPlots;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
-import org.jeecg.modules.youcai.entity.YoucaiSensorHourly;
 import org.jeecg.modules.youcai.entity.YoucaiIotDevices;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.entity.YoucaiBases;
 import org.jeecg.modules.youcai.entity.iotEntity.ApiResponse;
 import org.jeecg.modules.youcai.entity.iotEntity.sensor.SensorInfo;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
-import org.jeecg.modules.youcai.mapper.YoucaiSensorHourlyMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiGrowthMonitoringMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiIotDevicesMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiSensorInfoMapper;
@@ -27,8 +25,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,9 +36,6 @@ public class IrrigationServiceImpl implements IIrrigationService {
     // 新增日志对象
     private static final Logger log = LoggerFactory.getLogger(IrrigationServiceImpl.class);
 
-    @Autowired
-    private YoucaiSensorHourlyMapper sensorHourlyMapper;
-    
     @Autowired
     private YoucaiPlotsMapper plotsMapper;
     
@@ -511,104 +504,6 @@ public class IrrigationServiceImpl implements IIrrigationService {
         return r;
     }
 
-    private BigDecimal latestSoilMoisture(String plotId) {
-        // 兼容逻辑：优先plotId，无数据则用baseId
-        YoucaiPlots plot = plotsMapper.selectById(plotId);
-        if (plot == null) {
-            return BigDecimal.ZERO;
-        }
-        
-        QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
-        qw.lambda().eq(YoucaiSensorHourly::getDelFlag, 0)
-                .eq(YoucaiSensorHourly::getPlotId, plotId);
-        
-        qw.lambda().orderByDesc(YoucaiSensorHourly::getHourTs)
-                .last("limit 1");
-        
-        YoucaiSensorHourly row = sensorHourlyMapper.selectOne(qw);
-        return row != null && row.getSoilMoisturePct() != null ? row.getSoilMoisturePct() : BigDecimal.ZERO;
-    }
-
-    private List<Map<String, Object>> aggregateDaily(String plotId, int days) {
-        // 兼容逻辑：优先plotId，无数据则用baseId
-        YoucaiPlots plot = plotsMapper.selectById(plotId);
-        if (plot == null) {
-            return new ArrayList<>();
-        }
-        
-        QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
-        qw.lambda().eq(YoucaiSensorHourly::getDelFlag, 0)
-                .eq(YoucaiSensorHourly::getPlotId, plotId);
-        
-        qw.lambda().orderByDesc(YoucaiSensorHourly::getHourTs)
-                .last("limit " + (24 * days));
-        
-        List<YoucaiSensorHourly> rows = sensorHourlyMapper.selectList(qw);
-        log.debug("地块{}聚合日数据：查询到{}小时数据", plotId, rows.size());
-
-        Map<String, List<YoucaiSensorHourly>> byDay = new LinkedHashMap<>();
-        rows.forEach(r -> {
-            String d = r.getHourTs().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString();
-            byDay.computeIfAbsent(d, k -> new ArrayList<>()).add(r);
-        });
-
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Map.Entry<String, List<YoucaiSensorHourly>> e : byDay.entrySet()) {
-            List<YoucaiSensorHourly> hs = e.getValue();
-            BigDecimal temp = avg(hs.stream().map(YoucaiSensorHourly::getAirTempC).collect(Collectors.toList()));
-            BigDecimal rh = avg(hs.stream().map(YoucaiSensorHourly::getRelHumidityPct).collect(Collectors.toList()));
-            BigDecimal wind = avg(hs.stream().map(YoucaiSensorHourly::getWindSpeedMs).collect(Collectors.toList()));
-            BigDecimal solarWm2 = sum(hs.stream().map(YoucaiSensorHourly::getSolarRadiationWm2).collect(Collectors.toList()));
-            BigDecimal solarMj = solarWm2.multiply(new BigDecimal("0.0036")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal precip = sum(hs.stream().map(YoucaiSensorHourly::getPrecipMm).collect(Collectors.toList()));
-            BigDecimal et0 = sum(hs.stream().map(this::hourlyEt0).collect(Collectors.toList()));
-            BigDecimal soil = avg(hs.stream().map(YoucaiSensorHourly::getSoilMoisturePct).collect(Collectors.toList()));
-            
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("date", e.getKey());
-            m.put("tempC", temp);
-            m.put("rhPct", rh);
-            m.put("windMs", wind);
-            m.put("solarMj", solarMj);
-            m.put("precipMm", precip);
-            m.put("et0Mm", et0);
-            m.put("soilPct", soil);
-            list.add(m);
-        }
-
-        List<Map<String, Object>> last = list.stream().sorted(Comparator.comparing(m -> (String) m.get("date"))).collect(Collectors.toList());
-        if (last.size() > days) last = last.subList(last.size() - days, last.size());
-        
-        log.debug("地块{}聚合日数据：生成{}天数据", plotId, last.size());
-        return last;
-    }
-
-    private BigDecimal hourlyEt0(YoucaiSensorHourly r) {
-        BigDecimal t = nz(r.getAirTempC());
-        BigDecimal rh = nz(r.getRelHumidityPct());
-        BigDecimal u2 = nz(r.getWindSpeedMs());
-        BigDecimal rsWm2 = nz(r.getSolarRadiationWm2());
-        BigDecimal rs = rsWm2.multiply(new BigDecimal("0.0036"));
-        
-        BigDecimal es = saturationVaporPressure(t);
-        BigDecimal ea = es.multiply(rh.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP));
-        BigDecimal delta = slopeVaporPressureCurve(t);
-        BigDecimal gamma = psychrometricConstant();
-        
-        BigDecimal rns = rs.multiply(new BigDecimal("0.77"));
-        BigDecimal rnl = longwaveApprox(t, ea);
-        BigDecimal rn = rns.subtract(rnl);
-        
-        BigDecimal numRad = delta.multiply(rn).multiply(new BigDecimal("3600")).divide(new BigDecimal("2.45e6"), 8, RoundingMode.HALF_UP);
-        BigDecimal numAer = gamma.multiply(new BigDecimal("900")).divide(t.add(new BigDecimal("273")), 8, RoundingMode.HALF_UP).multiply(u2).multiply(es.subtract(ea));
-        BigDecimal denom = delta.add(gamma.multiply(new BigDecimal("1"))).max(new BigDecimal("1e-6"));
-        
-        BigDecimal et0 = numRad.add(numAer).divide(denom, 6, RoundingMode.HALF_UP);
-        if (et0.compareTo(BigDecimal.ZERO) < 0) et0 = BigDecimal.ZERO;
-        
-        return et0.setScale(2, RoundingMode.HALF_UP);
-    }
-
     private BigDecimal saturationVaporPressure(BigDecimal t) {
         BigDecimal b = t;
         double v = 0.6108 * Math.exp((17.27 * b.doubleValue()) / (b.doubleValue() + 237.3));
@@ -648,73 +543,6 @@ public class IrrigationServiceImpl implements IIrrigationService {
 
     private BigDecimal nz(BigDecimal v) { 
         return v == null ? BigDecimal.ZERO : v; 
-    }
-
-    private BigDecimal latestSoilMoistureByBase(String baseId) {
-        QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
-        qw.lambda().eq(YoucaiSensorHourly::getDelFlag, 0)
-                .eq(YoucaiSensorHourly::getBaseId, baseId);
-        qw.lambda().orderByDesc(YoucaiSensorHourly::getHourTs)
-                .last("limit 1");
-        YoucaiSensorHourly row = sensorHourlyMapper.selectOne(qw);
-        return row != null && row.getSoilMoisturePct() != null ? row.getSoilMoisturePct() : BigDecimal.ZERO;
-    }
-
-    private List<Map<String, Object>> aggregateDailyByBase(String baseId, int days) {
-        QueryWrapper<YoucaiSensorHourly> qw = new QueryWrapper<>();
-        qw.lambda().eq(YoucaiSensorHourly::getDelFlag, 0)
-                .eq(YoucaiSensorHourly::getBaseId, baseId);
-        qw.lambda().orderByDesc(YoucaiSensorHourly::getHourTs)
-                .last("limit " + (24 * days));
-        List<YoucaiSensorHourly> rows = sensorHourlyMapper.selectList(qw);
-        Map<String, List<YoucaiSensorHourly>> byDay = new LinkedHashMap<>();
-        rows.forEach(r -> {
-            String d = r.getHourTs().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString();
-            byDay.computeIfAbsent(d, k -> new ArrayList<>()).add(r);
-        });
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Map.Entry<String, List<YoucaiSensorHourly>> e : byDay.entrySet()) {
-            List<YoucaiSensorHourly> hs = e.getValue();
-            BigDecimal temp = avg(hs.stream().map(YoucaiSensorHourly::getAirTempC).collect(Collectors.toList()));
-            BigDecimal rh = avg(hs.stream().map(YoucaiSensorHourly::getRelHumidityPct).collect(Collectors.toList()));
-            BigDecimal wind = avg(hs.stream().map(YoucaiSensorHourly::getWindSpeedMs).collect(Collectors.toList()));
-            BigDecimal solarWm2 = sum(hs.stream().map(YoucaiSensorHourly::getSolarRadiationWm2).collect(Collectors.toList()));
-            BigDecimal solarMj = solarWm2.multiply(new BigDecimal("0.0036")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal precip = sum(hs.stream().map(YoucaiSensorHourly::getPrecipMm).collect(Collectors.toList()));
-            BigDecimal et0 = sum(hs.stream().map(this::hourlyEt0).collect(Collectors.toList()));
-            BigDecimal soil = avg(hs.stream().map(YoucaiSensorHourly::getSoilMoisturePct).collect(Collectors.toList()));
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("date", e.getKey());
-            m.put("tempC", temp);
-            m.put("rhPct", rh);
-            m.put("windMs", wind);
-            m.put("solarMj", solarMj);
-            m.put("precipMm", precip);
-            m.put("et0Mm", et0);
-            m.put("soilPct", soil);
-            list.add(m);
-        }
-        List<Map<String, Object>> last = list.stream().sorted(Comparator.comparing(m -> (String) m.get("date"))).collect(Collectors.toList());
-        if (last.size() > days) last = last.subList(last.size() - days, last.size());
-        return last;
-    }
-
-    private String nextMorning() {
-        Calendar c = Calendar.getInstance();
-        c.add(Calendar.DATE, 1);
-        c.set(Calendar.HOUR_OF_DAY, 6);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        Date d = c.getTime();
-        return d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-    }
-
-    private BigDecimal recommendedVolume(BigDecimal moisture) {
-        if (moisture.compareTo(new BigDecimal("35")) < 0) return new BigDecimal("30");
-        if (moisture.compareTo(new BigDecimal("45")) < 0) return new BigDecimal("25");
-        if (moisture.compareTo(new BigDecimal("55")) < 0) return new BigDecimal("20");
-        if (moisture.compareTo(new BigDecimal("60")) < 0) return new BigDecimal("15");
-        return new BigDecimal("10");
     }
 
     private Map<String, Object> fetchRealtimeSensorData(String deviceCode) {
@@ -801,8 +629,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
     }
 
     private String getDeviceCodeByBaseId(String baseId) {
-        // 从 youcai_sensor_info 表中根据基地经纬度匹配
-        String deviceCode = getSensorSerialByBaseIdAndType(baseId, 2);
+        String deviceCode = getSensorSerialByBaseIdAndType(baseId, 2, "土壤传感器");
         if (deviceCode != null) {
             return deviceCode;
         }
@@ -811,143 +638,128 @@ public class IrrigationServiceImpl implements IIrrigationService {
     }
 
     private String getMeteoDeviceCodeByBaseId(String baseId) {
-        // 从 youcai_sensor_info 表中根据基地经纬度匹配
-        String deviceCode = getSensorSerialByBaseIdAndType(baseId, 1);
+        String deviceCode = getSensorSerialByBaseIdAndType(baseId, 1, "气象站");
         if (deviceCode != null) {
             return deviceCode;
         }
         log.warn("基地{}没有配置气象站设备", baseId);
         return null;
     }
-    
-    /**
-     * 硬编码的基地设备映射表
-     * 九里: 1992822087463333889
-     * 洋梓: 1992821962494046210
-     * 丰乐: 1992821272807862273
-     * 胡集: 1992821484976730114
-     */
-    private String getHardcodedDeviceCode(String baseId, Integer sensorTypeId) {
-        Map<String, Map<Integer, String>> deviceMap = new HashMap<>();
-        
-        // 九里
-        Map<Integer, String> jiuli = new HashMap<>();
-        jiuli.put(1, "0030022506040006"); // 气象
-        jiuli.put(2, "862635068101757");  // 土壤
-        deviceMap.put("1992822087463333889", jiuli);
-        
-        // 洋梓
-        Map<Integer, String> yangzi = new HashMap<>();
-        yangzi.put(1, "0030022506040007");
-        yangzi.put(2, "862635068112473");
-        deviceMap.put("1992821962494046210", yangzi);
-        
-        // 丰乐
-        Map<Integer, String> fengle = new HashMap<>();
-        fengle.put(1, "0030022506040004");
-        fengle.put(2, "862635068112416");
-        deviceMap.put("1992821272807862273", fengle);
-        
-        // 胡集
-        Map<Integer, String> huji = new HashMap<>();
-        huji.put(1, "0030022506040005");
-        huji.put(2, "862635068112390");
-        deviceMap.put("1992821484976730114", huji);
-        
-        Map<Integer, String> baseDevices = deviceMap.get(baseId);
-        if (baseDevices != null) {
-            return baseDevices.get(sensorTypeId);
+
+    private String getSensorSerialByBaseIdAndType(String baseId, Integer sensorTypeId, String deviceLabel) {
+        if (baseId == null || baseId.isEmpty()) {
+            log.warn("{}查询失败：baseId为空", deviceLabel);
+            return null;
         }
-        return null;
-    }
-    
-    /**
-     * 根据基地ID和传感器类型从 youcai_sensor_info 表获取设备编号
-     * 通过基地名称匹配传感器名称中的关键词
-     * @param baseId 基地ID
-     * @param sensorTypeId 传感器类型：1=气象，2=土壤
-     * @return 设备编号，如果没有找到返回null
-     */
-    private String getSensorSerialByBaseIdAndType(String baseId, Integer sensorTypeId) {
-        // 优先使用硬编码的设备映射表（4个已知基地）
-        String hardcodedCode = getHardcodedDeviceCode(baseId, sensorTypeId);
-        if (hardcodedCode != null) {
-            log.info("通过硬编码映射获取设备: baseId={}, type={}, code={}", baseId, sensorTypeId, hardcodedCode);
-            return hardcodedCode;
-        }
-        
+
         try {
-            // 1. 根据baseId获取基地信息（包含经纬度）
             YoucaiBases base = basesMapper.selectById(baseId);
             if (base == null) {
                 log.warn("基地{}不存在", baseId);
                 return null;
             }
-            BigDecimal baseLat = base.getLatitude();
-            BigDecimal baseLon = base.getLongitude();
-            String baseName = base.getBaseName();
-            
-            if (baseLat == null || baseLon == null) {
-                log.warn("基地{}没有经纬度信息，尝试通过名称匹配", baseName);
-                // 备用方案：通过名称匹配
-                return getSensorSerialByNameMatch(baseName, sensorTypeId);
-            }
-            
-            log.info("开始匹配基地{}的传感器，类型={}，经纬度=({}, {})", baseName, sensorTypeId, baseLat, baseLon);
-            
-            // 2. 在 youcai_sensor_info 中查找同位置的传感器（通过经纬度匹配，距离小于0.01度约1km）
-            QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
-            qw.lambda()
-                .eq(YoucaiSensorInfo::getIsDelete, 0)
-                .eq(YoucaiSensorInfo::getSensorTypeId, sensorTypeId)
-                .apply("ABS(CAST(latitude AS DECIMAL(10,6)) - CAST({0} AS DECIMAL(10,6))) < 0.01", baseLat.toPlainString())
-                .apply("ABS(CAST(longitude AS DECIMAL(10,6)) - CAST({0} AS DECIMAL(10,6))) < 0.01", baseLon.toPlainString())
-                .last("limit 1");
-            
-            YoucaiSensorInfo sensor = sensorInfoMapper.selectOne(qw);
-            if (sensor != null && sensor.getSensorSerial() != null) {
-                log.info("通过经纬度匹配到传感器: {} -> {}", sensor.getSensorName(), sensor.getSensorSerial());
-                return sensor.getSensorSerial();
-            }
-            
-            // 3. 备用方案：通过名称匹配
-            log.warn("经纬度匹配未找到，尝试通过名称匹配");
-            return getSensorSerialByNameMatch(baseName, sensorTypeId);
-            
+            return getSensorSerialByBaseNameAndType(base.getBaseName(), sensorTypeId, deviceLabel);
         } catch (Exception e) {
-            log.warn("查询传感器设备失败: {}", e.getMessage());
+            log.warn("查询{}失败: {}", deviceLabel, e.getMessage());
             return null;
         }
     }
-    
-    /**
-     * 通过基地名称匹配传感器（备用方案）
-     */
-    private String getSensorSerialByNameMatch(String baseName, Integer sensorTypeId) {
-        try {
-            if (baseName == null) return null;
-            
-            // 在 youcai_sensor_info 中查找名称包含基地名的传感器
-            QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
-            qw.lambda()
-                .eq(YoucaiSensorInfo::getIsDelete, 0)
-                .eq(YoucaiSensorInfo::getSensorTypeId, sensorTypeId)
-                .like(YoucaiSensorInfo::getSensorName, baseName);
-            
-            List<YoucaiSensorInfo> sensors = sensorInfoMapper.selectList(qw);
-            if (sensors != null && !sensors.isEmpty()) {
-                YoucaiSensorInfo sensor = sensors.get(0);
-                log.info("通过名称匹配到传感器: {} -> {}", sensor.getSensorName(), sensor.getSensorSerial());
-                return sensor.getSensorSerial();
-            }
-            
-            log.warn("名称匹配未找到传感器: baseName={}, type={}", baseName, sensorTypeId);
-            return null;
-            
-        } catch (Exception e) {
-            log.warn("名称匹配传感器失败: {}", e.getMessage());
+
+    private String getSensorSerialByBaseNameAndType(String baseName, Integer sensorTypeId, String deviceLabel) {
+        List<String> keywords = buildBaseNameKeywords(baseName);
+        if (keywords.isEmpty()) {
+            log.warn("{}查询失败：基地名为空，sensorTypeId={}", deviceLabel, sensorTypeId);
             return null;
         }
+
+        for (String keyword : keywords) {
+            String sensorSerial = querySensorSerialByKeyword(sensorTypeId, keyword, true);
+            if (sensorSerial != null) {
+                log.info("通过基地名关键词前缀匹配到{}: baseName={}, keyword={}, sensorTypeId={}, code={}",
+                    deviceLabel, baseName, keyword, sensorTypeId, sensorSerial);
+                return sensorSerial;
+            }
+        }
+
+        for (String keyword : keywords) {
+            String sensorSerial = querySensorSerialByKeyword(sensorTypeId, keyword, false);
+            if (sensorSerial != null) {
+                log.info("通过基地名关键词模糊匹配到{}: baseName={}, keyword={}, sensorTypeId={}, code={}",
+                    deviceLabel, baseName, keyword, sensorTypeId, sensorSerial);
+                return sensorSerial;
+            }
+        }
+
+        log.warn("未找到匹配的{}: baseName={}, sensorTypeId={}, keywords={}", deviceLabel, baseName, sensorTypeId, keywords);
+        return null;
+    }
+
+    private String querySensorSerialByKeyword(Integer sensorTypeId, String keyword, boolean prefixMatch) {
+        if (keyword == null || keyword.isEmpty()) {
+            return null;
+        }
+
+        QueryWrapper<YoucaiSensorInfo> qw = new QueryWrapper<>();
+        qw.lambda()
+            .eq(YoucaiSensorInfo::getIsDelete, 0)
+            .eq(YoucaiSensorInfo::getSensorTypeId, sensorTypeId)
+            .isNotNull(YoucaiSensorInfo::getSensorSerial)
+            .ne(YoucaiSensorInfo::getSensorSerial, "")
+            .orderByAsc(YoucaiSensorInfo::getSensorName);
+        if (prefixMatch) {
+            qw.lambda().likeRight(YoucaiSensorInfo::getSensorName, keyword);
+        } else {
+            qw.lambda().like(YoucaiSensorInfo::getSensorName, keyword);
+        }
+        qw.last("limit 1");
+
+        YoucaiSensorInfo sensor = sensorInfoMapper.selectOne(qw);
+        return sensor != null ? sensor.getSensorSerial() : null;
+    }
+
+    private List<String> buildBaseNameKeywords(String baseName) {
+        LinkedHashSet<String> keywords = new LinkedHashSet<>();
+        if (baseName == null) {
+            return new ArrayList<>(keywords);
+        }
+
+        String normalized = baseName.replaceAll("\\s+", "");
+        if (normalized.isEmpty()) {
+            return new ArrayList<>(keywords);
+        }
+
+        keywords.add(normalized);
+
+        String withoutProjectSuffix = normalized.replaceAll("(基地|示范区|核心区)$", "");
+        if (!withoutProjectSuffix.isEmpty()) {
+            keywords.add(withoutProjectSuffix);
+        }
+
+        int firstRegionSuffixIndex = indexOfFirstRegionSuffix(normalized);
+        if (firstRegionSuffixIndex > 0) {
+            keywords.add(normalized.substring(0, firstRegionSuffixIndex));
+        }
+
+        String[] parts = normalized.split("[乡镇街道村社区]");
+        for (String part : parts) {
+            if (part != null && part.length() >= 2) {
+                keywords.add(part);
+            }
+        }
+
+        return new ArrayList<>(keywords);
+    }
+
+    private int indexOfFirstRegionSuffix(String baseName) {
+        char[] suffixes = {'乡', '镇', '街', '道', '村', '社', '区'};
+        int index = -1;
+        for (char suffix : suffixes) {
+            int currentIndex = baseName.indexOf(suffix);
+            if (currentIndex > 0 && (index == -1 || currentIndex < index)) {
+                index = currentIndex;
+            }
+        }
+        return index;
     }
 
     private Optional<BigDecimal> toBigDecimal(Object value) {

@@ -19,13 +19,17 @@
           <!-- 左侧：视频监控 -->
           <a-col :span="12">                                                                                                                                                       <a-card title="视频监控" class="video-card">
               <div class="video-grid" :class="`video-grid-${Math.min(videoDevices.length, 4)}`">
-                <FlvPlayer
-                  v-for="device in videoDevices" 
-                  :key="device.equipmentCode"
-                  :url="device.streamUrl"
-                  :title="device.equipmentName"
-                  class="video-item"
-                />
+                <div v-for="device in videoDevices" :key="device.equipmentCode" class="video-monitor-card">
+                  <FlvPlayer
+                    :url="device.streamUrl"
+                    :title="device.equipmentName"
+                    class="video-item"
+                  />
+                  <PtzControlPanel
+                    :device-code="device.equipmentCode"
+                    :channel-num="device.channelNum || '1'"
+                  />
+                </div>
                 <a-empty v-if="videoDevices.length === 0" description="暂无视频设备" />
               </div>
             </a-card>
@@ -47,11 +51,6 @@
                   <a-empty description="暂无分析数据" />
                 </div>
                 <div v-else class="analysis-content">
-                  <!-- 分析图片 -->
-                  <div class="analysis-image">
-                    <img :src="analysisResult.imageUrl" alt="分析图片" />
-                  </div>
-                  
                   <!-- 关键指标 -->
                   <div class="analysis-metrics">
                     <a-row :gutter="12">
@@ -208,7 +207,8 @@
                 <div class="loading-spinner"></div>
                 <div class="loading-text">加载中...</div>
               </div>
-              <Bar v-else-if="dataLoaded" :chartData="barChartData" :height="'250px'" :option="barChartOption" @click="handleBarClick" />
+              <Bar v-else-if="dataLoaded && barChartData.length" :chartData="barChartData" :height="'250px'" :option="barChartOption" @click="handleBarClick" />
+              <a-empty v-else-if="dataLoaded" description="暂无地块风险数据" />
               <div v-else class="loading-container">
                 <div class="loading-text">准备加载数据...</div>
               </div>
@@ -476,7 +476,8 @@ import dayjs from 'dayjs';
 import { 
   getLodgingRiskDataById, 
   getBatchLodgingRiskDataByBaseId,
-  getBatchVideoLodgingAnalysis,
+  getBatchVideoLodgingAnalysisTask,
+  submitBatchVideoLodgingAnalysis,
   type LodgingRiskAssessmentResponse,
   type BatchLodgingRiskAssessmentResponse,
   type VideoLodgingAnalysisResult
@@ -498,6 +499,7 @@ import Pie from '/@/components/chart/Pie.vue';
 import Bar from '/@/components/chart/Bar.vue';
 import { Icon } from '/@/components/Icon';
 import FlvPlayer from '/@/views/rapeseed/work-area/components/FlvPlayer.vue';
+import PtzControlPanel from '/@/views/rapeseed/work-area/components/PtzControlPanel.vue';
 import { debounce, throttle } from 'lodash-es';
 import {
   ReloadOutlined,
@@ -525,12 +527,15 @@ const loading = ref(false);
 const dataLoaded = ref(false);
 const errorCount = ref(0);
 const maxRetries = 3;
+const ANALYSIS_POLL_INTERVAL = 2000;
+const ANALYSIS_MAX_POLL_COUNT = 90;
 
 // ==================== 视频监控与倒伏分析相关 ====================
 const videoDevices = ref<any[]>([]);
 const videoLoading = ref(false);
 const analysisLoading = ref(false);
 const analysisResult = ref<VideoLodgingAnalysisResult | null>(null);
+let latestVideoAnalysisToken = 0;
 
 // 地图相关
 const mapInstance = ref(null);
@@ -540,7 +545,12 @@ const fieldOverlayRef = ref(null);
 // ==================== 视频监控与倒伏分析方法 ====================
 async function loadVideoDevices() {
   const baseId = selectStore.selectedBase.baseId;
-  if (!baseId) return;
+  if (!baseId) {
+    latestVideoAnalysisToken += 1;
+    videoDevices.value = [];
+    analysisResult.value = null;
+    return;
+  }
   
   videoLoading.value = true;
   try {
@@ -561,11 +571,14 @@ async function loadVideoDevices() {
     }
     
     if (videoDevices.value.length > 0) {
-      autoAnalyzeAllVideos();
+      void autoAnalyzeAllVideos();
+    } else {
+      analysisResult.value = null;
     }
   } catch (error) {
     console.error('加载视频设备失败:', error);
     videoDevices.value = [];
+    analysisResult.value = null;
   } finally {
     videoLoading.value = false;
   }
@@ -578,17 +591,52 @@ async function autoAnalyzeAllVideos() {
     .filter(device => device.id)
     .map(device => device.id);
   
-  if (videoIds.length === 0) return;
-  
+  if (videoIds.length === 0) {
+    analysisResult.value = null;
+    return;
+  }
+
+  const token = ++latestVideoAnalysisToken;
   analysisLoading.value = true;
   try {
-    const result = await getBatchVideoLodgingAnalysis(videoIds);
+    const submitResult = await submitBatchVideoLodgingAnalysis(videoIds);
+    const result = await pollBatchVideoLodgingAnalysisTask(submitResult.taskId, token);
+    if (token !== latestVideoAnalysisToken) {
+      return;
+    }
     analysisResult.value = result as VideoLodgingAnalysisResult;
   } catch (error) {
+    if (token !== latestVideoAnalysisToken) {
+      return;
+    }
     console.error('批量倒伏分析失败:', error);
+    createMessage.error('批量倒伏分析失败');
   } finally {
-    analysisLoading.value = false;
+    if (token === latestVideoAnalysisToken) {
+      analysisLoading.value = false;
+    }
   }
+}
+
+async function pollBatchVideoLodgingAnalysisTask(taskId: string, token: number) {
+  for (let count = 0; count < ANALYSIS_MAX_POLL_COUNT; count += 1) {
+    const task = await getBatchVideoLodgingAnalysisTask(taskId);
+    if (token !== latestVideoAnalysisToken) {
+      throw new Error('分析任务已取消');
+    }
+    if (task.status === 'SUCCESS') {
+      return task.result || ({} as VideoLodgingAnalysisResult);
+    }
+    if (task.status === 'FAILED') {
+      throw new Error(task.errorMessage || '批量倒伏分析失败');
+    }
+    await sleep(ANALYSIS_POLL_INTERVAL);
+  }
+  throw new Error('批量倒伏分析超时，请稍后重试');
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function getRiskTagColor(level: string): string {
@@ -608,6 +656,36 @@ function getRiskValueColor(value: number): string {
   if (value < 65) return '#faad14';
   if (value < 80) return '#fa8c16';
   return '#f5222d';
+}
+
+function normalizeRiskScore(score?: number): number {
+  if (typeof score !== 'number' || Number.isNaN(score)) {
+    return 0;
+  }
+  return score > 1 ? score / 100 : score;
+}
+
+function getPlotCurrentRisk(plot: any) {
+  return plot?.current_risk || plot?.currentRisk || null;
+}
+
+function normalizePlotRiskData(plot: any) {
+  const currentRisk = getPlotCurrentRisk(plot);
+  return {
+    ...plot,
+    plotId: plot?.plotId || plot?.id,
+    id: plot?.id || plot?.plotId,
+    plotName: plot?.plotName || plot?.name || `地块${plot?.plotId || plot?.id || ''}`,
+    current_risk: currentRisk
+      ? {
+          ...currentRisk,
+          riskScore: normalizeRiskScore(currentRisk.riskScore),
+        }
+      : null,
+    forecast_7days: plot?.forecast_7days || plot?.forecast7Days || plot?.forecast_7_days || null,
+    comprehensive_suggestions:
+      plot?.comprehensive_suggestions || plot?.comprehensiveSuggestions || null,
+  };
 }
 
 // ==================== 图表相关变量 ====================
@@ -1161,6 +1239,12 @@ const handlePlotClick = async (plotId) => {
   // 支持两种ID格式：plotId和id
   const id = plotId;
   const plot = plotRisksData.value.find(p => p.plotId === id || p.id === id);
+
+  if (!plot) {
+    console.warn('未找到对应地块的倒伏风险数据:', plotId);
+    createMessage.warning('未找到对应地块的倒伏风险数据');
+    return;
+  }
   
   // 如果找不到匹配的地块，使用传入的ID创建基本数据结构
   
@@ -1412,7 +1496,7 @@ const handlePieClick = (params) => {
 const handleBarClick = (params) => {
   console.log('条形图点击:', params);
   const plotName = params.name;
-  const plot = plotRisksData.value.find(p => p.plotName === plotName);
+  const plot = plotRisksData.value.find(p => (p.plotName || p.name) === plotName);
   if (plot) {
     onPlotClick(plot.plotId);
   }
@@ -1460,6 +1544,7 @@ const prepareBarChartData = () => {
   
   // 按风险分数排序的地块，过滤掉没有current_risk数据的地块
   const sortedPlots = [...plots]
+    .map(plot => normalizePlotRiskData(plot))
     .filter(plot => plot.current_risk && plot.current_risk.riskScore !== undefined)
     .sort((a, b) => b.current_risk.riskScore - a.current_risk.riskScore);
   
@@ -1618,7 +1703,7 @@ const loadLodgingRiskData = async () => {
     if (batchData && batchData.plotRisks) {
       console.log('plotRisks数据:', batchData.plotRisks);
       // 更新plotRisksData，用于传递给地图组件
-      plotRisksData.value = batchData.plotRisks;
+      plotRisksData.value = batchData.plotRisks.map((plot) => normalizePlotRiskData(plot));
       
       // 更新baseStatistics数据
       baseStatistics.value = {
@@ -1875,6 +1960,24 @@ onBeforeUnmount(() => {
       min-height: 0;
       overflow: hidden;
     }
+
+    .video-monitor-card {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .video-monitor-card :deep(.flv-player-container) {
+      flex: 1;
+      min-height: 0;
+      border-radius: 0;
+    }
     
     .video-container {
       height: 100%;
@@ -1927,20 +2030,6 @@ onBeforeUnmount(() => {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        
-        .analysis-image {
-          flex: 1;
-          min-height: 150px;
-          border-radius: 8px;
-          overflow: hidden;
-          background: #f5f5f5;
-          
-          img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-        }
         
         .analysis-metrics {
           padding: 8px 0;

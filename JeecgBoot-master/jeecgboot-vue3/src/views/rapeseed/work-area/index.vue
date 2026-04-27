@@ -4,13 +4,18 @@
       <a-col :span="12" style="height: 100%">
         <a-card title="视频监控" class="card-panel video-card">
           <div class="video-grid" :class="`video-grid-${Math.min(videoDevices.length, 4)}`">
-            <FlvPlayer
-              v-for="device in videoDevices" 
-              :key="device.equipmentCode"
-              :url="device.streamUrl"
-              :title="device.equipmentName"
-              class="video-item"
-            />
+            <div v-for="device in videoDevices" :key="device.renderKey" class="video-monitor-card">
+              <FlvPlayer
+                :url="device.streamUrl"
+                :title="device.equipmentName"
+                class="video-item"
+              />
+              <PtzControlPanel
+                class="video-control-panel"
+                :device-code="device.equipmentCode"
+                :channel-num="device.channelNum"
+              />
+            </div>
             <a-empty v-if="videoDevices.length === 0" description="暂无视频设备" />
           </div>
         </a-card>
@@ -120,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, nextTick, onUnmounted } from 'vue';
+import { ref, reactive, watch, nextTick, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { useSelectStore } from '/@/store/selectStore';
 import {
@@ -132,6 +137,7 @@ import {
 } from './workArea.api';
 import dayjs from 'dayjs';
 import FlvPlayer from './components/FlvPlayer.vue';
+import PtzControlPanel from './components/PtzControlPanel.vue';
 
 const selectStore = useSelectStore();
 const selectedBaseId = ref<string | number | undefined>(selectStore.selectedBase.baseId);
@@ -160,9 +166,11 @@ const trackStats = reactive({
 const trackLoading = ref(false);
 
 const videoDevices = ref<any[]>([]);
+const MAX_VIDEO_STREAMS = 4;
 
 const operationRecords = ref<any[]>([]);
 const loading = ref(false);
+let dataLoadToken = 0;
 
 const operationColumns = [
   { title: '开始时间', dataIndex: 'startTime', width: 160 },
@@ -173,24 +181,17 @@ const operationColumns = [
 ];
 
 watch(
-  () => selectStore.selectedBase.baseId,
-  (newVal) => {
-    if (newVal) {
-      selectedBaseId.value = newVal;
-      selectedBaseName.value = selectStore.selectedBase.baseName || '';
-      loadData();
+  () => [selectStore.selectedBase.baseId, selectStore.selectedBase.baseName],
+  ([baseId, baseName]) => {
+    selectedBaseId.value = baseId;
+    selectedBaseName.value = baseName || '';
+    resetBaseDependentState();
+    if (baseId) {
+      void loadData();
     }
-  }
+  },
+  { immediate: true }
 );
-
-watch(recordDateRange, () => {
-  loadOperationRecords();
-});
-
-onMounted(() => {
-  console.log('selectedBaseId:', selectedBaseId.value);
-  loadData();
-});
 
 onUnmounted(() => {
   stopTrackAnimation();
@@ -201,74 +202,196 @@ onUnmounted(() => {
 });
 
 async function loadData() {
-  if (!selectedBaseId.value) {
+  const baseId = selectedBaseId.value;
+  const baseName = selectedBaseName.value;
+  const currentToken = ++dataLoadToken;
+
+  if (!baseId) {
     return;
   }
-  await loadMachines();
-  await Promise.all([loadVideoDevices(), loadOperationRecords()]);
+
+  const baseMachines = await loadMachines(baseId, baseName, currentToken);
+  if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
+    return;
+  }
+
+  await Promise.all([
+    loadVideoDevices(baseId, currentToken),
+    loadOperationRecords(baseMachines, currentToken),
+  ]);
 }
 
-async function loadMachines() {
-  if (!selectedBaseName.value) return;
+function resetBaseDependentState() {
+  stopTrackAnimation();
+  videoDevices.value = [];
+  machines.value = [];
+  selectedMachineSn.value = '';
+  selectedMachine.value = null;
+  operationRecords.value = [];
+  trackPoints.value = [];
+  trackStats.qualifiedArea = 0;
+  loading.value = false;
+  trackLoading.value = false;
+}
+
+function getMachineBaseId(machine: any) {
+  return machine?.baseId ?? machine?.jdBaseId ?? machine?.baseid ?? machine?.base?.id ?? '';
+}
+
+function getMachineBaseName(machine: any) {
+  return machine?.baseName ?? machine?.baseFullName ?? machine?.base?.baseName ?? '';
+}
+
+function matchesMachineBase(machine: any, baseId: string | number, baseName: string) {
+  const machineBaseId = getMachineBaseId(machine);
+  if (machineBaseId !== '' && String(machineBaseId) === String(baseId)) {
+    return true;
+  }
+
+  const currentBaseKeyword = extractBaseKeyword(baseName);
+  const machineBaseKeyword = extractBaseKeyword(getMachineBaseName(machine));
+  return Boolean(currentBaseKeyword && machineBaseKeyword && currentBaseKeyword === machineBaseKeyword);
+}
+
+async function loadMachines(baseId: string | number, baseName: string, currentToken: number) {
+  if (!baseId) {
+    machines.value = [];
+    return [];
+  }
+
   try {
     const res = await getMachineList();
     const allMachines = res || [];
-    const baseNameWithoutSuffix = selectedBaseName.value.replace(/基地$/, '');
-    machines.value = allMachines.filter((m: any) => m.baseName === baseNameWithoutSuffix);
-    if (machines.value.length > 0) {
-      selectedMachineSn.value = machines.value[0].beidouSn;
-      selectedMachine.value = machines.value[0];
+    const filteredMachines = allMachines.filter((machine: any) =>
+      matchesMachineBase(machine, baseId, baseName)
+    );
+
+    if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
+      return [];
+    }
+
+    machines.value = filteredMachines;
+    if (filteredMachines.length > 0) {
+      selectedMachineSn.value = filteredMachines[0].beidouSn;
+      selectedMachine.value = filteredMachines[0];
     } else {
       selectedMachineSn.value = '';
       selectedMachine.value = null;
     }
+    return filteredMachines;
   } catch (e) {
     console.error('加载农机列表失败', e);
+    if (currentToken === dataLoadToken) {
+      machines.value = [];
+      selectedMachineSn.value = '';
+      selectedMachine.value = null;
+    }
+    return [];
   }
 }
 
-async function loadVideoDevices() {
-  if (!selectedBaseId.value) return;
-  try {
-    const res = await getVideoDevices(String(selectedBaseId.value));
-    console.log('加载视频设备响应:', res);
-    videoDevices.value = (res || []).map((device: any) => ({
-      ...device,
-      streamUrl: null,
-    }));
-    
-    for (let i = 0; i < videoDevices.value.length; i++) {
-      const device = videoDevices.value[i];
-      try {
-        const streamUrl = await getVideoStream(device.equipmentCode, device.channelNum);
-        console.log(`设备 ${device.equipmentName} 视频流:`, streamUrl);
-        videoDevices.value[i].streamUrl = streamUrl;
-      } catch (e) {
-        console.error(`加载设备 ${device.equipmentName} 视频流失败`, e);
-      }
+function extractBaseKeyword(baseName: string) {
+  if (!baseName) {
+    return '';
+  }
+  let normalized = baseName.trim();
+  normalized = normalized.replace(/基地$/, '');
+  const separators = ['镇', '乡', '街道'];
+  for (const separator of separators) {
+    const index = normalized.indexOf(separator);
+    if (index > 0) {
+      return normalized.substring(0, index);
     }
+  }
+  return normalized;
+}
+
+async function loadVideoDevices(baseId = selectedBaseId.value, currentToken = dataLoadToken) {
+  if (!baseId) {
+    videoDevices.value = [];
+    return;
+  }
+
+  try {
+    const res = await getVideoDevices(String(baseId));
+    const devices = (res || []).map((device: any) => ({
+      ...device,
+      channelNum: String(device.channelNum || '1'),
+      streamUrl: '',
+      renderKey: `${baseId}-${device.equipmentCode}-${device.channelNum || '1'}`,
+    }));
+    const limitedDevices = devices.slice(0, MAX_VIDEO_STREAMS);
+
+    if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
+      return;
+    }
+
+    videoDevices.value = limitedDevices;
+    await Promise.allSettled(
+      videoDevices.value.map(async (device: any, index: number) => {
+        try {
+          const streamUrl = await getVideoStream(device.equipmentCode, device.channelNum);
+          if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
+            return;
+          }
+          videoDevices.value[index] = {
+            ...videoDevices.value[index],
+            streamUrl: streamUrl || '',
+          };
+        } catch (e) {
+          console.error(`加载设备 ${device.equipmentName} 视频流失败`, e);
+          if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
+            return;
+          }
+          videoDevices.value[index] = {
+            ...videoDevices.value[index],
+            streamUrl: '',
+          };
+        }
+      })
+    );
   } catch (e) {
     console.error('加载视频设备失败', e);
+    if (currentToken === dataLoadToken) {
+      videoDevices.value = [];
+    }
   }
 }
 
-async function loadOperationRecords() {
-  if (!selectedBaseId.value || !recordDateRange.value || !recordDateRange.value[0] || !recordDateRange.value[1]) return;
-  if (machines.value.length === 0) return;
-  
+async function loadOperationRecords(baseMachines = machines.value, currentToken = dataLoadToken) {
+  if (!selectedBaseId.value || !recordDateRange.value || !recordDateRange.value[0] || !recordDateRange.value[1]) {
+    operationRecords.value = [];
+    trackStats.qualifiedArea = 0;
+    return;
+  }
+  if (baseMachines.length === 0) {
+    operationRecords.value = [];
+    trackStats.qualifiedArea = 0;
+    return;
+  }
+
   loading.value = true;
   try {
-    const beidouSnList = machines.value.map(m => m.beidouSn);
+    const beidouSnList = baseMachines.map((m) => m.beidouSn);
     const startDate = recordDateRange.value[0].format('YYYY-MM-DD');
     const endDate = recordDateRange.value[1].format('YYYY-MM-DD');
-    
+
     const res = await getOperationRecords(beidouSnList, startDate, endDate);
+    if (currentToken !== dataLoadToken) {
+      return;
+    }
     operationRecords.value = res || [];
     calculateTrackStats();
   } catch (e) {
     console.error('加载作业记录失败', e);
+    if (currentToken === dataLoadToken) {
+      operationRecords.value = [];
+      trackStats.qualifiedArea = 0;
+    }
   } finally {
-    loading.value = false;
+    if (currentToken === dataLoadToken) {
+      loading.value = false;
+    }
   }
 }
 
@@ -371,7 +494,7 @@ function calculateTrackStats() {
 }
 
 function onRecordDateChange() {
-  loadOperationRecords();
+  void loadOperationRecords();
 }
 
 function loadTiandituAPI() {
@@ -602,10 +725,37 @@ function stopTrackAnimation() {
 }
 
 .video-item {
-  width: 100%;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.video-monitor-card {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #020617;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+}
+
+.video-monitor-card :deep(.flv-player-container) {
+  height: 100%;
+  min-height: 180px;
+  border-radius: 0;
+}
+
+.video-monitor-card :deep(.video-wrapper) {
+  min-height: 140px;
+}
+
+.video-control-panel {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 20;
 }
 
 .track-card {

@@ -61,75 +61,22 @@
       </a-col>
     </a-row>
 
-    <a-card title="农药选择与分析" :bordered="false" class="analysis-card">
-      <div class="analysis-header">
-        <a-button type="primary" size="large" @click="handleLLMAnalysis">
-          AI生成近7天虫情防治建议
-        </a-button>
-        <div class="analysis-tip">基于当前时间范围内的虫情图片汇总结果生成防治建议</div>
-      </div>
-
-      <div v-if="llmAnalysis" class="analysis-content">
-        <div class="analysis-section">
-          <div class="analysis-result" :class="{ collapsed: !isAnalysisExpanded }" style="white-space: pre-line;">
-            {{ llmAnalysis }}
-          </div>
-          <div class="analysis-controls">
-            <a-button type="link" @click="toggleAnalysis" class="toggle-button">
-              {{ isAnalysisExpanded ? '收起' : '展开' }}
-              <Icon :icon="isAnalysisExpanded ? 'ant-design:up-outlined' : 'ant-design:down-outlined'" />
-            </a-button>
-          </div>
+    <a-card title="虫情趋势与防治建议" :bordered="false" class="analysis-card">
+      <a-spin :spinning="analysisLoading">
+        <div v-if="!currentBaseName" class="analysis-empty">
+          <a-empty description="请先选择基地" />
         </div>
-
-        <div class="pesticide-selection-section">
-          <a-divider>农药选择与使用记录</a-divider>
-          <a-form :model="pesticideForm" layout="vertical">
-            <a-form-item label="选择农药">
-              <a-select
-                v-model:value="pesticideForm.selectedPesticide"
-                placeholder="请选择农药"
-                @change="handlePesticideChange"
-                show-search
-                option-filter-prop="children"
-              >
-                <a-select-option
-                  v-for="pesticide in pesticideOptions"
-                  :key="pesticide.id"
-                  :value="pesticide.id"
-                >
-                  {{ pesticide.name }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-
-            <a-row :gutter="16">
-              <a-col :xs="24" :md="12">
-                <a-form-item label="使用剂量">
-                  <a-input v-model:value="pesticideForm.dosage" placeholder="请输入使用剂量" />
-                </a-form-item>
-              </a-col>
-              <a-col :xs="24" :md="12">
-                <a-form-item label="使用方法">
-                  <a-input v-model:value="pesticideForm.method" placeholder="请输入使用方法" />
-                </a-form-item>
-              </a-col>
-            </a-row>
-
-            <a-form-item>
-              <a-button
-                type="primary"
-                @click="savePesticideRecord"
-                :loading="savingRecord"
-                :disabled="!pesticideForm.selectedPesticide"
-                block
-              >
-                保存使用记录
-              </a-button>
-            </a-form-item>
-          </a-form>
+        <div v-else-if="pestImages.length === 0 && !pageLoading" class="analysis-empty">
+          <a-empty description="当前时间范围内暂无虫情数据" />
         </div>
-      </div>
+        <div v-else-if="analysisError" class="analysis-error">
+          {{ analysisError }}
+        </div>
+        <div v-else-if="llmAnalysis" class="analysis-result" style="white-space: pre-line;">
+          {{ llmAnalysis }}
+        </div>
+        <div v-else class="analysis-placeholder">正在根据虫情图片生成趋势与防治建议...</div>
+      </a-spin>
     </a-card>
 
     <a-modal v-model:open="previewVisible" title="虫情图片预览" :footer="null" width="1000px">
@@ -140,11 +87,10 @@
 
 <script lang="ts" setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { Icon } from '/@/components/Icon';
 import * as echarts from 'echarts';
 import { message } from 'ant-design-vue';
 import { useSelectStore } from '/@/store/selectStore';
-import { addPestControlRecord, analyzePestWithAI, getAllPest, getPesticideList, type PestImageQueryParams } from './insectControl.api';
+import { getPestAnalysisTask, getPestImages, submitPestAnalysisTask, type PestImageQueryParams } from './insectControl.api';
 
 interface PestRecord {
   dateCreated?: string;
@@ -156,15 +102,13 @@ interface PestRecord {
   insects?: Record<string, number>;
 }
 
-interface PesticideOption {
-  id: string;
-  name: string;
-}
-
 interface InsectChartItem {
   name: string;
   value: number;
 }
+
+const ANALYSIS_POLL_INTERVAL = 2000;
+const ANALYSIS_MAX_POLL_COUNT = 90;
 
 const selectStore = useSelectStore();
 const currentBaseName = computed(() => selectStore.selectedBase.baseName || '');
@@ -190,15 +134,10 @@ const pageLoading = ref(false);
 const previewVisible = ref(false);
 const previewImageUrl = ref('');
 
-const isAnalysisExpanded = ref(true);
 const llmAnalysis = ref('');
-const savingRecord = ref(false);
-const pesticideOptions = ref<PesticideOption[]>([]);
-const pesticideForm = ref({
-  selectedPesticide: null as string | null,
-  dosage: '',
-  method: '',
-});
+const analysisLoading = ref(false);
+const analysisError = ref('');
+let latestAnalysisToken = 0;
 
 const barChartRef = ref<HTMLDivElement | null>(null);
 let chartInstance: echarts.ECharts | null = null;
@@ -252,8 +191,10 @@ function formatDisplayTime(value?: string) {
 }
 
 function clearPestData() {
+  latestAnalysisToken += 1;
   pestImages.value = [];
   llmAnalysis.value = '';
+  analysisError.value = '';
 }
 
 async function loadPestImages() {
@@ -264,18 +205,25 @@ async function loadPestImages() {
 
   pageLoading.value = true;
   try {
-    const res = await getAllPest(buildPestQueryParams());
+    const res = await getPestImages(buildPestQueryParams());
     pestImages.value = Array.isArray(res) ? res : [];
+    llmAnalysis.value = '';
+    analysisError.value = '';
     if (pestImages.value.length === 0) {
       message.info('当前时间范围内无虫情图片');
+      return;
     }
   } catch (error) {
     console.error('加载虫情图片失败:', error);
     pestImages.value = [];
+    llmAnalysis.value = '';
+    analysisError.value = '加载虫情图片失败';
     message.error('加载虫情图片失败');
   } finally {
     pageLoading.value = false;
   }
+
+  void handleLLMAnalysis(pestImages.value);
 }
 
 function renderBarChart() {
@@ -319,86 +267,73 @@ function renderBarChart() {
   chartInstance.resize();
 }
 
-async function fetchPesticideOptions() {
-  try {
-    const response = await getPesticideList();
-    const names = Array.isArray(response) ? response : [];
-    pesticideOptions.value = names.map((name: string, index: number) => ({
-      id: `pesticide_${index + 1}`,
-      name,
-    }));
-  } catch (error) {
-    console.error('获取农药列表失败:', error);
-    message.error('获取农药列表失败');
-  }
-}
-
-function handlePesticideChange() {
-  // 更换农药后清空用户输入，避免沿用上一种农药的剂量和方法。
-  pesticideForm.value.dosage = '';
-  pesticideForm.value.method = '';
-}
-
-function toggleAnalysis() {
-  isAnalysisExpanded.value = !isAnalysisExpanded.value;
-}
-
-async function handleLLMAnalysis() {
-  if (pestImages.value.length === 0) {
-    message.warning('暂无虫情数据可供分析');
+async function handleLLMAnalysis(records: PestRecord[]) {
+  if (records.length === 0) {
     return;
   }
 
+  const imageUrls = records
+    .map((item) => item.image_url || item.thumbnail)
+    .filter((url): url is string => Boolean(url));
+
+  if (imageUrls.length === 0) {
+    llmAnalysis.value = '';
+    analysisError.value = '当前虫情图片缺少可分析的图片地址';
+    return;
+  }
+
+  const token = ++latestAnalysisToken;
+  analysisLoading.value = true;
+  analysisError.value = '';
   try {
     const requestData = {
-      pest_data: pestImages.value.map((item) => ({
+      pest_data: records.map((item) => ({
         analysis_time: item.analysis_time,
         insects: item.insects,
       })),
+      image_urls: imageUrls,
     };
 
-    const response = await analyzePestWithAI(requestData);
-    const data = response.data ?? response;
-    llmAnalysis.value = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-    isAnalysisExpanded.value = true;
-    await fetchPesticideOptions();
+    const submitResult = await submitPestAnalysisTask(requestData);
+    const taskResult = await pollPestAnalysisTask(submitResult.taskId, token);
+    if (token !== latestAnalysisToken) {
+      return;
+    }
+    llmAnalysis.value = typeof taskResult === 'string' ? taskResult : JSON.stringify(taskResult, null, 2);
   } catch (error) {
+    if (token !== latestAnalysisToken) {
+      return;
+    }
     console.error('AI分析请求失败:', error);
+    llmAnalysis.value = '';
+    analysisError.value = 'AI分析请求失败，请稍后重试';
     message.error('AI分析请求失败，请稍后重试');
+  } finally {
+    if (token === latestAnalysisToken) {
+      analysisLoading.value = false;
+    }
   }
 }
 
-async function savePesticideRecord() {
-  if (!pesticideForm.value.selectedPesticide) {
-    message.warning('请选择农药');
-    return;
+async function pollPestAnalysisTask(taskId: string, token: number) {
+  for (let count = 0; count < ANALYSIS_MAX_POLL_COUNT; count += 1) {
+    const task = await getPestAnalysisTask(taskId);
+    if (token !== latestAnalysisToken) {
+      throw new Error('分析任务已取消');
+    }
+    if (task.status === 'SUCCESS') {
+      return task.result || '';
+    }
+    if (task.status === 'FAILED') {
+      throw new Error(task.errorMessage || 'AI分析失败');
+    }
+    await sleep(ANALYSIS_POLL_INTERVAL);
   }
-  if (!selectStore.selectedPlot.plotId) {
-    message.warning('请先选择地块');
-    return;
-  }
+  throw new Error('AI分析超时，请稍后重试');
+}
 
-  savingRecord.value = true;
-  try {
-    const requestData = {
-      plotId: selectStore.selectedPlot.plotId,
-      controlDate: queryRange.value[1],
-      pesticideName: pesticideOptions.value.find((item) => item.id === pesticideForm.value.selectedPesticide)?.name,
-      pesticideDosage: pesticideForm.value.dosage,
-      applicationMethod: pesticideForm.value.method,
-    };
-
-    await addPestControlRecord(requestData);
-    message.success('使用记录保存成功');
-    pesticideForm.value.selectedPesticide = null;
-    pesticideForm.value.dosage = '';
-    pesticideForm.value.method = '';
-  } catch (error) {
-    console.error('保存使用记录失败:', error);
-    message.error('保存使用记录失败');
-  } finally {
-    savingRecord.value = false;
-  }
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 async function handleSearch() {
@@ -455,6 +390,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  latestAnalysisToken += 1;
   if (resizeHandler) {
     window.removeEventListener('resize', resizeHandler);
   }
@@ -622,90 +558,41 @@ onUnmounted(() => {
   }
 }
 
-.analysis-header {
-  margin-bottom: 16px;
+.analysis-empty,
+.analysis-placeholder {
+  min-height: 240px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-
-  .ant-btn {
-    min-width: 260px;
-  }
-}
-
-.analysis-tip {
-  font-size: 13px;
-  line-height: 1.6;
+  justify-content: center;
   color: #8c8c8c;
 }
 
-.analysis-content {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  gap: 16px;
-  align-items: start;
+.analysis-result {
+  min-height: 240px;
+  padding: 16px 18px;
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  color: #389e0d;
+  font-weight: 500;
+  text-align: left;
+  line-height: 1.9;
 }
 
-.analysis-section {
-  .analysis-result {
-    padding: 14px 16px;
-    background-color: #f6ffed;
-    border: 1px solid #b7eb8f;
-    border-radius: 8px;
-    color: #389e0d;
-    font-weight: 500;
-    text-align: left;
-    max-height: 280px;
-    overflow-y: auto;
-    line-height: 1.8;
-
-    &.collapsed {
-      max-height: 120px;
-      overflow: hidden;
-      position: relative;
-
-      &::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 30px;
-        background: linear-gradient(to bottom, transparent, #f6ffed);
-      }
-    }
-  }
-
-  .analysis-controls {
-    text-align: center;
-    padding: 10px 0 0;
-  }
-}
-
-.pesticide-selection-section {
-  margin-top: 0;
-  padding: 16px;
-  border-radius: 10px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-
-  :deep(.ant-divider) {
-    margin: 0 0 16px;
-  }
-
-  :deep(.ant-form-item) {
-    margin-bottom: 14px;
-  }
+.analysis-error {
+  min-height: 240px;
+  padding: 16px 18px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 8px;
+  color: #cf1322;
+  display: flex;
+  align-items: center;
 }
 
 @media (max-width: 1200px) {
   .chart-container {
     height: 320px;
-  }
-
-  .analysis-content {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -722,11 +609,5 @@ onUnmounted(() => {
     height: 280px;
   }
 
-  .analysis-header {
-    .ant-btn {
-      width: 100%;
-      min-width: 0;
-    }
-  }
 }
 </style>

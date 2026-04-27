@@ -146,9 +146,9 @@ spring:
           slow-sql-millis: 5000
       datasource:
         master:
-          url: jdbc:mysql://127.0.0.1:3306/jeecg-boot?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          url: jdbc:mysql://127.0.0.1:3306/jeecg-boot-youcai?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
           username: root
-          password: root
+          password: ZYJ147942
           driver-class-name: com.mysql.cj.jdbc.Driver
           # 多数据源配置
           #multi-datasource1:
@@ -171,6 +171,10 @@ python:
     api-key: dev-test-key-123
     # 是否启用
     enabled: true
+dashscope:
+  api-key: sk-cdedbad893674d55891299453792694e
+  base-url: https://dashscope.aliyuncs.com/api/v1
+  model: qwen3.6-plus
 weather:
   qweather:
     # 和风天气API密钥

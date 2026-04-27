@@ -87,7 +87,11 @@ const hidePlotDropdown = computed(() => {
          currentPath.includes('/rapeseed/farming-records')||
          currentPath.includes('/rapeseed/pest-control')||
          currentPath.includes('/rapeseed/disease-control')||
-         currentPath.includes('/rapeseed/production-plan')
+         currentPath.includes('/rapeseed/seedling-quality')||
+         currentPath.includes('/rapeseed/production-plan')||
+      currentPath.includes('/rapeseed/fertilization')||
+      currentPath.includes('/rapeseed/irrigation')
+
          ;
 
 });

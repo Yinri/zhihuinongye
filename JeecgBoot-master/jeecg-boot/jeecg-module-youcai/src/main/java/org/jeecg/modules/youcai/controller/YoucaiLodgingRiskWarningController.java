@@ -1,13 +1,19 @@
 package org.jeecg.modules.youcai.controller;
 
+import com.alibaba.fastjson.JSON;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.query.QueryGenerator;
+import org.jeecg.modules.youcai.dto.AiTaskRecordDTO;
+import org.jeecg.modules.youcai.dto.AiTaskResultDTO;
+import org.jeecg.modules.youcai.dto.AiTaskSubmitResponseDTO;
 import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
 import org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO;
 import org.jeecg.modules.youcai.entity.YoucaiLodgingRiskWarning;
+import org.jeecg.modules.youcai.service.IAiAnalysisTaskService;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -23,6 +29,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.jeecg.common.aspect.annotation.AutoLog;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.util.DigestUtils;
  /**
  * @Description: 倒伏风险预警表
  * @Author: jeecg-boot
@@ -36,6 +43,9 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLodgingRiskWarning, IYoucaiLodgingRiskWarningService> {
 	@Autowired
 	private IYoucaiLodgingRiskWarningService youcaiLodgingRiskWarningService;
+
+	@Autowired
+	private IAiAnalysisTaskService aiAnalysisTaskService;
 
      /**
       * 根据地块Id查询倒伏风险数据
@@ -79,14 +89,66 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
 		}
 	}
 
+	@AutoLog(value = "倒伏风险预警表-提交视频倒伏分析任务")
+	@Operation(summary="倒伏风险预警表-提交视频倒伏分析任务")
+	@GetMapping(value = "/analysisVideo/submit/{videoId}")
+	public Result<AiTaskSubmitResponseDTO> submitVideoLodgingAnalysis(@PathVariable String videoId) {
+		if (videoId == null || videoId.trim().isEmpty()) {
+			return Result.error("视频ID不能为空");
+		}
+		try {
+			String cacheKey = "lodging-video:" + DigestUtils.md5DigestAsHex(
+					videoId.getBytes(StandardCharsets.UTF_8));
+			AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
+					"lodging_video",
+					cacheKey,
+					() -> {
+						try {
+							return JSON.toJSONString(youcaiLodgingRiskWarningService.analyzeLodgingByVideoId(videoId));
+						} catch (Exception e) {
+							throw new IllegalStateException(e.getMessage(), e);
+						}
+					}
+			);
+			return Result.OK(submitResponse);
+		} catch (Exception e) {
+			log.error("提交视频倒伏分析任务失败: {}", e.getMessage(), e);
+			return Result.error("提交视频倒伏分析任务失败: " + e.getMessage());
+		}
+	}
+
+	@AutoLog(value = "倒伏风险预警表-查询视频倒伏分析任务状态")
+	@Operation(summary="倒伏风险预警表-查询视频倒伏分析任务状态")
+	@GetMapping(value = "/analysisVideo/task/{taskId}")
+	public Result<AiTaskResultDTO<VideoLodgingAnalysisResultDTO>> getVideoLodgingAnalysisTask(@PathVariable String taskId) {
+		AiTaskRecordDTO taskRecord = aiAnalysisTaskService.getTask(taskId);
+		if (taskRecord == null || !"lodging_video".equals(taskRecord.getTaskType())) {
+			return Result.error("任务不存在");
+		}
+		AiTaskResultDTO<VideoLodgingAnalysisResultDTO> response = new AiTaskResultDTO<>();
+		response.setTaskId(taskRecord.getTaskId());
+		response.setTaskType(taskRecord.getTaskType());
+		response.setStatus(taskRecord.getStatus());
+		response.setErrorMessage(taskRecord.getErrorMessage());
+		response.setCached(taskRecord.isCached());
+		response.setCreatedTime(taskRecord.getCreatedTime());
+		response.setFinishedTime(taskRecord.getFinishedTime());
+		if (AiTaskRecordDTO.STATUS_SUCCESS.equals(taskRecord.getStatus())
+				&& taskRecord.getResultJson() != null) {
+			response.setResult(JSON.parseObject(taskRecord.getResultJson(), VideoLodgingAnalysisResultDTO.class));
+		}
+		return Result.OK(response);
+	}
+
 	/**
 	 * 批量根据视频ID进行倒伏分析
 	 */
 	@AutoLog(value = "倒伏风险预警表-批量视频倒伏分析")
 	@Operation(summary="倒伏风险预警表-批量视频倒伏分析")
 	@PostMapping(value = "/analysisVideo/batch")
-	public Result<VideoLodgingAnalysisResultDTO> batchVideoLodgingAnalysis(@RequestBody java.util.List<String> videoIds) {
+	public Result<VideoLodgingAnalysisResultDTO> batchVideoLodgingAnalysis(@RequestBody java.util.Map<String, java.util.List<String>> request) {
 		try {
+			java.util.List<String> videoIds = request != null ? request.get("videoIds") : null;
 			if (videoIds == null || videoIds.isEmpty()) {
 				return Result.error("视频ID列表不能为空");
 			}
@@ -96,6 +158,58 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
 			log.error("批量视频倒伏分析失败: {}", e.getMessage(), e);
 			return Result.error("批量视频倒伏分析失败: " + e.getMessage());
 		}
+	}
+
+	@AutoLog(value = "倒伏风险预警表-提交批量视频倒伏分析任务")
+	@Operation(summary="倒伏风险预警表-提交批量视频倒伏分析任务")
+	@PostMapping(value = "/analysisVideo/batch/submit")
+	public Result<AiTaskSubmitResponseDTO> submitBatchVideoLodgingAnalysis(@RequestBody java.util.Map<String, java.util.List<String>> request) {
+		try {
+			java.util.List<String> videoIds = request != null ? request.get("videoIds") : null;
+			if (videoIds == null || videoIds.isEmpty()) {
+				return Result.error("视频ID列表不能为空");
+			}
+			String cacheKey = "lodging-video-batch:" + DigestUtils.md5DigestAsHex(
+					JSON.toJSONString(videoIds).getBytes(StandardCharsets.UTF_8));
+			AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
+					"lodging_video_batch",
+					cacheKey,
+					() -> {
+						try {
+							return JSON.toJSONString(youcaiLodgingRiskWarningService.batchAnalyzeLodgingByVideoIds(videoIds));
+						} catch (Exception e) {
+							throw new IllegalStateException(e.getMessage(), e);
+						}
+					}
+			);
+			return Result.OK(submitResponse);
+		} catch (Exception e) {
+			log.error("提交批量视频倒伏分析任务失败: {}", e.getMessage(), e);
+			return Result.error("提交批量视频倒伏分析任务失败: " + e.getMessage());
+		}
+	}
+
+	@AutoLog(value = "倒伏风险预警表-查询批量视频倒伏分析任务状态")
+	@Operation(summary="倒伏风险预警表-查询批量视频倒伏分析任务状态")
+	@GetMapping(value = "/analysisVideo/batch/task/{taskId}")
+	public Result<AiTaskResultDTO<VideoLodgingAnalysisResultDTO>> getBatchVideoLodgingAnalysisTask(@PathVariable String taskId) {
+		AiTaskRecordDTO taskRecord = aiAnalysisTaskService.getTask(taskId);
+		if (taskRecord == null || !"lodging_video_batch".equals(taskRecord.getTaskType())) {
+			return Result.error("任务不存在");
+		}
+		AiTaskResultDTO<VideoLodgingAnalysisResultDTO> response = new AiTaskResultDTO<>();
+		response.setTaskId(taskRecord.getTaskId());
+		response.setTaskType(taskRecord.getTaskType());
+		response.setStatus(taskRecord.getStatus());
+		response.setErrorMessage(taskRecord.getErrorMessage());
+		response.setCached(taskRecord.isCached());
+		response.setCreatedTime(taskRecord.getCreatedTime());
+		response.setFinishedTime(taskRecord.getFinishedTime());
+		if (AiTaskRecordDTO.STATUS_SUCCESS.equals(taskRecord.getStatus())
+				&& taskRecord.getResultJson() != null) {
+			response.setResult(JSON.parseObject(taskRecord.getResultJson(), VideoLodgingAnalysisResultDTO.class));
+		}
+		return Result.OK(response);
 	}
 
 

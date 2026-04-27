@@ -19,6 +19,8 @@ import org.jeecg.modules.youcai.mapper.YoucaiBasesMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiGrowthMonitoringMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiLodgingRiskWarningMapper;
 import org.jeecg.modules.youcai.mapper.YoucaiPlotsMapper;
+import org.jeecg.modules.youcai.service.IDashScopeMultiModalService;
+import org.jeecg.modules.youcai.service.IVideoSnapshotService;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
 import org.jeecg.modules.youcai.service.IYoucaiPlotsService;
 import org.jeecg.modules.youcai.service.IYoucaiProjectInfoService;
@@ -28,7 +30,6 @@ import org.jeecg.modules.youcai.util.PythonApiUtil;
 import org.jeecg.modules.youcai.util.QWeatherApiUtil;
 import org.jeecg.common.exception.JeecgBootException;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -79,6 +81,12 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
     
     @Autowired
     private IYoucaiPlotsService youcaiPlotsService;
+
+    @Autowired
+    private IVideoSnapshotService videoSnapshotService;
+
+    @Autowired
+    private IDashScopeMultiModalService dashScopeMultiModalService;
     
     @Override
     public LodgingRiskAssessmentResponseDTO riskAssessmentById(String plotId) {
@@ -822,7 +830,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             result.setVideoId(videoId);
             result.setAnalysisTime(new Date());
             
-            String imageUrl = fetchVideoPhoto(videoId);
+            String imageUrl = videoSnapshotService.fetchVideoPhoto(videoId);
             if (imageUrl == null || imageUrl.isEmpty()) {
                 log.warn("获取视频截图失败，视频ID: {}", videoId);
                 throw new JeecgBootException("获取视频截图失败");
@@ -972,54 +980,15 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
         return newOrder > currentOrder ? newLevel : currentLevel;
     }
     
-    private String fetchVideoPhoto(String videoId) {
-        try {
-            String photoUrl = "http://opencv.aheagle.com/videoOpenCv/wlwPhoto?videoId=" + videoId;
-            log.debug("请求视频截图: {}", photoUrl);
-            
-            org.springframework.web.reactive.function.client.WebClient webClient = 
-                org.springframework.web.reactive.function.client.WebClient.builder()
-                    .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
-                    .build();
-            
-            String response = webClient.get()
-                .uri(photoUrl)
-                .retrieve()
-                .bodyToMono(String.class)
-                .timeout(Duration.ofSeconds(30))
-                .block();
-            
-            if (response != null) {
-                JSONObject jsonResponse = JSONObject.parseObject(response);
-                if (jsonResponse.getInteger("code") == 200) {
-                    String imagePath = jsonResponse.getString("data");
-                    if (imagePath != null && !imagePath.isEmpty()) {
-                        String fullImageUrl = "https://img.aheagle.com/preview/yg-iot/" + 
-                            imagePath + "?tk=cd1528943bae170aa6bc1450b5d78afa";
-                        return fullImageUrl;
-                    }
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            log.error("获取视频截图失败: {}", e.getMessage(), e);
-            return null;
-        }
-    }
-    
     private org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO callPythonLodgingAnalysis(String imageUrl) {
         try {
-            log.debug("调用Python服务进行倒伏分析，图片URL: {}", imageUrl);
-            
-            org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO result = 
-                pythonApiUtil.analyzeLodgingFromImage(imageUrl)
-                    .doOnError(e -> log.warn("Python倒伏分析服务调用失败: {}", e.getMessage()))
-                    .onErrorReturn(createDefaultAnalysisResult())
-                    .block();
-            
+            log.debug("调用 DashScope 进行倒伏分析，图片URL: {}", imageUrl);
+            String responseText = dashScopeMultiModalService.analyzeImages(List.of(imageUrl), buildLodgingPrompt());
+            org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO result = parseLodgingAnalysisResponse(responseText);
+            result.setImageUrl(imageUrl);
             return result;
         } catch (Exception e) {
-            log.error("调用Python倒伏分析服务异常: {}", e.getMessage(), e);
+            log.error("调用 DashScope 倒伏分析异常: {}", e.getMessage(), e);
             return createDefaultAnalysisResult();
         }
     }
@@ -1043,6 +1012,68 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
         
         result.setSuggestions(java.util.Arrays.asList("暂无分析结果，请稍后重试"));
         return result;
+    }
+
+    private String buildLodgingPrompt() {
+        return "你是一名油菜倒伏风险识别专家。请仅基于当前图片判断油菜群体是否发生倒伏或存在明显倒伏风险，并严格输出 JSON，不要输出 Markdown 或代码块。"
+                + "分析时重点关注油菜冠层倾斜、成片压伏、株体贴地、倒伏带分布、受风雨后偏倒方向、群体密度过大造成的互相压伏等特征。"
+                + "不要把道路、沟渠、田埂、阴影、拍摄角度透视变形、收割痕迹或非油菜区域误判为倒伏。"
+                + "如果画面中油菜主体过少、距离过远、遮挡严重或证据不足，请降低 confidence，并把 riskLevel 控制在低风险或中低风险，不要夸大。"
+                + "suggestions 只输出与油菜倒伏防范或处置直接相关的建议，如排水、减轻田间积水、关注大风降雨后复查、分类收获等。"
+                + "JSON 字段要求如下："
+                + "lodgingRatio(0到100之间的倒伏比例),"
+                + "lodgingArea(倒伏面积，单位平方米，可估算),"
+                + "totalArea(总面积，单位平方米，可估算),"
+                + "riskLevel(低风险/中低风险/中等风险/高风险/极高风险),"
+                + "confidence(0到100之间的置信度),"
+                + "details(对象，包含healthyArea、mildLodgingArea、moderateLodgingArea、severeLodgingArea),"
+                + "suggestions(字符串数组)。"
+                + "如果无法精确测量，请给出合理估计，并保持字段完整。";
+    }
+
+    private org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO parseLodgingAnalysisResponse(String responseText) {
+        org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO result = createDefaultAnalysisResult();
+        if (!StringUtils.hasText(responseText)) {
+            return result;
+        }
+
+        try {
+            String jsonText = extractJson(responseText);
+            JSONObject jsonObject = JSONObject.parseObject(jsonText);
+            result.setLodgingRatio(jsonObject.getDouble("lodgingRatio"));
+            result.setLodgingArea(jsonObject.getDouble("lodgingArea"));
+            result.setTotalArea(jsonObject.getDouble("totalArea"));
+            result.setRiskLevel(jsonObject.getString("riskLevel"));
+            result.setConfidence(jsonObject.getDouble("confidence"));
+
+            JSONObject detailsJson = jsonObject.getJSONObject("details");
+            if (detailsJson != null) {
+                org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO.DetailsDTO details =
+                        new org.jeecg.modules.youcai.dto.VideoLodgingAnalysisResultDTO.DetailsDTO();
+                details.setHealthyArea(detailsJson.getDouble("healthyArea"));
+                details.setMildLodgingArea(detailsJson.getDouble("mildLodgingArea"));
+                details.setModerateLodgingArea(detailsJson.getDouble("moderateLodgingArea"));
+                details.setSevereLodgingArea(detailsJson.getDouble("severeLodgingArea"));
+                result.setDetails(details);
+            }
+
+            if (jsonObject.containsKey("suggestions")) {
+                result.setSuggestions(jsonObject.getJSONArray("suggestions").toJavaList(String.class));
+            }
+        } catch (Exception e) {
+            log.warn("解析倒伏分析结果失败: {}", e.getMessage());
+            result.setSuggestions(java.util.Arrays.asList(responseText));
+        }
+        return result;
+    }
+
+    private String extractJson(String text) {
+        int start = text.indexOf("{");
+        int end = text.lastIndexOf("}");
+        if (start >= 0 && end > start) {
+            return text.substring(start, end + 1);
+        }
+        return text;
     }
 }
 

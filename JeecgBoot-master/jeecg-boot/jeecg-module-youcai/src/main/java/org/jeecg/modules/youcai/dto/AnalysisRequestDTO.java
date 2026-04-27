@@ -11,6 +11,10 @@ import java.util.Map;
 public class AnalysisRequestDTO {
     @JsonProperty("pest_data") // 前端 JSON 是 pest_data，这里做映射
     private List<PestItem> pestData;
+
+    @JsonProperty("image_urls")
+    private List<String> imageUrls;
+
     @Data
     public static class PestItem {
         @JsonProperty("analysis_time") // 前端 JSON 是 analysis_time

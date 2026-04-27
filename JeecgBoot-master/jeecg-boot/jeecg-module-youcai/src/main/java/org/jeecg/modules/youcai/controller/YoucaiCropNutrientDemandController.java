@@ -39,7 +39,7 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 @RestController
 @RequestMapping("/youcai/cropNutrientDemand")
 @Slf4j
-public class CropNutrientDemandController extends JeecgController<CropNutrientDemand, ICropNutrientDemandService> {
+public class YoucaiCropNutrientDemandController extends JeecgController<CropNutrientDemand, ICropNutrientDemandService> {
 	@Autowired
 	private ICropNutrientDemandService cropNutrientDemandService;
 	

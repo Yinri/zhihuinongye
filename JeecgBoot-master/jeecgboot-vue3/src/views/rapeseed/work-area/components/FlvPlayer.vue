@@ -71,7 +71,7 @@ async function initPlayer() {
   
   if (!props.url) {
     loading.value = false;
-    error.value = '无视频流地址';
+    error.value = '';
     return;
   }
 
@@ -257,28 +257,30 @@ defineExpose({
 
 .video-loading {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
   color: #fff;
   display: flex;
   align-items: center;
-  z-index: 5;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 20;
+  pointer-events: none;
 }
 
 .video-error {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
   color: #ff4d4f;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
   gap: 8px;
   text-align: center;
   padding: 0 16px;
-  z-index: 5;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 20;
   
   .error-icon {
     font-size: 24px;

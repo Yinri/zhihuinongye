@@ -46,7 +46,7 @@ public class IoTApiUtil {
         
         this.webClient = webClientBuilder
                 .exchangeStrategies(strategies)
-                .defaultHeader("Content-Type", "application/json")
+                .defaultHeader("Content-Type", "application/json;charset=utf-8")
                 .build();
     }
 
@@ -61,6 +61,7 @@ public class IoTApiUtil {
 
         return webClient.post()
                 .uri(BASE_URL + "/LoginSensor/CreateLoginJWT")
+                .header("Content-Type", "application/json;charset=utf-8")
                 .body(BodyInserters.fromValue(request))
                 .retrieve()
                 .bodyToMono(ApiResponse.class)
@@ -241,6 +242,27 @@ public class IoTApiUtil {
                         .retrieve()
                         .bodyToMono(ApiResponse.class)
         );
+    }
+
+    /**
+     * 视频云台控制
+     */
+    public Mono<ApiResponse> controlVideoStream(String deviceCode, String channelNum, String command, String speed) {
+        return checkTokenAndRequest(() -> {
+            java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+            requestBody.put("DeviceCode", deviceCode);
+            requestBody.put("ChannelNum", channelNum);
+            requestBody.put("command", command);
+            requestBody.put("speed", speed == null || speed.isBlank() ? "33" : speed);
+
+            return webClient.post()
+                    .uri(BASE_URL + "/SensorData/VideoStremControl")
+                    .header("Content-Type", "application/json;charset=utf-8")
+                    .header("Authorization", token)
+                    .body(BodyInserters.fromValue(requestBody))
+                    .retrieve()
+                    .bodyToMono(ApiResponse.class);
+        });
     }
 
 

@@ -1,6 +1,8 @@
 import { defHttp } from '/@/utils/http/axios';
 import { AxiosRequestConfig } from 'axios';
 
+const ANALYZE_TIMEOUT = 120 * 1000;
+
 // 枚举API地址
 enum Api {
   // 列表
@@ -21,6 +23,27 @@ enum Api {
   RiskData = '/youcai/lodgingRisk/riskData',
   // 视频倒伏分析
   LodgingAnalysis = '/youcai/lodgingRisk/analysisVideo',
+  LodgingAnalysisSubmit = '/youcai/lodgingRisk/analysisVideo/submit',
+  LodgingAnalysisTask = '/youcai/lodgingRisk/analysisVideo/task',
+  LodgingAnalysisBatchSubmit = '/youcai/lodgingRisk/analysisVideo/batch/submit',
+  LodgingAnalysisBatchTask = '/youcai/lodgingRisk/analysisVideo/batch/task',
+}
+
+export interface AiTaskSubmitResponse {
+  taskId: string;
+  status: string;
+  cached: boolean;
+}
+
+export interface AiTaskResultResponse<T> {
+  taskId: string;
+  taskType: string;
+  status: string;
+  errorMessage?: string;
+  cached: boolean;
+  createdTime: number;
+  finishedTime?: number;
+  result?: T;
 }
 
 // 获取倒伏风险预警列表
@@ -66,7 +89,10 @@ export const getLodgingRiskDataById = (plotId: string) => {
 
 // 批量获取基地下所有地块倒伏风险数据
 export const getBatchLodgingRiskDataByBaseId = (baseId: string) => {
-  return defHttp.get({ url: `/youcai/lodgingRisk/batchRiskData/${baseId}` });
+  return defHttp.get({
+    url: `/youcai/lodgingRisk/batchRiskData/${baseId}`,
+    timeout: ANALYZE_TIMEOUT,
+  });
 };
 
 // 倒伏风险数据接口
@@ -133,10 +159,46 @@ export interface VideoLodgingAnalysisResult {
 
 // 获取视频截图并进行倒伏分析（单个视频）
 export const getVideoLodgingAnalysis = (videoId: string) => {
-  return defHttp.get({ url: `${Api.LodgingAnalysis}/${videoId}` });
+  return defHttp.get({
+    url: `${Api.LodgingAnalysis}/${videoId}`,
+    timeout: ANALYZE_TIMEOUT,
+  });
+};
+
+export const submitVideoLodgingAnalysis = (videoId: string) => {
+  return defHttp.get<AiTaskSubmitResponse>({
+    url: `${Api.LodgingAnalysisSubmit}/${videoId}`,
+    timeout: 30 * 1000,
+  });
+};
+
+export const getVideoLodgingAnalysisTask = (taskId: string) => {
+  return defHttp.get<AiTaskResultResponse<VideoLodgingAnalysisResult>>({
+    url: `${Api.LodgingAnalysisTask}/${taskId}`,
+    timeout: 30 * 1000,
+  });
 };
 
 // 批量获取多个视频的倒伏分析结果
 export const getBatchVideoLodgingAnalysis = (videoIds: string[]) => {
-  return defHttp.post({ url: `${Api.LodgingAnalysis}/batch`, data: videoIds });
+  return defHttp.post({
+    url: `${Api.LodgingAnalysis}/batch`,
+    data: { videoIds },
+    timeout: ANALYZE_TIMEOUT,
+  });
+};
+
+export const submitBatchVideoLodgingAnalysis = (videoIds: string[]) => {
+  return defHttp.post<AiTaskSubmitResponse>({
+    url: Api.LodgingAnalysisBatchSubmit,
+    data: { videoIds },
+    timeout: 30 * 1000,
+  });
+};
+
+export const getBatchVideoLodgingAnalysisTask = (taskId: string) => {
+  return defHttp.get<AiTaskResultResponse<VideoLodgingAnalysisResult>>({
+    url: `${Api.LodgingAnalysisBatchTask}/${taskId}`,
+    timeout: 30 * 1000,
+  });
 };

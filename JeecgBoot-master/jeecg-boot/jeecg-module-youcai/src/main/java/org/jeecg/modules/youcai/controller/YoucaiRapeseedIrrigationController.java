@@ -26,7 +26,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 @RestController
 @RequestMapping("/youcai/irrigation")
 @Slf4j
-public class RapeseedIrrigationController {
+public class YoucaiRapeseedIrrigationController {
     @Autowired
     private IIrrigationService irrigationService;
     @Autowired

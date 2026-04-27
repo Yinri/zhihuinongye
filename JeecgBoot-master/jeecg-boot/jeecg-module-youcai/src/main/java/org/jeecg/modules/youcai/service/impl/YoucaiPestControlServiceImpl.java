@@ -1,7 +1,5 @@
 package org.jeecg.modules.youcai.service.impl;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -9,14 +7,13 @@ import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import org.jeecg.modules.youcai.entity.YoucaiSensorInfo;
 import org.jeecg.modules.youcai.mapper.YoucaiPestControlMapper;
+import org.jeecg.modules.youcai.service.IDashScopeMultiModalService;
 import org.jeecg.modules.youcai.service.IYoucaiPestControlService;
 import org.jeecg.modules.youcai.service.IYoucaiSensorInfoService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
@@ -27,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @Description: 虫害防控表
@@ -42,76 +40,13 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
     private IoTApiUtil ioTApiUtil;
 
     @Autowired
-    private YoucaiPestControlMapper youcaiPestControlMapper;
-
-    @Autowired
     private IYoucaiSensorInfoService youcaiSensorInfoService;
 
-    private static final String API_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-
-    @Value("${dashscope.api-key:${DASHSCOPE_API_KEY:}}")
-    private String dashscopeApiKey;
+    @Autowired
+    private IDashScopeMultiModalService dashScopeMultiModalService;
 
     @Override
     public Mono<List<Map<String, Object>>> getPestImages(String baseName, String startDate, String endDate) {
-        return getAllPestImages(baseName, startDate, endDate)
-                .map(records -> records.isEmpty() ? Collections.emptyList() : Collections.singletonList(records.get(0)));
-    }
-
-    @Override
-    public String aiAnalysis(AnalysisRequestDTO req) throws Exception {
-        if (req.getPestData() == null || req.getPestData().isEmpty()) {
-            throw new Exception("pest_data 不能为空");
-        }
-        // ---- 构建 Prompt ----
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("你是农业专家。请基于最近十天的虫情数据给出具体的防治建议：\n")
-                .append("1. 各害虫趋势分析\n")
-                .append("2. 防治建议与最佳时期\n")
-                .append("3. 推荐适用农药及剂量\n")
-                .append("4. 请给出一份非常简短的防治建议\n\n");
-
-        prompt.append("虫情数据：\n");
-        for (AnalysisRequestDTO.PestItem item : req.getPestData()) {
-            prompt.append("时间：").append(item.getAnalysisTime()).append("\n");
-            item.getInsects().forEach((name, count) -> {
-                prompt.append("  ").append(name).append(": ").append(count).append("只\n");
-            });
-            prompt.append("\n");
-        }
-
-        // ---- 构建请求体 ----
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("model", "qwen-turbo");
-        requestBody.put("input", new JSONObject() {
-            {
-                put("prompt", prompt.toString());
-            }
-        });
-        requestBody.put("parameters", new JSONObject() {
-            {
-                put("temperature", 0.3);
-                put("top_p", 0.9);
-            }
-        });
-
-        WebClient client = WebClient.builder().build();
-
-        String result = client.post()
-                .uri(API_URL)
-                .header("Authorization", "Bearer " + dashscopeApiKey)
-                .header("Content-Type", "application/json")
-                .bodyValue(requestBody.toJSONString())
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-
-        JSONObject json = JSON.parseObject(result);
-        return json.getJSONObject("output").getString("text");
-    }
-
-    @Override
-    public Mono<List<Map<String, Object>>> getAllPestImages(String baseName, String startDate, String endDate) {
         String deviceCode = resolvePestDeviceCode(baseName);
         if (!StringUtils.hasText(deviceCode)) {
             return Mono.just(Collections.emptyList());
@@ -123,8 +58,48 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
     }
 
     @Override
-    public List<YoucaiPestControl> findControl(String plotId, String start, String end) {
-        return youcaiPestControlMapper.queryControlHistory(plotId, start, end);
+    public String aiAnalysis(AnalysisRequestDTO req) throws Exception {
+        if (req == null || req.getPestData() == null || req.getPestData().isEmpty()) {
+            throw new Exception("pest_data 不能为空");
+        }
+        List<String> validImageUrls = req.getImageUrls() == null ? Collections.emptyList() : req.getImageUrls().stream()
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (validImageUrls.isEmpty()) {
+            throw new Exception("image_urls 不能为空");
+        }
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("你是一名油菜虫情监测与绿色防控专家。")
+                .append("请结合虫情测报灯图片和虫情统计数据，只分析与油菜生产相关的害虫动态。")
+                .append("重点关注蚜虫、菜青虫、小菜蛾、跳甲、地老虎等油菜常见害虫；")
+                .append("对明显与油菜关联弱的杂虫，可合并表述为非主要目标害虫，不要展开。")
+                .append("只输出“害虫趋势”和“防治建议”两部分内容。")
+                .append("不要输出农药商品名、剂量、使用记录、Markdown 标题或额外说明。")
+                .append("结论要简洁、专业、可执行，建议优先体现监测加密、阈值防控、分阶段处置和绿色防控思路。\n\n");
+
+        prompt.append("虫情数据：\n");
+        for (AnalysisRequestDTO.PestItem item : req.getPestData()) {
+            prompt.append("时间：").append(item.getAnalysisTime()).append("\n");
+            if (item.getInsects() != null) {
+                item.getInsects().forEach((name, count) -> {
+                    prompt.append("  ").append(name).append(": ").append(count).append("只\n");
+                });
+            }
+            prompt.append("\n");
+        }
+
+        prompt.append("分析要求：\n");
+        prompt.append("1. 先结合连续时间数据判断主要害虫数量变化、是否上升、是否达到需要重点防控的趋势。\n");
+        prompt.append("2. 再结合图片判断虫体特征是否支持该趋势，如图片证据不足，要明确写“图片证据有限”。\n");
+        prompt.append("3. 防治建议只给田间管理动作，不写具体农药名称和剂量。\n");
+        prompt.append("4. 如果当前虫量低且趋势平稳，应建议继续监测而不是过度处置。\n\n");
+
+        prompt.append("请严格按以下纯文本格式输出：\n");
+        prompt.append("害虫趋势：用2到4句总结油菜相关主要害虫的变化趋势、风险高低和判断依据。\n");
+        prompt.append("防治建议：用2到4句给出巡查、诱控、田间清理、分阶段处置等建议。\n");
+        return dashScopeMultiModalService.analyzeImages(validImageUrls, prompt.toString());
     }
 
     /**
@@ -199,7 +174,15 @@ public class YoucaiPestControlServiceImpl extends ServiceImpl<YoucaiPestControlM
     }
 
     private String normalizeBaseName(String baseName) {
-        return baseName.endsWith("基地") ? baseName.substring(0, baseName.length() - 2) : baseName;
+        String normalized = baseName == null ? "" : baseName.trim();
+        String[] separators = {"镇", "乡", "街道"};
+        for (String separator : separators) {
+            int index = normalized.indexOf(separator);
+            if (index > 0) {
+                return normalized.substring(0, index);
+            }
+        }
+        return normalized;
     }
 
 }

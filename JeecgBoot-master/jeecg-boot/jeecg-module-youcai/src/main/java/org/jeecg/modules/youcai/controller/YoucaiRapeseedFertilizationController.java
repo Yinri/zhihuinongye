@@ -14,7 +14,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/youcai/fertilization")
 @Slf4j
-public class RapeseedFertilizationController {
+public class YoucaiRapeseedFertilizationController {
 
     @Autowired
     private IFertilizationService fertilizationService;
