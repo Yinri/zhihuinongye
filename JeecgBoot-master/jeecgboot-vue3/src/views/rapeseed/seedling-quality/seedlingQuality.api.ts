@@ -1,63 +1,84 @@
-// src/api/youcai.ts
-import { defHttp } from "/@/utils/http/axios";
-import { AxiosRequestConfig } from 'axios';
+import { defHttp } from '/@/utils/http/axios';
 
-/**
- * 后端接口地址统一管理
- */
-export enum Api {
-  OilQuality = "/youcai/youcaiColorQuality/midu",   // 油菜苗密度 
-  Density = "/youcai/youcaiColorQuality/color", 
-  GetGrowthAdvice ="/youcai/youcaiColorQuality/advice",
-  PesticideList = '/youcai/youcaiPesticideInfo/name/list',
-  AddPestControl ='/youcai/youcaiColorQuality/add'
-    // 油菜颜色指数
+enum Api {
+  MonitorImages = '/youcai/diseaseControl/monitorImages',
+  AnalyzeSeedlingSubmit = '/youcai/seedlingQuality/analyze/submit',
+  AnalyzeSeedlingTask = '/youcai/seedlingQuality/analyze/task',
 }
 
-/**
- * 图片类型 → 接口映射
- */
-export const youcaiApiMap: Record<string, string> = {
-  oil_quality: Api.OilQuality,
-  density: Api.Density,
-};
-
-/**
- * Base64 图片上传（JSON 方式）
- */
-export const uploadYoucaiImage = (
-  url: string,
-  base64Image: string,
-) => {
-  return defHttp.post(
-    {
-      url:url,
-      data: {
-        file: base64Image, // Base64 字符串            // 图片类型
-      },
-      headers: {
-        "Content-Type": "application/json",
-      },
-    },
-  );
-};
-
-export const addControlRecord = (data: any, config?: AxiosRequestConfig) => {
-  return defHttp.post({ url: Api.AddPestControl, data }, config);
+export interface SeedlingBaseParams {
+  baseId?: string;
+  baseName?: string;
 }
 
-export const getGrowthAdvice = (analysisResult: any) => {
-  return defHttp.post({
-    url:Api.GetGrowthAdvice,
-    data: analysisResult,
-    headers: {
-      "Content-Type": "application/json",
-    },
+export interface ImageInfo {
+  imageUrl: string;
+  thumbnail?: string;
+  dateCreated?: string;
+  deviceName?: string;
+  videoId?: string;
+}
+
+export interface SeedlingIndicator {
+  name: string;
+  value: string;
+  level: string;
+  description: string;
+}
+
+export interface SeedlingAnalysisResponse {
+  seedlingLevel: string;
+  growthStage: string;
+  confidence: number;
+  summary: string;
+  evidence: string;
+  indicators: SeedlingIndicator[];
+  mainProblems: string[];
+  managementSuggestions: string[];
+  analysisTime?: string;
+}
+
+export interface SeedlingAnalysisRequest {
+  imageUrls: string[];
+  baseName?: string;
+}
+
+export interface AiTaskSubmitResponse {
+  taskId: string;
+  status: string;
+  cached: boolean;
+}
+
+export interface AiTaskResultResponse<T> {
+  taskId: string;
+  taskType: string;
+  status: string;
+  errorMessage?: string;
+  cached: boolean;
+  createdTime: number;
+  finishedTime?: number;
+  result?: T;
+}
+
+export const getMonitorImages = (params: SeedlingBaseParams) => {
+  return defHttp.get<ImageInfo[]>({
+    url: Api.MonitorImages,
+    params,
+    timeout: 30 * 1000,
   });
 };
 
-export const getPesticideList = (params?: AxiosRequestConfig) => {
-  return defHttp.get({ url: Api.PesticideList, params });
+export const submitSeedlingAnalysis = (data: SeedlingAnalysisRequest) => {
+  return defHttp.post<AiTaskSubmitResponse>({
+    url: Api.AnalyzeSeedlingSubmit,
+    data,
+    timeout: 30 * 1000,
+  });
 };
 
-
+export const getSeedlingAnalysisTask = (taskId: string) => {
+  return defHttp.get<AiTaskResultResponse<SeedlingAnalysisResponse>>({
+    url: `${Api.AnalyzeSeedlingTask}/${taskId}`,
+    timeout: 30 * 1000,
+  });
+};
