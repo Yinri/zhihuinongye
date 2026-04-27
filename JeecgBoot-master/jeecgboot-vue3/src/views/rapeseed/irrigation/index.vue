@@ -2,36 +2,124 @@
   <div class="irrigation-page">
     <!-- 选择与概览区域 -->
     <a-row :gutter="16" class="top-row">
-      <a-col :xs="24" :md="12">
+      <a-col :xs="24" :md="14">
         <a-card :bordered="false" class="rich-card">
           <template #title>
             <div class="table-title">
-              <Icon icon="ant-design:dot-chart-outlined" /> 土壤水分概览
+              <Icon icon="ant-design:dashboard-outlined" /> 环境监测概览
             </div>
           </template>
-          <div class="moisture-card" v-if="hasData">
-            <a-progress type="dashboard" :percent="soilMoisturePercent" status="normal" :format="progressText" :stroke-color="moistureStateColor" />
-            <div class="moisture-info">
-              <div>当前含水率：{{ soilMoisturePercent }}%</div>
-              <div>
-                含水状态：<Tag :color="moistureStateColor">{{ moistureStateLabel }}</Tag>
+          <div v-if="hasData" class="environment-overview">
+            <div class="environment-main">
+              <div class="section-title">
+                <Icon icon="ant-design:dot-chart-outlined" /> 土壤水分概览
+              </div>
+              <div class="moisture-card">
+                <a-progress
+                  type="dashboard"
+                  :percent="soilMoisturePercent"
+                  status="normal"
+                  :format="progressText"
+                  :stroke-color="moistureStateColor"
+                />
+                <div class="moisture-info">
+                  <div>当前含水率：{{ soilMoisturePercent }}%</div>
+                  <div>
+                    含水状态：<Tag :color="moistureStateColor">{{ moistureStateLabel }}</Tag>
+                  </div>
+                </div>
+              </div>
+              <div class="statistic-grid">
+                <div class="metric">
+                  <div class="metric-title">趋势</div>
+                  <div class="metric-value">{{ soilMoistureTrendText }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-title">上次更新</div>
+                  <div class="metric-value">{{ lastUpdatedText }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="environment-weather">
+              <div class="section-title">
+                <Icon icon="ant-design:cloud-outlined" /> 空气环境
+              </div>
+              <div class="weather-summary-grid">
+                <a-card :bordered="false" class="data-card weather-card compact-card">
+                  <div class="data-item">
+                    <div class="data-icon weather-icon temperature"><Icon icon="ant-design:cloud-outlined" /></div>
+                    <div class="data-content">
+                      <div class="data-label">空气温度</div>
+                      <div class="data-value">{{ penmanInputs.temp?.[0] || '-' }} <span class="unit">℃</span></div>
+                      <div class="data-status" :class="getTemperatureStatus(penmanInputs.temp?.[0])">{{ getTemperatureStatusText(penmanInputs.temp?.[0]) }}</div>
+                    </div>
+                  </div>
+                </a-card>
+                <a-card :bordered="false" class="data-card weather-card compact-card">
+                  <div class="data-item">
+                    <div class="data-icon weather-icon humidity"><Icon icon="ant-design:water-outlined" /></div>
+                    <div class="data-content">
+                      <div class="data-label">空气湿度</div>
+                      <div class="data-value">{{ penmanInputs.humidity?.[0] || '-' }} <span class="unit">%</span></div>
+                      <div class="data-status" :class="getHumidityStatus(penmanInputs.humidity?.[0])">{{ getHumidityStatusText(penmanInputs.humidity?.[0]) }}</div>
+                    </div>
+                  </div>
+                </a-card>
+              </div>
+            </div>
+
+            <div class="environment-layers">
+              <div class="section-title">
+                <Icon icon="ant-design:database-outlined" /> 土壤分层数据
+              </div>
+              <div class="soil-layers">
+                <div class="soil-layer layer-top">
+                  <div class="layer-label">上层 (浅层)</div>
+                  <div class="layer-data">
+                    <div class="layer-item">
+                      <span class="layer-item-label">土壤温度</span>
+                      <span class="layer-item-value">{{ soilTemp1 || '-' }}℃</span>
+                    </div>
+                    <div class="layer-item">
+                      <span class="layer-item-label">土壤湿度</span>
+                      <span class="layer-item-value">{{ soilMoisture1 || '-' }}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="soil-layer layer-middle">
+                  <div class="layer-label">中层</div>
+                  <div class="layer-data">
+                    <div class="layer-item">
+                      <span class="layer-item-label">土壤温度</span>
+                      <span class="layer-item-value">{{ soilTemp2 || '-' }}℃</span>
+                    </div>
+                    <div class="layer-item">
+                      <span class="layer-item-label">土壤湿度</span>
+                      <span class="layer-item-value">{{ soilMoisture2 || '-' }}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="soil-layer layer-bottom">
+                  <div class="layer-label">深层</div>
+                  <div class="layer-data">
+                    <div class="layer-item">
+                      <span class="layer-item-label">土壤温度</span>
+                      <span class="layer-item-value">{{ soilTemp3 || '-' }}℃</span>
+                    </div>
+                    <div class="layer-item">
+                      <span class="layer-item-label">土壤湿度</span>
+                      <span class="layer-item-value">{{ soilMoisture3 || '-' }}%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           <a-empty v-else description="暂无数据，请选择有效地块或检查后台" />
-          <div class="statistic-grid">
-            <div class="metric">
-              <div class="metric-title">趋势</div>
-              <div class="metric-value">{{ soilMoistureTrendText }}</div>
-            </div>
-            <div class="metric">
-              <div class="metric-title">上次更新</div>
-              <div class="metric-value">{{ lastUpdatedText }}</div>
-            </div>
-          </div>
         </a-card>
       </a-col>
-      <a-col :xs="24" :md="12">
+      <a-col :xs="24" :md="10">
         <a-card :bordered="false" class="rich-card">
           <template #title>
             <div class="table-title">
@@ -55,93 +143,41 @@
               <a-button size="small" @click="refresh" :disabled="!selectedPlotId">刷新数据</a-button>
               <a-button size="small" @click="openReportModal('irrigation')" :disabled="!selectedPlotId || !hasData">生成报告</a-button>
             </div>
+            <a-divider class="water-gate-divider" />
+            <div class="water-gate-section">
+              <div class="water-gate-header">
+                <div class="water-gate-title">
+                  <Icon icon="ant-design:gateway-outlined" /> 水阀控制
+                </div>
+                <template v-if="canFetchWaterGate">
+                  <a-button size="small" @click="fetchWaterGateList(true)" :loading="waterGateLoading">刷新列表</a-button>
+                </template>
+                <template v-else>
+                  <Tag>当前基地无水阀设备</Tag>
+                </template>
+              </div>
+              <template v-if="canFetchWaterGate">
+                <div v-if="waterGateList.length" class="water-gate-scroll-list">
+                  <div v-for="gate in waterGateList" :key="gate.id" class="water-gate-card">
+                    <div class="water-gate-card-head">
+                      <span class="water-gate-card-name">{{ gate.name }}</span>
+                      <Tag :color="getWaterGateStatusColor(gate)">{{ getWaterGateStatusText(gate) }}</Tag>
+                    </div>
+                    <div class="water-gate-card-body">
+                      <div class="field"><span class="label">设备编号</span><span class="value">{{ formatWaterGateField(gate.code) }}</span></div>
+                      <div class="field"><span class="label">站点编号</span><span class="value">{{ formatWaterGateField(gate.siteNo) }}</span></div>
+                      <div class="field"><span class="label">经度</span><span class="value">{{ formatWaterGateField(gate.longitude) }}</span></div>
+                      <div class="field"><span class="label">纬度</span><span class="value">{{ formatWaterGateField(gate.latitude) }}</span></div>
+                      <div class="field"><span class="label">管理单位</span><span class="value">{{ formatWaterGateField(gate.manageUnit) }}</span></div>
+                      <div class="field"><span class="label">管控中心</span><span class="value">{{ formatWaterGateField(gate.controlCenter) }}</span></div>
+                    </div>
+                  </div>
+                </div>
+                <a-empty v-else :image="false" description="暂无水阀数据" />
+              </template>
+            </div>
           </div>
           <a-empty v-else description="暂无建议，等待后端数据" />
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 实时气象数据展示 -->
-    <a-row :gutter="16" class="mt-4" v-if="hasData">
-      <a-col :xs="12" :md="12">
-        <a-card :bordered="false" class="data-card weather-card">
-          <div class="data-item">
-            <div class="data-icon weather-icon temperature"><Icon icon="ant-design:cloud-outlined" /></div>
-            <div class="data-content">
-              <div class="data-label">空气温度</div>
-              <div class="data-value">{{ penmanInputs.temp?.[0] || '-' }} <span class="unit">℃</span></div>
-              <div class="data-status" :class="getTemperatureStatus(penmanInputs.temp?.[0])">{{ getTemperatureStatusText(penmanInputs.temp?.[0]) }}</div>
-            </div>
-          </div>
-        </a-card>
-      </a-col>
-      <a-col :xs="12" :md="12">
-        <a-card :bordered="false" class="data-card weather-card">
-          <div class="data-item">
-            <div class="data-icon weather-icon humidity"><Icon icon="ant-design:water-outlined" /></div>
-            <div class="data-content">
-              <div class="data-label">空气湿度</div>
-              <div class="data-value">{{ penmanInputs.humidity?.[0] || '-' }} <span class="unit">%</span></div>
-              <div class="data-status" :class="getHumidityStatus(penmanInputs.humidity?.[0])">{{ getHumidityStatusText(penmanInputs.humidity?.[0]) }}</div>
-            </div>
-          </div>
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 土壤分层数据展示 -->
-    <a-row :gutter="16" class="mt-4" v-if="hasData">
-      <a-col :xs="24">
-        <a-card :bordered="false" class="rich-card">
-          <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:database-outlined" /> 土壤分层数据
-            </div>
-          </template>
-          <div class="soil-layers">
-            <!-- 上层(浅层) -->
-            <div class="soil-layer layer-top">
-              <div class="layer-label">上层 (浅层)</div>
-              <div class="layer-data">
-                <div class="layer-item">
-                  <span class="layer-item-label">土壤温度</span>
-                  <span class="layer-item-value">{{ soilTemp1 || '-' }}℃</span>
-                </div>
-                <div class="layer-item">
-                  <span class="layer-item-label">土壤湿度</span>
-                  <span class="layer-item-value">{{ soilMoisture1 || '-' }}%</span>
-                </div>
-              </div>
-            </div>
-            <!-- 中层 -->
-            <div class="soil-layer layer-middle">
-              <div class="layer-label">中层</div>
-              <div class="layer-data">
-                <div class="layer-item">
-                  <span class="layer-item-label">土壤温度</span>
-                  <span class="layer-item-value">{{ soilTemp2 || '-' }}℃</span>
-                </div>
-                <div class="layer-item">
-                  <span class="layer-item-label">土壤湿度</span>
-                  <span class="layer-item-value">{{ soilMoisture2 || '-' }}%</span>
-                </div>
-              </div>
-            </div>
-            <!-- 深层 -->
-            <div class="soil-layer layer-bottom">
-              <div class="layer-label">深层</div>
-              <div class="layer-data">
-                <div class="layer-item">
-                  <span class="layer-item-label">土壤温度</span>
-                  <span class="layer-item-value">{{ soilTemp3 || '-' }}℃</span>
-                </div>
-                <div class="layer-item">
-                  <span class="layer-item-label">土壤湿度</span>
-                  <span class="layer-item-value">{{ soilMoisture3 || '-' }}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </a-card>
       </a-col>
     </a-row>
@@ -443,7 +479,7 @@ import { ref, reactive, watch, Ref, computed, onMounted, nextTick } from 'vue';
 import { printJS } from '/@/hooks/web/usePrintJS';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { Icon } from '/@/components/Icon';
-import { getPlotStatus, getPenmanPredict, getInterventionComparison } from './irrigation.api';
+import { getPlotStatus, getPenmanPredict, getInterventionComparison, getWaterGateList } from './irrigation.api';
 import { useECharts } from '/@/hooks/web/useECharts';
 import { Tag } from 'ant-design-vue';
 import { defHttp } from '/@/utils/http/axios';
@@ -467,6 +503,22 @@ interface PlotItem {
   plotName: string;
 }
 
+interface WaterGateItem {
+  id: string;
+  name: string;
+  status: string;
+  code?: string;
+  siteNo?: string;
+  longitude?: string | number;
+  latitude?: string | number;
+  onlineText?: string;
+  stateText?: string;
+  manageUnit?: string;
+  controlCenter?: string;
+  online?: unknown;
+  raw?: Record<string, any>;
+}
+
 const { createMessage } = useMessage();
 const searchInfo = reactive<Recordable>({});
 
@@ -475,7 +527,10 @@ const baseList = ref<BaseItem[]>([]); // 基地列表（来自bases表）
 const plotList = ref<PlotItem[]>([]); // 地块列表（来自plots表）
 const selectedBase = ref<BaseItem | null>(null); // 选中基地
 const selectedPlot = ref<PlotItem | null>(null); // 选中地块
+const waterGateList = ref<WaterGateItem[]>([]);
+const waterGateLoading = ref<boolean>(false);
 const isDropdownOpen = reactive({ base: false, plot: false }); // 下拉框展开状态
+const WATER_GATE_BASE_NAME = '胡集镇尚湾村';
 
 // 全局状态仓库（同步选择状态）
 const selectStore = useSelectStore();
@@ -710,6 +765,7 @@ watch(() => selectStore.selectedBase.baseId, async (baseId, prev) => {
     // 触发数据刷新逻辑
     resetIrrigationState();
     plotList.value = await fetchPlotListByBaseId(baseId as any);
+    await fetchWaterGateList();
     
     if (plotList.value.length > 0) {
       const target = plotList.value[0] as any;
@@ -735,6 +791,7 @@ watch(selectedBaseId, async (val, oldVal) => {
   if (val === undefined || val === null || val === oldVal) return;
   resetIrrigationState();
   plotList.value = await fetchPlotListByBaseId(val as any);
+  await fetchWaterGateList();
   if (plotList.value.length > 0) {
     const target = plotList.value[0] as any;
     lockedPlotId.value = target.plotId;
@@ -795,6 +852,7 @@ function onBaseChange(value: string | number | undefined) {
   if (value) {
     fetchBaseStatusAndSuggest(value);
     fetchInterventionComparisonBase(value);
+    fetchWaterGateList();
   }
 }
 
@@ -1241,6 +1299,124 @@ const riskTips = computed<string[]>(() => {
   ];
 });
 
+const currentBaseName = computed(() => {
+  const currentBase =
+    selectedBase.value ||
+    baseList.value.find((item) => String(item.baseId) === String(selectedBaseId.value ?? '')) ||
+    null;
+  return String(currentBase?.fullName || currentBase?.baseName || selectStore.selectedBase.baseName || '').trim();
+});
+
+const canFetchWaterGate = computed(() => currentBaseName.value === WATER_GATE_BASE_NAME);
+
+function pickWaterGateValue(source: Record<string, any>, keys: string[]) {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+    return value;
+  }
+  return '';
+}
+
+function normalizeWaterGateItem(item: any, index: number): WaterGateItem {
+  const raw = item?.raw && typeof item.raw === 'object' ? item.raw : item || {};
+  const id = pickWaterGateValue(item || {}, ['id']) || pickWaterGateValue(raw, ['id', 'gateId', 'deviceId', 'equipmentCode', 'serialNo', 'sn', 'code']);
+  const name =
+    pickWaterGateValue(item || {}, ['name']) ||
+    pickWaterGateValue(raw, ['name', 'gateName', 'deviceName', 'equipmentName', 'title', 'gateNo', 'alias']) ||
+    `水阀${index + 1}`;
+  const status =
+    pickWaterGateValue(item || {}, ['status']) ||
+    pickWaterGateValue(raw, ['status', 'workState', 'state', 'runState', 'gateStatus']) ||
+    '-';
+  const online =
+    pickWaterGateValue(item || {}, ['online']) || pickWaterGateValue(raw, ['online', 'isOnline', 'onLine', 'deviceOnline']);
+  const onlineText =
+    pickWaterGateValue(item || {}, ['onlineText']) ||
+    pickWaterGateValue(raw, ['onlineExp', 'onlineText']) ||
+    '';
+  const stateText =
+    pickWaterGateValue(item || {}, ['stateText']) ||
+    pickWaterGateValue(raw, ['stateExp', 'stateText']) ||
+    '';
+
+  return {
+    id: String(id || `gate-${index}`),
+    name: String(name),
+    status: String(status),
+    code: String(pickWaterGateValue(item || {}, ['code']) || pickWaterGateValue(raw, ['code']) || ''),
+    siteNo: String(pickWaterGateValue(item || {}, ['siteNo']) || pickWaterGateValue(raw, ['siteNo']) || ''),
+    longitude: pickWaterGateValue(item || {}, ['longitude']) || pickWaterGateValue(raw, ['longitude']),
+    latitude: pickWaterGateValue(item || {}, ['latitude']) || pickWaterGateValue(raw, ['latitude']),
+    onlineText: String(onlineText || ''),
+    stateText: String(stateText || ''),
+    manageUnit: String(pickWaterGateValue(item || {}, ['manageUnit']) || pickWaterGateValue(raw, ['gldw', 'manageUnit']) || ''),
+    controlCenter: String(pickWaterGateValue(item || {}, ['controlCenter']) || pickWaterGateValue(raw, ['gkzx', 'controlCenter']) || ''),
+    online,
+    raw,
+  };
+}
+
+async function fetchWaterGateList(showError = false) {
+  if (!canFetchWaterGate.value) {
+    waterGateList.value = [];
+    waterGateLoading.value = false;
+    return;
+  }
+  waterGateLoading.value = true;
+  try {
+    const res: any = await getWaterGateList();
+    const list = Array.isArray(res) ? res : res?.items || res?.list || res?.data || [];
+    waterGateList.value = Array.isArray(list) ? list.map((item, index) => normalizeWaterGateItem(item, index)) : [];
+  } catch (error) {
+    console.error('获取水阀列表失败：', error);
+    waterGateList.value = [];
+    if (showError) {
+      createMessage.error('获取水阀列表失败，请稍后重试');
+    }
+  } finally {
+    waterGateLoading.value = false;
+  }
+}
+
+function getWaterGateStatusText(gate: WaterGateItem) {
+  if (gate.onlineText) {
+    return gate.onlineText;
+  }
+  const onlineText = String(gate.online ?? '').toLowerCase();
+  if (onlineText === '0' || onlineText === 'false' || onlineText === 'offline') {
+    return '离线';
+  }
+  const statusText = String(gate.stateText || gate.status || '-');
+  return statusText === '-' ? '未知' : statusText;
+}
+
+function getWaterGateStatusColor(gate: WaterGateItem) {
+  const statusText = getWaterGateStatusText(gate);
+  if (statusText === '离线') {
+    return 'default';
+  }
+  if (/(开|运行|启)/.test(statusText)) {
+    return 'green';
+  }
+  if (/(停)/.test(statusText)) {
+    return 'orange';
+  }
+  if (/(关|关闭)/.test(statusText)) {
+    return 'red';
+  }
+  return 'blue';
+}
+
+function formatWaterGateField(value: string | number | undefined) {
+  if (value === undefined || value === null || value === '' || value === '-') {
+    return '-';
+  }
+  return String(value);
+}
+
 async function copySuggestion() {
   const text = `地块：${selectedPlotName.value}\n需要灌溉：${penmanSuggestion.needIrrigation ? '是' : '否'}\n时间：${penmanSuggestion.recommendedTime || '-'}\n方式：${penmanSuggestion.method || '-'}\n推荐灌水量：${recommendedVolumeMm.value} mm（约 ${mmToM3PerMu(recommendedVolumeMm.value)} m³/亩）\n原因：${penmanSuggestion.reason || '-'}`;
   try {
@@ -1254,6 +1430,7 @@ async function copySuggestion() {
 async function refresh() {
   await fetchPlotStatusAndSuggest();
   await fetchInterventionComparison();
+  await fetchWaterGateList();
   createMessage.success('数据已刷新');
 }
 
@@ -1401,7 +1578,51 @@ function exportReport() {
 .moisture-card {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+}
+
+.environment-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 14px;
+}
+
+.environment-main,
+.environment-weather,
+.environment-layers {
+  padding: 14px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fafcff 0%, #f6f9ff 100%);
+  border: 1px solid #edf2ff;
+}
+
+.environment-layers {
+  grid-column: 1 / -1;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.weather-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.compact-card {
+  box-shadow: none;
+  border: 1px solid #eef2f7;
+}
+
+.compact-card :deep(.ant-card-body) {
+  padding: 14px;
 }
 
 .suggestion-card {
@@ -1424,8 +1645,8 @@ function exportReport() {
 
 .statistic-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
   margin-top: 8px;
 }
 .metric-title {
@@ -1433,7 +1654,7 @@ function exportReport() {
   color: #888;
 }
 .metric-value {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -1441,6 +1662,139 @@ function exportReport() {
   display: flex;
   gap: 8px;
   margin-top: 8px;
+}
+
+.water-gate-divider {
+  margin: 14px 0 12px;
+}
+
+.water-gate-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.water-gate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.water-gate-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.water-gate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.water-gate-scroll-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.water-gate-card {
+  width: 100%;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.water-gate-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.water-gate-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.water-gate-card-body .field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #595959;
+  padding: 2px 0;
+}
+
+.water-gate-card-body .label {
+  color: #8c8c8c;
+}
+
+.water-gate-card-body .value {
+  color: #262626;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.water-gate-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+}
+
+.water-gate-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.water-gate-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.water-gate-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.water-gate-info {
+  margin-top: 6px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.water-gate-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .tips {
@@ -1594,6 +1948,20 @@ function exportReport() {
   .irrigation-page {
     padding: 16px;
   }
+  .environment-overview {
+    grid-template-columns: 1fr;
+  }
+  .environment-main,
+  .environment-weather,
+  .environment-layers {
+    padding: 12px;
+  }
+  .weather-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .soil-layers {
+    grid-template-columns: 1fr;
+  }
   .statistic-grid {
     grid-template-columns: 1fr;
   }
@@ -1610,38 +1978,38 @@ function exportReport() {
 
 /* 气象数据卡片样式 */
 .weather-card {
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: all 0.2s ease;
   background: #fff;
   
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
   }
   
   :deep(.ant-card-body) {
-    padding: 20px;
+    padding: 16px;
   }
 }
 
 .data-item {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
 }
 
 .data-icon {
-  width: 60px;
-  height: 60px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 19px;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   
   &:hover {
@@ -1668,18 +2036,18 @@ function exportReport() {
 .data-label {
   font-size: 14px;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   font-weight: 500;
 }
 
 .data-value {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 700;
   color: #333;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   
   .unit {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     color: #999;
     margin-left: 4px;
@@ -1733,13 +2101,13 @@ function exportReport() {
 .soil-layers {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .soil-layer {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 13px 16px;
   border-radius: 8px;
   color: #fff;
   transition: all 0.3s ease;
@@ -1765,13 +2133,13 @@ function exportReport() {
 .layer-label {
   width: 100px;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
 .layer-data {
   display: flex;
-  gap: 32px;
+  gap: 28px;
   flex: 1;
   justify-content: center;
 }
@@ -1789,7 +2157,7 @@ function exportReport() {
 }
 
 .layer-item-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
 }
 
@@ -2363,6 +2731,19 @@ function exportReport() {
 
   .recommend-info-row .ant-col {
     margin-bottom: 12px;
+  }
+
+  .water-gate-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .water-gate-actions {
+    width: 100%;
+  }
+
+  .water-gate-card {
+    width: 100%;
   }
 }
 </style>

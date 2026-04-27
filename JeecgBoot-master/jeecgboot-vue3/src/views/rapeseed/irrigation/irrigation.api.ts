@@ -16,6 +16,8 @@ enum Api {
   PlotStatusByBase = '/youcai/irrigation/plotStatusByBase',
   PenmanPredict = '/youcai/irrigation/penmanPredict',
   InterventionComparison = '/youcai/irrigation/interventionComparison',
+  WaterGateList = '/youcai/irrigation/waterGateList',
+  WaterGateControl = '/youcai/irrigation/waterGate/control',
   FarmingAdd = '/youcai/farmingRecords/add',
 }
 
@@ -91,4 +93,12 @@ export const getInterventionComparison = (plotId?: string | number, baseId?: str
   if (plotId != null) params.plotId = plotId;
   if (baseId != null) params.baseId = baseId;
   return defHttp.get({ url: `${Api.InterventionComparison}`, params });
+};
+
+export const getWaterGateList = () => {
+  return defHttp.get({ url: `${Api.WaterGateList}` });
+};
+
+export const controlWaterGate = (params: { id: string; action: 'open' | 'stop' | 'close'; setVal?: string }) => {
+  return defHttp.post({ url: `${Api.WaterGateControl}`, data: params });
 };

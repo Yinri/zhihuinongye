@@ -10,4 +10,6 @@ public interface IIrrigationService {
     Map<String, Object> getPlotStatusByBase(String baseId);
     Map<String, Object> getPenmanPredictByBase(String baseId);
     Map<String, Object> getInterventionComparisonByBase(String baseId);
+    List<Map<String, Object>> getWaterGateList();
+    Map<String, Object> controlWaterGate(String id, String action, String setVal);
 }

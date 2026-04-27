@@ -504,6 +504,59 @@ public class IrrigationServiceImpl implements IIrrigationService {
         return r;
     }
 
+    @Override
+    public List<Map<String, Object>> getWaterGateList() {
+        try {
+            ApiResponse response = ioTApiUtil.getZxWaterGateList().block();
+            log.info("设备数据：{}",response);
+            if (response == null || response.getCode() != 200) {
+                log.warn("获取水阀列表失败: {}", response != null ? response.getMsg() : "响应为空");
+                return new ArrayList<>();
+            }
+            return extractWaterGateItems(response.getData());
+        } catch (Exception e) {
+            log.error("获取水阀列表异常", e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public Map<String, Object> controlWaterGate(String id, String action, String setVal) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", false);
+        result.put("action", action);
+        result.put("id", id);
+        try {
+            ApiResponse response;
+            if ("open".equalsIgnoreCase(action)) {
+                String targetOpenPercent = (setVal == null || setVal.trim().isEmpty()) ? "100" : setVal.trim();
+                response = ioTApiUtil.setZxWaterGateOpenPos(id, targetOpenPercent).block();
+                result.put("setVal", targetOpenPercent);
+            } else if ("stop".equalsIgnoreCase(action)) {
+                response = ioTApiUtil.setZxGateStop(id).block();
+            } else if ("close".equalsIgnoreCase(action)) {
+                response = ioTApiUtil.setZxGateClose(id).block();
+            } else {
+                result.put("msg", "不支持的阀门操作类型");
+                return result;
+            }
+
+            if (response != null && response.getCode() == 1) {
+                result.put("success", true);
+                result.put("msg", response.getMsg() == null ? "控制指令下发成功" : response.getMsg());
+                result.put("data", response.getData());
+                return result;
+            }
+
+            result.put("msg", response != null ? response.getMsg() : "控制接口无响应");
+            return result;
+        } catch (Exception e) {
+            log.error("控制水阀异常: id={}, action={}", id, action, e);
+            result.put("msg", "控制异常: " + e.getMessage());
+            return result;
+        }
+    }
+
     private BigDecimal saturationVaporPressure(BigDecimal t) {
         BigDecimal b = t;
         double v = 0.6108 * Math.exp((17.27 * b.doubleValue()) / (b.doubleValue() + 237.3));
@@ -543,6 +596,80 @@ public class IrrigationServiceImpl implements IIrrigationService {
 
     private BigDecimal nz(BigDecimal v) { 
         return v == null ? BigDecimal.ZERO : v; 
+    }
+
+    private List<Map<String, Object>> extractWaterGateItems(Object data) {
+        Object candidate = data;
+        if (candidate instanceof JSONObject) {
+            JSONObject jsonObject = (JSONObject) candidate;
+            if (jsonObject.containsKey("list")) {
+                candidate = jsonObject.get("list");
+            } else if (jsonObject.containsKey("rows")) {
+                candidate = jsonObject.get("rows");
+            } else if (jsonObject.containsKey("data")) {
+                candidate = jsonObject.get("data");
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (candidate instanceof JSONArray) {
+            JSONArray array = (JSONArray) candidate;
+            for (int i = 0; i < array.size(); i++) {
+                result.add(normalizeWaterGateItem(array.get(i), i));
+            }
+            return result;
+        }
+        if (candidate instanceof List<?>) {
+            List<?> list = (List<?>) candidate;
+            for (int i = 0; i < list.size(); i++) {
+                result.add(normalizeWaterGateItem(list.get(i), i));
+            }
+            return result;
+        }
+        if (candidate != null) {
+            result.add(normalizeWaterGateItem(candidate, 0));
+        }
+        return result;
+    }
+
+    private Map<String, Object> normalizeWaterGateItem(Object item, int index) {
+        Map<String, Object> raw = toPlainMap(item);
+        Map<String, Object> normalized = new LinkedHashMap<>();
+        normalized.put("id", firstExistingValue(raw, "id", "gateId", "deviceId", "equipmentCode", "serialNo", "sn", "code"));
+        normalized.put("name", firstExistingValue(raw, "name", "gateName", "deviceName", "equipmentName", "title", "gateNo", "alias"));
+        normalized.put("status", firstExistingValue(raw, "status", "workState", "state", "runState", "gateStatus"));
+        normalized.put("openPercent", firstExistingValue(raw, "openPercent", "openPos", "setVal", "position", "opening"));
+        normalized.put("online", firstExistingValue(raw, "online", "isOnline", "onLine", "deviceOnline"));
+        normalized.put("raw", raw);
+        normalized.putIfAbsent("id", "gate-" + index);
+        normalized.putIfAbsent("name", "水阀" + (index + 1));
+        return normalized;
+    }
+
+    private Map<String, Object> toPlainMap(Object value) {
+        if (value == null) {
+            return new LinkedHashMap<>();
+        }
+        if (value instanceof Map<?, ?>) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            ((Map<?, ?>) value).forEach((k, v) -> result.put(String.valueOf(k), v));
+            return result;
+        }
+        return JSONObject.parseObject(JSONObject.toJSONString(value));
+    }
+
+    private Object firstExistingValue(Map<String, Object> source, String... keys) {
+        for (String key : keys) {
+            Object value = source.get(key);
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof String && ((String) value).trim().isEmpty()) {
+                continue;
+            }
+            return value;
+        }
+        return null;
     }
 
     private Map<String, Object> fetchRealtimeSensorData(String deviceCode) {

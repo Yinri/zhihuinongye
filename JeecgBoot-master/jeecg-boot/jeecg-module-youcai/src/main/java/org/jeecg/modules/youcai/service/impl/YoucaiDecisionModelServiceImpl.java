@@ -26,6 +26,8 @@ import org.jeecg.modules.youcai.service.IYoucaiHistoricalYieldService;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
 import org.jeecg.modules.youcai.service.IYoucaiPestControlService;
 import org.jeecg.modules.youcai.service.IYoucaiPlotsService;
+import org.jeecg.modules.youcai.service.IYoucaiColorQualityService;
+import org.jeecg.modules.youcai.entity.YoucaiColorQuality;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -53,6 +55,9 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
 
     @Autowired
     private IYoucaiBasesService basesService;
+
+    @Autowired
+    private IYoucaiColorQualityService colorQualityService;
 
     @Autowired
     private IYoucaiPestControlService pestControlService;
@@ -274,8 +279,10 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         YoucaiDecisionPestDTO pestData = buildPestData(base, LocalDate.now().minusDays(6), LocalDate.now());
         YoucaiDecisionLodgingDTO lodgingData = buildLodgingData(base);
 
-        int rvi = calculateRvi(latestGrowthList);
-        int nbi = calculateNbi(fertilizationStatus);
+        BigDecimal colorIndex = getLatestColorIndex(base.getId());
+
+        int rvi = calculateRvi(latestGrowthList, colorIndex);
+        int nbi = calculateNbi(fertilizationStatus, colorIndex);
         int gsi = calculateGsi(latestGrowthList);
         int sei = calculateSei(irrigationStatus, fertilizationStatus, pestData, lodgingData);
 
@@ -288,6 +295,13 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         dto.setSgt(buildGrowthSuggestion(base.getBaseName(), rvi, nbi, gsi, sei, irrigationAdvice,
                 fertilizationAdvice, pestData, lodgingData));
         return dto;
+    }
+
+    private BigDecimal getLatestColorIndex(String baseId) {
+        QueryWrapper<YoucaiColorQuality> query = new QueryWrapper<>();
+        query.eq("base_id", baseId).orderByDesc("monitor_date").last("LIMIT 1");
+        YoucaiColorQuality latest = colorQualityService.getOne(query);
+        return latest != null ? latest.getColorIndex() : null;
     }
 
     private YoucaiDecisionHeightRiskDTO buildHeightRiskTrendData(YoucaiBases base) {
@@ -777,7 +791,7 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         return new BigDecimal("25");
     }
 
-    private int calculateRvi(List<YoucaiGrowthMonitoring> latestGrowthList) {
+    private int calculateRvi(List<YoucaiGrowthMonitoring> latestGrowthList, BigDecimal colorIndex) {
         int score = 50;
         int healthScore = 0;
         for (YoucaiGrowthMonitoring item : latestGrowthList) {
@@ -821,27 +835,58 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
                 score -= 5;
             }
         }
+        // 多光谱参数 (NDVI)
+        if (colorIndex != null) {
+            if (colorIndex.compareTo(new BigDecimal("0.7")) > 0) {
+                score += 15;
+            } else if (colorIndex.compareTo(new BigDecimal("0.5")) > 0) {
+                score += 8;
+            } else if (colorIndex.compareTo(new BigDecimal("0.3")) < 0) {
+                score -= 10;
+            }
+        } else {
+            // 缺失参数使用估计值计算 (假设 NDVI 为 0.6)
+            score += 5;
+        }
         return clampInt(score);
     }
 
-    private int calculateNbi(Map<String, Object> fertilizationStatus) {
+    private int calculateNbi(Map<String, Object> fertilizationStatus, BigDecimal colorIndex) {
         BigDecimal n = positiveOrNull(toBigDecimal(fertilizationStatus.get("estimatedN")));
         BigDecimal p = positiveOrNull(toBigDecimal(fertilizationStatus.get("estimatedP")));
         BigDecimal k = positiveOrNull(toBigDecimal(fertilizationStatus.get("estimatedK")));
+        
+        int baseScore;
         if (n == null || p == null || k == null || n.compareTo(BigDecimal.ZERO) <= 0) {
-            return 50;
+            baseScore = 60;
+        } else {
+            BigDecimal pRatio = p.divide(n, 4, RoundingMode.HALF_UP);
+            BigDecimal kRatio = k.divide(n, 4, RoundingMode.HALF_UP);
+            BigDecimal deviation = pRatio.subtract(new BigDecimal("0.35")).abs()
+                    .divide(new BigDecimal("0.35"), 4, RoundingMode.HALF_UP)
+                    .add(kRatio.subtract(new BigDecimal("1.20")).abs()
+                            .divide(new BigDecimal("1.20"), 4, RoundingMode.HALF_UP));
+            baseScore = BigDecimal.valueOf(100)
+                    .subtract(deviation.multiply(new BigDecimal("40")))
+                    .setScale(0, RoundingMode.HALF_UP)
+                    .intValue();
         }
-        BigDecimal pRatio = p.divide(n, 4, RoundingMode.HALF_UP);
-        BigDecimal kRatio = k.divide(n, 4, RoundingMode.HALF_UP);
-        BigDecimal deviation = pRatio.subtract(new BigDecimal("0.35")).abs()
-                .divide(new BigDecimal("0.35"), 4, RoundingMode.HALF_UP)
-                .add(kRatio.subtract(new BigDecimal("1.20")).abs()
-                        .divide(new BigDecimal("1.20"), 4, RoundingMode.HALF_UP));
-        int score = BigDecimal.valueOf(100)
-                .subtract(deviation.multiply(new BigDecimal("40")))
-                .setScale(0, RoundingMode.HALF_UP)
-                .intValue();
-        return clampInt(score);
+
+        // 使用多光谱参数 (SPAD/NDVI 代理) 修正营养均衡度
+        if (colorIndex != null) {
+            if (colorIndex.compareTo(new BigDecimal("0.75")) > 0) {
+                baseScore += 10;
+            } else if (colorIndex.compareTo(new BigDecimal("0.6")) > 0) {
+                baseScore += 5;
+            } else if (colorIndex.compareTo(new BigDecimal("0.4")) < 0) {
+                baseScore -= 10;
+            }
+        } else {
+            // 缺失参数使用估计值 (假设颜色指数良好)
+            baseScore += 2;
+        }
+        
+        return clampInt(baseScore);
     }
 
     private int calculateGsi(List<YoucaiGrowthMonitoring> latestGrowthList) {

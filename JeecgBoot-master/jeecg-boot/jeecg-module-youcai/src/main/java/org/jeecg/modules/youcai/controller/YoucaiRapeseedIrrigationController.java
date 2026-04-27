@@ -72,7 +72,30 @@ public class YoucaiRapeseedIrrigationController {
         }
     }
 
-    
+    @Operation(summary="水阀列表")
+    @GetMapping("/waterGateList")
+    public Result<List<Map<String, Object>>> waterGateList() {
+        return Result.OK(irrigationService.getWaterGateList());
+    }
+
+    @Operation(summary="水阀控制")
+    @PostMapping("/waterGate/control")
+    public Result<Map<String, Object>> controlWaterGate(@RequestBody Map<String, Object> body) {
+        String id = str(body.get("id"));
+        String action = str(body.get("action"));
+        String setVal = str(body.get("setVal"));
+        if (id == null || id.trim().isEmpty()) {
+            return Result.error("阀门ID不能为空");
+        }
+        if (action == null || action.trim().isEmpty()) {
+            return Result.error("控制动作不能为空");
+        }
+        Map<String, Object> result = irrigationService.controlWaterGate(id, action, setVal);
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return Result.OK(result);
+        }
+        return Result.error(String.valueOf(result.getOrDefault("msg", "水阀控制失败")));
+    }
 
     @Operation(summary="灌溉记录列表")
     @GetMapping("/list")
