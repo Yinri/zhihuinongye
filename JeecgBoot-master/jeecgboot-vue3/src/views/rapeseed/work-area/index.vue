@@ -148,6 +148,9 @@ let map: any = null;
 let T: any = null;
 let carTrack: any = null;
 let validTrackPolyline: any = null;
+let allTrackPolyline: any = null;
+let startMarker: any = null;
+let endMarker: any = null;
 
 const machines = ref<any[]>([]);
 const selectedMachineSn = ref<string>('');
@@ -428,7 +431,7 @@ async function loadTrackData() {
       direction: parseFloat(item.t6) || 0,
       speed: parseFloat(item.t7) || 0,
       isValid: item.workflag === '1',
-    }));
+    })).filter((item: any) => Number.isFinite(item.lng) && Number.isFinite(item.lat));
     
     trackLoading.value = false;
     await nextTick();
@@ -445,7 +448,7 @@ async function loadTrackData() {
       direction: parseFloat(item.t6) || 0,
       speed: parseFloat(item.t7) || 0,
       isValid: item.workflag === '1',
-    }));
+    })).filter((item: any) => Number.isFinite(item.lng) && Number.isFinite(item.lat));
     trackLoading.value = false;
     await nextTick();
     await nextTick();
@@ -587,7 +590,6 @@ async function drawTrack() {
       await loadTiandituAPI();
       await loadD3Script();
       await loadD3OverlayScript();
-      await loadOpenSourceScript();
 
       map = new T.Map(mapRef.value);
       map.setMapType(window.TMAP_SATELLITE_MAP);
@@ -604,18 +606,25 @@ async function drawTrack() {
     }
   }
 
-  if (!T.CarTrack) {
-    console.error('CarTrack类未加载，请确保天地图开源扩展库已正确加载');
-    return;
-  }
-
   if (carTrack) {
     carTrack.clear();
     carTrack = null;
   }
+  if (allTrackPolyline) {
+    map.removeOverLay(allTrackPolyline);
+    allTrackPolyline = null;
+  }
   if (validTrackPolyline) {
     map.removeOverLay(validTrackPolyline);
     validTrackPolyline = null;
+  }
+  if (startMarker) {
+    map.removeOverLay(startMarker);
+    startMarker = null;
+  }
+  if (endMarker) {
+    map.removeOverLay(endMarker);
+    endMarker = null;
   }
 
   const allPoints = trackPoints.value.map((p) => new T.LngLat(p.lng, p.lat));
@@ -623,9 +632,27 @@ async function drawTrack() {
 
   console.log('轨迹点数量:', allPoints.length, '有效点数量:', validPoints.length);
 
-  if (allPoints.length > 0) {
+  if (allPoints.length > 0 && map.setViewport) {
+    map.setViewport(allPoints);
+  } else if (allPoints.length > 0) {
     const firstPoint = trackPoints.value[0];
     map.centerAndZoom(new T.LngLat(firstPoint.lng, firstPoint.lat), 15);
+  }
+
+  if (allPoints.length > 0) {
+    allTrackPolyline = new T.Polyline(allPoints, {
+      color: '#1890ff',
+      weight: 4,
+      opacity: 0.85,
+    });
+    map.addOverLay(allTrackPolyline);
+
+    startMarker = new T.Marker(allPoints[0]);
+    map.addOverLay(startMarker);
+    if (allPoints.length > 1) {
+      endMarker = new T.Marker(allPoints[allPoints.length - 1]);
+      map.addOverLay(endMarker);
+    }
   }
 
   if (validPoints.length > 0) {
@@ -637,40 +664,29 @@ async function drawTrack() {
     map.addOverLay(validTrackPolyline);
   }
 
-  const carTrackOptions = {
-    interval: 25,
-    speed: 1,
-    dynamicLine: true,
-    Datas: allPoints,
-    polylinestyle: {
-      color: '#1890ff',
-      width: 6,
-      opacity: 0.9
-    },
-    arrowStyle: {
-      display: true,
-      offset: 30,
-      repeat: 60,
-      pixelSize: 5,
-      headAngle: 75,
-      color: '#fff',
-      weight: 3
-    },
-    passedLineColor: '#1890ff',
-    notPassedLineColor: '#cccccc',
-    loop: true
-  };
-
-  console.log('创建CarTrack, 配置:', carTrackOptions);
-  carTrack = new T.CarTrack(map, carTrackOptions);
-  console.log('CarTrack创建完成:', carTrack);
-  carTrack.start();
-  console.log('CarTrack已启动');
+  console.log('轨迹绘制完成（原生折线模式）');
 }
 
 function stopTrackAnimation() {
   if (carTrack) {
     carTrack.stop();
+    carTrack = null;
+  }
+  if (allTrackPolyline && map) {
+    map.removeOverLay(allTrackPolyline);
+    allTrackPolyline = null;
+  }
+  if (validTrackPolyline && map) {
+    map.removeOverLay(validTrackPolyline);
+    validTrackPolyline = null;
+  }
+  if (startMarker && map) {
+    map.removeOverLay(startMarker);
+    startMarker = null;
+  }
+  if (endMarker && map) {
+    map.removeOverLay(endMarker);
+    endMarker = null;
   }
 }
 </script>

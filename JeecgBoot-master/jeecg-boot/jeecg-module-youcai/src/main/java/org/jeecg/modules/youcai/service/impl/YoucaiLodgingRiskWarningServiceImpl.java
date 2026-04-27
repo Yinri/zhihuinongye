@@ -696,7 +696,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             batchResponse.setCalculationTime(new Date());
             
             // 4. 创建地块风险列表
-            List<LodgingRiskAssessmentResponseDTO> plotRisks = new java.util.ArrayList<>();
+            List<LodgingRiskAssessmentResponseDTO> plotRisks;
             
             // 5. 使用并行流处理每个地块的风险评估
          plotRisks = plots.parallelStream()
