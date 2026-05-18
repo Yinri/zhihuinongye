@@ -4,7 +4,7 @@ import { BasePageParams, BaseListResponse } from '/@/api/model/baseModel';
 // 生长监测数据接口
 export interface GrowthMonitoringData {
   id?: string;
-  plotId: number;
+  baseId?: string | number;
   monitoringDate: string;
   growthStage: string;
   plantHeight?: number;
@@ -14,17 +14,17 @@ export interface GrowthMonitoringData {
   notes?: string;
 }
 
-// 根据地块ID获取最新生长监测数据
-export const getLatestGrowthMonitoringByPlotId = (plotId: number) => {
+// 根据基地ID获取最新生长监测数据
+export const getLatestGrowthMonitoringByBaseId = (baseId: string | number) => {
   return defHttp.get({
-      url: `/youcai/youcaiGrowthMonitoring/queryByPlotId`, // 假设 Api.getPlotById 是基础路径：'/youcai/youcaiGrowthMonitoring/queryByPlotId'
-      params: { plotId } // 关键：传递 plotId 作为请求参数
+      url: `/youcai/youcaiGrowthMonitoring/queryByBaseId`,
+      params: { baseId }
     });
 };
 
 // 获取生长监测数据列表（分页）
 export const getGrowthMonitoringList = (params: BasePageParams & { 
-  plotId?: number;
+  baseId?: string | number;
   growthStage?: string;
   monitoringDateRange?: [string, string];
 }) => {

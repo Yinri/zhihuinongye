@@ -9,6 +9,12 @@ import java.util.Map;
 
 @Data
 public class AnalysisRequestDTO {
+    @JsonProperty("base_id")
+    private String baseId;
+
+    @JsonProperty("base_name")
+    private String baseName;
+
     @JsonProperty("pest_data") // 前端 JSON 是 pest_data，这里做映射
     private List<PestItem> pestData;
 

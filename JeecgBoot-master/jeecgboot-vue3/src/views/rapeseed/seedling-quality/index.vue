@@ -2,11 +2,10 @@
   <div class="seedling-quality-page">
     <a-row :gutter="16" class="main-content">
       <a-col class="monitor-column" flex="2">
-        <a-card title="监控截图" :bordered="false" class="content-card">
+        <a-card title="苗情图片" :bordered="false" class="content-card">
           <template #extra>
             <div class="card-extra">
-              <a-tag color="blue">共 {{ monitorCards.length }} 张截图</a-tag>
-              <a-tag color="processing">{{ workflowMessage }}</a-tag>
+              <a-tag color="blue">共 {{ monitorCards.length }} 张图片</a-tag>
               <a-button type="primary" size="small" :loading="pageLoading" @click="refreshData">
                 <ReloadOutlined />
                 刷新
@@ -14,9 +13,9 @@
             </div>
           </template>
 
-          <a-spin :spinning="pageLoading" tip="正在加载监控截图并分析苗情...">
+          <a-spin :spinning="monitorLoading" tip="正在加载苗情图片...">
             <div v-if="monitorLoadError" class="state-wrap">
-              <a-result status="error" title="监控截图加载失败" :sub-title="monitorLoadError">
+              <a-result status="error" title="苗情图片加载失败" :sub-title="monitorLoadError">
                 <template #extra>
                   <a-button type="primary" @click="refreshData">重新加载</a-button>
                 </template>
@@ -24,47 +23,10 @@
             </div>
 
             <div v-else-if="!monitorCards.length" class="state-wrap">
-              <a-empty description="当前基地暂无监控截图" />
+              <a-empty description="当前基地暂无苗情图片" />
             </div>
 
             <template v-else>
-              <div class="overview-banner">
-                <div class="overview-title">{{ currentBaseTitle }}</div>
-                <div class="overview-desc">
-                  左侧展示基地实时监控截图，右侧输出大模型对当前油菜苗情的综合判断。
-                </div>
-              </div>
-
-              <div class="video-section">
-                <div class="video-section-header">
-                  <span class="video-section-title">实时监控</span>
-                  <a-tag color="blue">共 {{ videoDevices.length }} 路</a-tag>
-                </div>
-                <a-spin :spinning="videoLoading" tip="正在加载实时监控...">
-                  <div v-if="videoDevices.length === 0" class="video-empty">
-                    <a-empty description="暂无视频监控设备" />
-                  </div>
-                  <div v-else class="video-grid">
-                    <div
-                      v-for="device in videoDevices"
-                      :key="device.equipmentCode"
-                      class="video-monitor-card"
-                    >
-                      <FlvPlayer
-                        :url="device.streamUrl || ''"
-                        :title="device.equipmentName"
-                        class="video-player"
-                      />
-                      <PtzControlPanel
-                        class="video-control-panel"
-                        :device-code="device.equipmentCode"
-                        :channel-num="device.channelNum"
-                      />
-                    </div>
-                  </div>
-                </a-spin>
-              </div>
-
               <div class="image-grid">
                 <div
                   v-for="card in monitorCards"
@@ -75,7 +37,7 @@
                   <div class="image-shell">
                     <img
                       :src="card.imageUrl"
-                      :alt="card.deviceName || `监控截图${card.order}`"
+                      :alt="card.deviceName || `苗情图片${card.order}`"
                       @load="markImageLoaded(card.id)"
                       @error="markImageError(card.id)"
                     />
@@ -105,7 +67,7 @@
       </a-col>
 
       <a-col class="analysis-column" flex="3">
-        <a-card title="AI苗情分析" :bordered="false" class="content-card analysis-card">
+        <a-card title="苗情分析" :bordered="false" class="content-card analysis-card">
           <template #extra>
             <div class="analysis-extra">
               <a-tag v-if="analysisResult" :color="getLevelColor(analysisResult.seedlingLevel)">
@@ -153,7 +115,7 @@
                   {{ analysisResult.evidence || '暂无依据' }}
                 </a-descriptions-item>
                 <a-descriptions-item label="分析范围">
-                  基于 {{ monitorCards.length }} 张监控截图综合判断
+                  基于 {{ monitorCards.length }} 张苗情图片综合判断
                 </a-descriptions-item>
                 <a-descriptions-item label="分析时间">
                   {{ formatImageTime(analysisResult.analysisTime) }}
@@ -203,8 +165,8 @@
       </a-col>
     </a-row>
 
-    <a-modal v-model:open="previewVisible" title="监控截图预览" :footer="null" width="920px">
-      <img :src="previewImageUrl" alt="监控截图预览" class="preview-image" />
+    <a-modal v-model:open="previewVisible" title="苗情图片预览" :footer="null" width="920px">
+      <img :src="previewImageUrl" alt="苗情图片预览" class="preview-image" />
     </a-modal>
   </div>
 </template>
@@ -215,9 +177,6 @@ import { message } from 'ant-design-vue';
 import { EyeOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
 import { useSelectStore } from '/@/store/selectStore';
-import FlvPlayer from '../work-area/components/FlvPlayer.vue';
-import PtzControlPanel from '../work-area/components/PtzControlPanel.vue';
-import { getVideoDevices, getVideoStream } from '../work-area/workArea.api';
 import {
   getSeedlingAnalysisTask,
   getMonitorImages,
@@ -235,25 +194,16 @@ interface MonitorImageCard extends ImageInfo {
   imageStatus: ImageLoadStatus;
 }
 
-interface VideoMonitorDevice {
-  equipmentCode: string;
-  equipmentName: string;
-  channelNum: string;
-  streamUrl?: string | null;
-}
-
 const ANALYSIS_POLL_INTERVAL = 2000;
 const ANALYSIS_MAX_POLL_COUNT = 90;
 
 const selectStore = useSelectStore();
 
 const monitorCards = ref<MonitorImageCard[]>([]);
-const videoDevices = ref<VideoMonitorDevice[]>([]);
 const analysisResult = ref<SeedlingAnalysisResponse | null>(null);
 
 const monitorLoading = ref(false);
 const analysisLoading = ref(false);
-const videoLoading = ref(false);
 const monitorLoadError = ref('');
 let latestAnalysisToken = 0;
 
@@ -261,22 +211,6 @@ const previewVisible = ref(false);
 const previewImageUrl = ref('');
 
 const pageLoading = computed(() => monitorLoading.value || analysisLoading.value);
-const currentBaseTitle = computed(() => selectStore.selectedBase?.baseName || '当前基地');
-const workflowMessage = computed(() => {
-  if (monitorLoadError.value) {
-    return '截图加载失败';
-  }
-  if (monitorLoading.value) {
-    return '正在加载截图';
-  }
-  if (analysisLoading.value) {
-    return '正在分析苗情';
-  }
-  if (!monitorCards.value.length) {
-    return '暂无截图';
-  }
-  return '分析完成';
-});
 const analysisIndicators = computed<SeedlingIndicator[]>(() => analysisResult.value?.indicators || []);
 const analysisProblems = computed<string[]>(() => analysisResult.value?.mainProblems || []);
 const analysisSuggestions = computed<string[]>(() => analysisResult.value?.managementSuggestions || []);
@@ -296,7 +230,6 @@ watch(
 function resetState() {
   latestAnalysisToken += 1;
   monitorCards.value = [];
-  videoDevices.value = [];
   analysisResult.value = null;
   monitorLoadError.value = '';
   analysisLoading.value = false;
@@ -329,14 +262,14 @@ async function loadMonitorImages() {
     monitorCards.value = (images || []).map(createMonitorCard);
     if (!monitorCards.value.length) {
       analysisResult.value = null;
-      message.info('当前基地暂无监控截图');
+      message.info('当前基地暂无苗情图片');
     }
   } catch (error) {
-    console.error('加载监控截图失败', error);
+    console.error('加载苗情图片失败', error);
     monitorCards.value = [];
     analysisResult.value = null;
-    monitorLoadError.value = '请检查监控设备与截图服务后重试';
-    message.error('加载监控截图失败');
+    monitorLoadError.value = '请检查图片服务后重试';
+    message.error('加载苗情图片失败');
   } finally {
     monitorLoading.value = false;
   }
@@ -347,47 +280,9 @@ async function refreshData() {
     resetState();
     return;
   }
-  videoDevices.value = [];
-  videoLoading.value = false;
   await loadMonitorImages();
   if (monitorCards.value.length) {
     await runSeedlingAnalysis();
-  }
-}
-
-async function loadVideoMonitorDevices() {
-  const baseId = selectStore.selectedBase?.baseId;
-  if (!baseId) {
-    videoDevices.value = [];
-    return;
-  }
-
-  videoLoading.value = true;
-  try {
-    const devices = await getVideoDevices(String(baseId));
-    const mappedDevices: VideoMonitorDevice[] = (devices || []).map((device: any) => ({
-      equipmentCode: device.equipmentCode,
-      equipmentName: device.equipmentName,
-      channelNum: device.channelNum,
-      streamUrl: '',
-    }));
-    videoDevices.value = mappedDevices;
-
-    await Promise.allSettled(
-      videoDevices.value.map(async (device) => {
-        try {
-          device.streamUrl = await getVideoStream(device.equipmentCode, device.channelNum);
-        } catch (error) {
-          console.error(`加载视频流失败: ${device.equipmentName}`, error);
-          device.streamUrl = '';
-        }
-      })
-    );
-  } catch (error) {
-    console.error('加载实时监控失败', error);
-    videoDevices.value = [];
-  } finally {
-    videoLoading.value = false;
   }
 }
 
@@ -415,7 +310,8 @@ async function runSeedlingAnalysis() {
       baseName,
       imageUrls,
     });
-    const result = await pollSeedlingAnalysisTask(submitResult.taskId, token, String(baseId));
+    // 命中后端1小时复用窗口时，提交接口会直接返回SUCCESS，此处优先单次取结果避免无意义轮询。
+    const result = await resolveSeedlingAnalysisResult(submitResult.taskId, submitResult.status, token, String(baseId));
     if (token !== latestAnalysisToken || baseId !== selectStore.selectedBase?.baseId) {
       return;
     }
@@ -432,6 +328,21 @@ async function runSeedlingAnalysis() {
       analysisLoading.value = false;
     }
   }
+}
+
+async function resolveSeedlingAnalysisResult(
+  taskId: string,
+  submitStatus: string,
+  token: number,
+  baseId: string
+) {
+  if (submitStatus === 'SUCCESS') {
+    const task = await getSeedlingAnalysisTask(taskId);
+    if (task.status === 'SUCCESS') {
+      return task.result || ({} as SeedlingAnalysisResponse);
+    }
+  }
+  return pollSeedlingAnalysisTask(taskId, token, baseId);
 }
 
 async function pollSeedlingAnalysisTask(taskId: string, token: number, baseId: string) {
@@ -568,93 +479,6 @@ function getIndicatorColor(level?: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.overview-banner {
-  margin-bottom: 16px;
-  padding: 16px 18px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #effaf1 0%, #f7fffb 100%);
-  border: 1px solid #d9f7be;
-}
-
-.overview-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f1f1f;
-}
-
-.overview-desc {
-  margin-top: 6px;
-  color: #666;
-  line-height: 1.6;
-}
-
-.video-section {
-  margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid #e6f4ff;
-  background: #fcfeff;
-}
-
-.video-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.video-section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f1f1f;
-}
-
-.video-empty {
-  min-height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.video-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.video-monitor-card {
-  position: relative;
-  min-height: 360px;
-  overflow: hidden;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: #020617;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-}
-
-.video-player {
-  flex: 1;
-  min-height: 220px;
-}
-
-.video-monitor-card :deep(.flv-player-container) {
-  height: 100%;
-  border-radius: 0;
-}
-
-.video-monitor-card :deep(.video-wrapper) {
-  min-height: 180px;
-}
-
-.video-control-panel {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 20;
 }
 
 .image-grid {

@@ -140,6 +140,7 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             // 3. 调用Python服务进行风险评估
             LodgingRiskAssessmentResponseDTO response = callPythonService(requestDTO);
         response.setPlotId(plotId);
+        response.setBaseId(plot.getBaseId());
         response.setPlotName(plot.getPlotName());
             
             long endTime = System.currentTimeMillis();
@@ -176,13 +177,13 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
         
         // 查询最新的生长监测数据
         LambdaQueryWrapper<YoucaiGrowthMonitoring> monitorWrapper = new LambdaQueryWrapper<>();
-        monitorWrapper.eq(YoucaiGrowthMonitoring::getPlotId, plotId)
+        monitorWrapper.eq(YoucaiGrowthMonitoring::getBaseId, plot.getBaseId())
                       .orderByDesc(YoucaiGrowthMonitoring::getMonitoringDate)
                       .last("LIMIT 1");
         YoucaiGrowthMonitoring monitor = youcaiGrowthMonitoringMapper.selectOne(monitorWrapper);
         
         if (monitor == null) {
-            log.warn("未找到生长监测数据，地块ID: {}", plotId);
+            log.warn("未找到生长监测数据，基地ID: {}", plot.getBaseId());
             return null;
         }
         
@@ -211,113 +212,38 @@ public class YoucaiLodgingRiskWarningServiceImpl extends ServiceImpl<YoucaiLodgi
             }
             
             YoucaiBases base = youcaiBasesMapper.selectById(plot.getBaseId());
-            //只获取基地名称的前2个字符
-            String baseName = base != null ? base.getBaseName().substring(0, 2) : "未知基地";
             if (base == null) {
                 log.warn("基地不存在，基地ID: {}", plot.getBaseId());
                 return;
             }
-            
-            // 1. 优先查询本地数据库中的项目信息
-            LambdaQueryWrapper<YoucaiProjectInfo> projectQuery = new LambdaQueryWrapper<>();
-            projectQuery.eq(YoucaiProjectInfo::getIsDelete, 0)
-                       .last("LIMIT 1"); // 只取第一个项目
-            List<YoucaiProjectInfo> localProjects = youcaiProjectInfoService.list(projectQuery);
-            
-            Integer projectId = null;
-            boolean needFetchProjectFromAPI = false;
-            
-            // 2. 如果本地有项目信息，使用本地项目ID
-            if (localProjects != null && !localProjects.isEmpty()) {
-                projectId = localProjects.get(0).getProjectId();
-                log.debug("从本地数据库获取到项目ID: {}", projectId);
-            } else {
-                // 3. 如果本地没有项目信息，从API获取
-                needFetchProjectFromAPI = true;
-                log.debug("本地数据库无项目信息，将从API获取");
-                
-                // 获取项目列表
-                ApiResponse projectResponse = ioTApiUtil.getProjectList().block();
-                
-                if (projectResponse == null || projectResponse.getCode() != 1 || projectResponse.getData() == null) {
-                    log.warn("获取IoT项目列表失败，地块ID: {}", plotId);
-                    return;
-                }
-                
-                // 解析项目列表，获取第一个项目ID
-                List<ProjectInfo> projectList = parseProjectList(projectResponse.getData());
-                if (projectList.isEmpty()) {
-                    log.warn("IoT项目列表为空，地块ID: {}", plotId);
-                    return;
-                }
-                
-                projectId = projectList.get(0).getQ() != null ? 
-                    projectList.get(0).getQ().getId() : 0;
-                
-                if (projectId == 0) {
-                    log.warn("项目ID为空，地块ID: {}", plotId);
-                    return;
-                }
-                
-                // 保存项目信息到本地数据库
-                saveProjectInfoToLocalDB(projectList.get(0));
+            String baseName = base.getBaseName().substring(0, 2);
+            if (StringUtils.isEmpty(baseName)) {    
+                log.warn("基地名称为空，基地ID: {}", plot.getBaseId());
+                return;
             }
-            
-            // 4. 查询本地数据库中的传感器信息
+
+            // 1. 直接查询本地数据库中的气象传感器信息（sensor_name 以 baseName 开头）
             LambdaQueryWrapper<YoucaiSensorInfo> sensorQuery = new LambdaQueryWrapper<>();
-            sensorQuery.eq(YoucaiSensorInfo::getProjectId, projectId)
-                      .eq(YoucaiSensorInfo::getSensorTypeId, 1) // 1=气象传感器
+            sensorQuery.eq(YoucaiSensorInfo::getSensorTypeId, 1) // 1=气象传感器
+                      .likeRight(YoucaiSensorInfo::getSensorName, baseName)
                       .eq(YoucaiSensorInfo::getIsDelete, 0)
-                      .last("LIMIT 1"); // 只取第一个传感器
+                      .last("LIMIT 1");
             List<YoucaiSensorInfo> localSensors = youcaiSensorInfoService.list(sensorQuery);
             
             String deviceCode = null;
-            boolean needFetchSensorFromAPI = false;
-            
-            // 5. 如果本地有传感器信息，使用本地传感器信息
+
+            // 2. 使用本地传感器信息
             if (localSensors != null && !localSensors.isEmpty()) {
                 deviceCode = localSensors.get(0).getSensorSerial();
                 log.debug("从本地数据库获取到传感器设备编码: {}", deviceCode);
             } else {
-                // 6. 如果本地没有传感器信息，从API获取
-                needFetchSensorFromAPI = true;
-                log.debug("本地数据库无传感器信息，将从API获取");
-                
-                // 获取气象传感器列表
-                SensorListRequest sensorListRequest = new SensorListRequest();
-                sensorListRequest.setProjectId(projectId);
-                sensorListRequest.setSensorTypeId(1); // 1=气象传感器
-                
-                ApiResponse sensorListResponse = ioTApiUtil.getSensorList(sensorListRequest).block();
-                
-                if (sensorListResponse == null || sensorListResponse.getCode() != 1 || sensorListResponse.getData() == null) {
-                    log.warn("获取IoT传感器列表失败，地块ID: {}", plotId);
-                    return;
-                }
-            
-                // 解析传感器列表
-                List<SensorInfo> sensorList = parseSensorList(sensorListResponse.getData());
-                if (sensorList.isEmpty()) {
-                    log.warn("IoT传感器列表为空，地块ID: {}", plotId);
-                    return;
-                }
-
-                //比较传感器名称是否以基地名称开头 这里不只是只比较第一个传感器
-                for (SensorInfo sensor : sensorList) {
-                    if (sensor.getQ().getSensorName().startsWith(baseName)) {
-                        log.debug("从IoT传感器列表获取到传感器设备编码: {}", sensor.getQ().getSensorSerial());
-                        deviceCode = sensor.getQ().getSensorSerial();
-                        break;
-                    }
-                }
-                if (deviceCode == null) {
-                    log.warn("IoT传感器列表中未找到以基地名称开头的传感器，地块ID: {}", plotId);
-                    return;
-                }
+                log.warn("本地未找到匹配的气象传感器，匹配条件: sensor_type_id=1 且 sensor_name LIKE '{}%'，地块ID: {}",
+                        baseName, plotId);
+                return;
             }
                 
             
-            // 7. 获取传感器实时数据
+            // 3. 获取传感器实时数据
             ApiResponse sensorDataResponse = ioTApiUtil.getSensorRealTimeData(deviceCode).block();
             
             if (sensorDataResponse == null || sensorDataResponse.getCode() != 1 || sensorDataResponse.getData() == null) {

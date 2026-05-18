@@ -2,7 +2,7 @@
   <div class="disease-control-page">
     <a-row :gutter="16" class="main-content">
       <a-col :span="12">
-        <a-card title="监控截图 - 病害分析" :bordered="false" class="content-card">
+        <a-card title="病害图片" :bordered="false" class="content-card">
           <template #extra>
             <div class="card-extra">
               <a-tag color="blue">共 {{ monitorCards.length }} 张图片</a-tag>
@@ -24,9 +24,9 @@
 
           <div class="image-section">
             <div class="image-gallery">
-              <a-spin :spinning="monitorLoading" tip="正在加载监控截图...">
+              <a-spin :spinning="monitorLoading" tip="正在加载病害图片...">
                 <div v-if="monitorLoadError" class="empty-container">
-                  <a-result status="error" title="截图加载失败" :sub-title="monitorLoadError">
+                  <a-result status="error" title="病害图片加载失败" :sub-title="monitorLoadError">
                     <template #extra>
                       <a-button type="primary" @click="retryMonitorWorkflow">
                         <ReloadOutlined /> 点击重试
@@ -35,47 +35,9 @@
                   </a-result>
                 </div>
                 <div v-else-if="monitorCards.length === 0" class="empty-container">
-                  <a-empty description="暂无监控截图数据" />
+                  <a-empty description="暂无病害图片数据" />
                 </div>
                 <template v-else>
-                  <div class="workflow-tip">
-                    <a-alert
-                      type="info"
-                      show-icon
-                      :message="monitorWorkflowMessage"
-                    />
-                  </div>
-
-                  <div class="video-section">
-                    <div class="video-section-header">
-                      <span class="video-section-title">实时监控</span>
-                      <a-tag color="blue">共 {{ videoDevices.length }} 路</a-tag>
-                    </div>
-                    <a-spin :spinning="videoLoading" tip="正在加载实时监控...">
-                      <div v-if="videoDevices.length === 0" class="video-empty">
-                        <a-empty description="暂无视频监控设备" />
-                      </div>
-                      <div v-else class="video-grid">
-                        <div
-                          v-for="device in videoDevices"
-                          :key="device.equipmentCode"
-                          class="video-monitor-card"
-                        >
-                          <FlvPlayer
-                            :url="device.streamUrl || ''"
-                            :title="device.equipmentName"
-                            class="video-player"
-                          />
-                          <PtzControlPanel
-                            class="video-control-panel"
-                            :device-code="device.equipmentCode"
-                            :channel-num="device.channelNum"
-                          />
-                        </div>
-                      </div>
-                    </a-spin>
-                  </div>
-
                   <div class="image-grid">
                     <div
                       v-for="card in pagedMonitorCards"
@@ -85,7 +47,7 @@
                       <div class="image-item" @click="previewImage(card.imageUrl)">
                         <img
                           :src="card.imageUrl"
-                          :alt="card.deviceName || '监控截图'"
+                          :alt="card.deviceName || '病害图片'"
                           @load="markMonitorImageLoaded(card.id)"
                           @error="markMonitorImageError(card.id)"
                         />
@@ -106,7 +68,7 @@
                       <div class="monitor-card-body">
                         <div class="monitor-card-head">
                           <div class="monitor-card-title">
-                            {{ card.deviceName || `监控截图 ${card.order}` }}
+                            {{ card.deviceName || `病害图片 ${card.order}` }}
                           </div>
                         </div>
 
@@ -295,9 +257,6 @@ import { message } from 'ant-design-vue';
 import { DownOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
 import { useSelectStore } from '/@/store/selectStore';
-import FlvPlayer from '../work-area/components/FlvPlayer.vue';
-import PtzControlPanel from '../work-area/components/PtzControlPanel.vue';
-import { getVideoDevices, getVideoStream } from '../work-area/workArea.api';
 import {
   DiseaseAnalysisResponse,
   getAnalyzeDiseaseTask,
@@ -323,13 +282,6 @@ interface MonitorAnalysisCard extends ImageInfo {
   errorMessage: string;
 }
 
-interface VideoMonitorDevice {
-  equipmentCode: string;
-  equipmentName: string;
-  channelNum: string;
-  streamUrl?: string | null;
-}
-
 const ANALYZE_CHUNK_SIZE = 6;
 const MONITOR_PAGE_SIZE = 24;
 const ANALYSIS_POLL_INTERVAL = 2000;
@@ -346,13 +298,11 @@ const timeRange = computed(() => `${dateRange.value[0]} 至 ${dateRange.value[1]
 
 const monitorCards = ref<MonitorAnalysisCard[]>([]);
 const sporeImages = ref<ImageInfo[]>([]);
-const videoDevices = ref<VideoMonitorDevice[]>([]);
 
 const monitorLoading = ref(false);
 const monitorAnalyzeRunning = ref(false);
 const sporeLoading = ref(false);
 const sporeAnalyzeLoading = ref(false);
-const videoLoading = ref(false);
 
 const monitorLoadError = ref('');
 const sporeResult = ref<SporeAnalysisResponse | null>(null);
@@ -372,7 +322,6 @@ const medicationColumns = [
   { title: '注意事项', dataIndex: 'precautions' },
 ];
 
-const monitorWorkflowLoading = computed(() => monitorLoading.value || monitorAnalyzeRunning.value);
 const monitorSuccessCount = computed(() => monitorCards.value.filter((item) => item.analyzeStatus === 'success').length);
 const monitorFailedCount = computed(() => monitorCards.value.filter((item) => item.analyzeStatus === 'failed').length);
 const analyzableMonitorCount = computed(() => monitorCards.value.length);
@@ -383,24 +332,6 @@ const pagedMonitorCards = computed(() => {
   }
   const start = (monitorCurrentPage.value - 1) * MONITOR_PAGE_SIZE;
   return monitorCards.value.slice(start, start + MONITOR_PAGE_SIZE);
-});
-const monitorWorkflowMessage = computed(() => {
-  if (monitorLoadError.value) {
-    return '截图加载失败，请重试';
-  }
-  if (monitorLoading.value) {
-    return '正在加载监控截图...';
-  }
-  if (monitorAnalyzeRunning.value) {
-    return `正在自动分析病害，已完成 ${monitorSuccessCount.value}/${analyzableMonitorCount.value}`;
-  }
-  if (!monitorCards.value.length) {
-    return '暂无监控截图数据';
-  }
-  if (monitorFailedCount.value > 0) {
-    return `自动分析完成，${monitorFailedCount.value} 张图片分析失败，可在卡片内单独重试`;
-  }
-  return '监控截图加载完成，病害分析结果已同步展示';
 });
 
 watch(
@@ -432,7 +363,6 @@ watch(
 function resetPageState() {
   monitorCards.value = [];
   sporeImages.value = [];
-  videoDevices.value = [];
   sporeResult.value = null;
   monitorLoadError.value = '';
   monitorCurrentPage.value = 1;
@@ -472,13 +402,13 @@ async function loadMonitorImages() {
     });
     monitorCards.value = (images || []).map(createMonitorCard);
     if (!monitorCards.value.length) {
-      message.info('当前基地暂无监控截图');
+      message.info('当前基地暂无病害图片');
     }
   } catch (e) {
-    console.error('加载监控截图失败', e);
+    console.error('加载病害图片失败', e);
     monitorCards.value = [];
-    monitorLoadError.value = '截图加载失败，点击重试';
-    message.error('加载监控截图失败');
+    monitorLoadError.value = '病害图片加载失败，点击重试';
+    message.error('加载病害图片失败');
   } finally {
     monitorLoading.value = false;
   }
@@ -511,42 +441,6 @@ async function loadSporeImages() {
   }
 }
 
-async function loadVideoMonitorDevices() {
-  const baseId = selectStore.selectedBase?.baseId;
-  if (!baseId) {
-    videoDevices.value = [];
-    return;
-  }
-
-  videoLoading.value = true;
-  try {
-    const devices = await getVideoDevices(String(baseId));
-    const mappedDevices: VideoMonitorDevice[] = (devices || []).map((device: any) => ({
-      equipmentCode: device.equipmentCode,
-      equipmentName: device.equipmentName,
-      channelNum: device.channelNum,
-      streamUrl: '',
-    }));
-    videoDevices.value = mappedDevices;
-
-    await Promise.allSettled(
-      videoDevices.value.map(async (device) => {
-        try {
-          device.streamUrl = await getVideoStream(device.equipmentCode, device.channelNum);
-        } catch (error) {
-          console.error(`加载视频流失败: ${device.equipmentName}`, error);
-          device.streamUrl = '';
-        }
-      })
-    );
-  } catch (error) {
-    console.error('加载实时监控失败', error);
-    videoDevices.value = [];
-  } finally {
-    videoLoading.value = false;
-  }
-}
-
 async function refreshData() {
   if (!selectStore.selectedBase?.baseId || !selectStore.selectedBase?.baseName) {
     resetPageState();
@@ -554,7 +448,7 @@ async function refreshData() {
   }
 
   try {
-    await Promise.all([loadMonitorImages(), loadSporeImages(), loadVideoMonitorDevices()]);
+    await Promise.all([loadMonitorImages(), loadSporeImages()]);
   } catch (e) {
     console.error('刷新病害防控数据失败', e);
     message.error('刷新病害防控数据失败');
@@ -641,7 +535,8 @@ async function retryAnalyzeCard(id: string) {
 
 async function analyzeOneMonitorCard(imageUrl: string, baseName?: string) {
   const submitResult = await submitAnalyzeDisease([imageUrl], baseName);
-  return pollDiseaseTask(submitResult.taskId);
+  // 命中后端缓存复用时提交即SUCCESS，先单次读取任务结果，避免进入轮询。
+  return resolveDiseaseTask(submitResult.taskId, submitResult.status);
 }
 
 function chunkArray<T>(items: T[], chunkSize: number) {
@@ -681,7 +576,8 @@ async function handleAnalyzeSpore(
       baseName,
       imageUrls,
     });
-    const res = await pollSporeTask(submitResult.taskId);
+    // 命中后端缓存复用时提交即SUCCESS，先单次读取任务结果，避免进入轮询。
+    const res = await resolveSporeTask(submitResult.taskId, submitResult.status);
     if (baseName !== selectStore.selectedBase?.baseName) {
       return;
     }
@@ -693,6 +589,26 @@ async function handleAnalyzeSpore(
   } finally {
     sporeAnalyzeLoading.value = false;
   }
+}
+
+async function resolveDiseaseTask(taskId: string, submitStatus: string) {
+  if (submitStatus === 'SUCCESS') {
+    const task = await getAnalyzeDiseaseTask(taskId);
+    if (task.status === 'SUCCESS') {
+      return task.result || ({} as DiseaseAnalysisResponse);
+    }
+  }
+  return pollDiseaseTask(taskId);
+}
+
+async function resolveSporeTask(taskId: string, submitStatus: string) {
+  if (submitStatus === 'SUCCESS') {
+    const task = await getAnalyzeSporeTask(taskId);
+    if (task.status === 'SUCCESS') {
+      return task.result || ({} as SporeAnalysisResponse);
+    }
+  }
+  return pollSporeTask(taskId);
 }
 
 async function pollDiseaseTask(taskId: string) {
@@ -958,76 +874,6 @@ function downloadBlob(blob: Blob, fileName: string) {
     display: flex;
     align-items: center;
   }
-}
-
-.workflow-tip {
-  margin-bottom: 12px;
-}
-
-.video-section {
-  margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #e6f4ff;
-  background: #fcfeff;
-}
-
-.video-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.video-section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #262626;
-}
-
-.video-empty {
-  min-height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.video-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.video-monitor-card {
-  position: relative;
-  min-height: 360px;
-  overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: #020617;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-}
-
-.video-player {
-  flex: 1;
-  min-height: 220px;
-}
-
-.video-monitor-card :deep(.flv-player-container) {
-  height: 100%;
-  border-radius: 0;
-}
-
-.video-monitor-card :deep(.video-wrapper) {
-  min-height: 180px;
-}
-
-.video-control-panel {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 20;
 }
 
 .monitor-card {

@@ -6,7 +6,7 @@ import 'ant-design-vue/dist/reset.css';
 import 'virtual:svg-icons-register';
 
 import App from './App.vue';
-import { createApp } from 'vue';
+import { createApp, type App as VueApp } from 'vue';
 import { initAppConfigStore } from '/@/logics/initAppConfig';
 import { setupErrorHandle } from '/@/logics/error-handle';
 import { router, createRouter, setupRouter } from '/@/router';
@@ -16,15 +16,13 @@ import { setupGlobDirectives } from '/@/directives';
 import { setupI18n } from '/@/locales/setupI18n';
 import { setupElectron } from "@/electron";
 import { registerGlobComp } from '/@/components/registerGlobComp';
-import { registerThirdComp } from '/@/settings/registerThirdComp';
-import { registerSuper } from '/@/views/super/registerSuper';
 import { useSso } from '/@/hooks/web/useSso';
 import { checkIsQiankunMicro } from "/@/qiankun/micro";
 import { autoUseQiankunMicro } from "/@/qiankun/micro/qiankunMicro";
 import { useAppStoreWithOut } from "@/store/modules/app";
+import { getToken } from '/@/utils/auth';
 
-// 注册online模块lib
-import { registerPackages } from '/@/utils/monorepo/registerPackages';
+let featureBootstrapPromise: Promise<void> | null = null;
 
 // 程序入口
 async function main() {
@@ -63,18 +61,12 @@ async function bootstrap(props?: MainAppProps) {
   // 初始化内部系统配置
   initAppConfigStore();
 
-  // 注册外部模块路由(注册online模块lib)
-  registerPackages(app);
-
   // 注册全局组件
   registerGlobComp(app);
 
   //CAS单点登录
   await useSso().ssoLogin();
 
-  // 注册super应用路由
-  await registerSuper(app);
-  
   // 配置路由
   setupRouter(app);
 
@@ -87,8 +79,10 @@ async function bootstrap(props?: MainAppProps) {
   // 配置全局错误处理
   setupErrorHandle(app);
 
-  // 注册第三方组件
-  await registerThirdComp(app);
+  const hasToken = !!getToken();
+  if (hasToken) {
+    await setupDeferredFeatures(app);
+  }
 
   // 配置electron
   setupElectron(app)
@@ -99,9 +93,44 @@ async function bootstrap(props?: MainAppProps) {
   // 挂载应用
   app.mount(getMountContainer(props), true);
 
+  if (!hasToken) {
+    deferFeatureSetup(app);
+  }
+
   console.log(" vue3 app 加载完成！")
 
   return app
+}
+
+async function setupDeferredFeatures(app: VueApp) {
+  if (!featureBootstrapPromise) {
+    featureBootstrapPromise = (async () => {
+      const [{ registerPackages }, { registerSuper }, { registerThirdComp }] = await Promise.all([
+        import('/@/utils/monorepo/registerPackages'),
+        import('/@/views/super/registerSuper'),
+        import('/@/settings/registerThirdComp'),
+      ]);
+      registerPackages(app);
+      await Promise.all([registerSuper(app), registerThirdComp(app)]);
+    })();
+  }
+  return featureBootstrapPromise;
+}
+
+function deferFeatureSetup(app: VueApp) {
+  const start = () => {
+    void setupDeferredFeatures(app).catch((error) => {
+      console.error('延迟注册扩展模块失败', error);
+    });
+  };
+
+  if ('requestIdleCallback' in window) {
+    (window as typeof window & { requestIdleCallback: (callback: () => void, options?: { timeout: number }) => number })
+      .requestIdleCallback(start, { timeout: 1500 });
+    return;
+  }
+
+  window.setTimeout(start, 0);
 }
 
 // 获取应用挂载容器

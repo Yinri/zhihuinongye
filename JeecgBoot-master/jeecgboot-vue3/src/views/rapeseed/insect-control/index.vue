@@ -90,7 +90,13 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import * as echarts from 'echarts';
 import { message } from 'ant-design-vue';
 import { useSelectStore } from '/@/store/selectStore';
-import { getPestAnalysisTask, getPestImages, submitPestAnalysisTask, type PestImageQueryParams } from './insectControl.api';
+import {
+  getPestAnalysisTask,
+  getPestImages,
+  submitPestAnalysisTask,
+  type PestAnalysisRequest,
+  type PestImageQueryParams,
+} from './insectControl.api';
 
 interface PestRecord {
   dateCreated?: string;
@@ -111,6 +117,7 @@ const ANALYSIS_POLL_INTERVAL = 2000;
 const ANALYSIS_MAX_POLL_COUNT = 90;
 
 const selectStore = useSelectStore();
+const currentBaseId = computed(() => String(selectStore.selectedBase.baseId || ''));
 const currentBaseName = computed(() => selectStore.selectedBase.baseName || '');
 
 // 默认查询近 7 天，进入页面后直接展示这一段时间内的全部虫情图片。
@@ -286,7 +293,9 @@ async function handleLLMAnalysis(records: PestRecord[]) {
   analysisLoading.value = true;
   analysisError.value = '';
   try {
-    const requestData = {
+    const requestData: PestAnalysisRequest = {
+      base_id: currentBaseId.value || undefined,
+      base_name: currentBaseName.value || undefined,
       pest_data: records.map((item) => ({
         analysis_time: item.analysis_time,
         insects: item.insects,
@@ -295,7 +304,8 @@ async function handleLLMAnalysis(records: PestRecord[]) {
     };
 
     const submitResult = await submitPestAnalysisTask(requestData);
-    const taskResult = await pollPestAnalysisTask(submitResult.taskId, token);
+    // 命中后端缓存复用时提交即SUCCESS，先单次读取任务结果，避免进入轮询。
+    const taskResult = await resolvePestAnalysisResult(submitResult.taskId, submitResult.status, token);
     if (token !== latestAnalysisToken) {
       return;
     }
@@ -313,6 +323,19 @@ async function handleLLMAnalysis(records: PestRecord[]) {
       analysisLoading.value = false;
     }
   }
+}
+
+async function resolvePestAnalysisResult(taskId: string, submitStatus: string, token: number) {
+  if (submitStatus === 'SUCCESS') {
+    const task = await getPestAnalysisTask(taskId);
+    if (token !== latestAnalysisToken) {
+      throw new Error('分析任务已取消');
+    }
+    if (task.status === 'SUCCESS') {
+      return task.result || '';
+    }
+  }
+  return pollPestAnalysisTask(taskId, token);
 }
 
 async function pollPestAnalysisTask(taskId: string, token: number) {

@@ -31,10 +31,10 @@ import lombok.experimental.Accessors;
 public class YoucaiGrowthMonitoring extends JeecgEntity {
     private static final long serialVersionUID = 1L;
 
-	/**地块ID*/
-	@Excel(name = "地块ID", width = 15)
-    @Schema(description = "地块ID")
-    private java.lang.String plotId;
+	/**基地ID*/
+	@Excel(name = "基地ID", width = 15)
+    @Schema(description = "基地ID")
+    private java.lang.String baseId;
 	/**监测日期*/
 	@Excel(name = "监测日期", width = 15, format = "yyyy-MM-dd")
 	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")

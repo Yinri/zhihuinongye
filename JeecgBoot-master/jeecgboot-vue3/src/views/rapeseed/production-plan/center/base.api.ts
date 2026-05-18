@@ -11,8 +11,8 @@ enum Api {
   getBaseById = '/youcai/bases/queryById',
   // 通过基地id获取地块列表
   getPlotsByBaseId = '/youcai/youcaiPlots/queryByBaseId',
-  // 通过地块id获取地块详情
-  getPlotById = '/youcai/youcaiGrowthMonitoring/queryByPlotId',
+  // 通过基地id获取最新生长监控数据
+  getGrowthMonitoringByBaseId = '/youcai/youcaiGrowthMonitoring/queryByBaseId',
   // 创建基地
   createBase = '/youcai/bases/add',
   //通过地块id获取当前地块生产计划
@@ -82,14 +82,14 @@ export const getPlotsByBaseId: Function = (baseId) => {
 };
 
 /**
- * 根据plotId获取地块生长监控数据
- * @param plotId 地块ID
+ * 根据baseId获取基地生长监控数据
+ * @param baseId 基地ID
  * @returns 生长监控数据
  */
-export const getPlotById: Function = (plotId) => {
+export const getGrowthMonitoringByBaseId: Function = (baseId) => {
   return defHttp.get({
-    url: Api.getPlotById,
-    params: { plotId: plotId + '' }
+    url: Api.getGrowthMonitoringByBaseId,
+    params: { baseId: baseId + '' }
   });
 };
 

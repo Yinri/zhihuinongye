@@ -16,7 +16,7 @@ import org.jeecg.modules.youcai.service.IDiseaseControlService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -94,11 +93,10 @@ public class YoucaiDiseaseControlController {
         }
         try {
             log.info("提交病害分析任务, baseName={}, 图片数量={}", request.getBaseName(), imageCount);
-            String cacheKey = "disease:" + DigestUtils.md5DigestAsHex(
-                    JSON.toJSONString(request).getBytes(StandardCharsets.UTF_8));
             AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
                     "disease",
-                    cacheKey,
+                    StringUtils.hasText(request.getBaseName()) ? request.getBaseName().trim() : null,
+                    "disease",
                     () -> {
                         try {
                             return JSON.toJSONString(diseaseControlService.analyzeDisease(request));
@@ -158,11 +156,10 @@ public class YoucaiDiseaseControlController {
         }
         try {
             log.info("提交监控截图批量分析任务, baseId={}", baseId);
-            String cacheKey = "disease-monitor-batch:" + DigestUtils.md5DigestAsHex(
-                    baseId.getBytes(StandardCharsets.UTF_8));
             AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
                     "disease_monitor_batch",
-                    cacheKey,
+                    baseId.trim(),
+                    "disease_monitor_batch",
                     () -> {
                         try {
                             return JSON.toJSONString(diseaseControlService.analyzeMonitorBatchByBaseId(baseId));
@@ -228,11 +225,10 @@ public class YoucaiDiseaseControlController {
         }
         try {
             log.info("提交孢子综合分析任务, baseName={}, 图片数量={}", request.getBaseName(), imageCount);
-            String cacheKey = "disease-spore:" + DigestUtils.md5DigestAsHex(
-                    JSON.toJSONString(request).getBytes(StandardCharsets.UTF_8));
             AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
                     "disease_spore",
-                    cacheKey,
+                    StringUtils.hasText(request.getBaseName()) ? request.getBaseName().trim() : null,
+                    "disease_spore",
                     () -> {
                         try {
                             return JSON.toJSONString(diseaseControlService.analyzeSpore(request));

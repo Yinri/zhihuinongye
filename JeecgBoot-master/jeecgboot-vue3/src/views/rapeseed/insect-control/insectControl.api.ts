@@ -31,7 +31,17 @@ export interface AiTaskResultResponse<T> {
   result?: T;
 }
 
-export const submitPestAnalysisTask = (data: any) => {
+export interface PestAnalysisRequest {
+  base_id?: string;
+  base_name?: string;
+  pest_data: Array<{
+    analysis_time?: string;
+    insects?: Record<string, number>;
+  }>;
+  image_urls: string[];
+}
+
+export const submitPestAnalysisTask = (data: PestAnalysisRequest) => {
   return defHttp.post<AiTaskSubmitResponse>({
     url: Api.AIAnalysisSubmit,
     data,

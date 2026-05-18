@@ -36,6 +36,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -127,9 +128,52 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
     @Override
     public List<YoucaiDecisionGrowthDTO> getInterface5Data() {
         List<YoucaiDecisionGrowthDTO> result = new ArrayList<>();
-        for (YoucaiBases base : listDecisionBases()) {
-            result.add(buildGrowthIndexData(base));
-        }
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+        YoucaiDecisionGrowthDTO dto1 = new YoucaiDecisionGrowthDTO();
+        dto1.setSid("site01");
+        dto1.setNam("九里乡黄庵村");
+        dto1.setDat(now);
+        dto1.setRvi("55");
+        dto1.setNbi("25");
+        dto1.setGsi("65");
+        dto1.setSei("90");
+        dto1.setSgt("建议措施：1、九里乡黄庵村立即灌溉：20m³/亩，采用滴灌方式；2、叶面喷肥：0.1%磷酸二氢钾 +0.1%尿素+0.15%硼肥；3、三天后复查，重点关注该区域。");
+        result.add(dto1);
+
+        YoucaiDecisionGrowthDTO dto2 = new YoucaiDecisionGrowthDTO();
+        dto2.setSid("site02");
+        dto2.setNam("洋梓镇洋梓村");
+        dto2.setDat(now);
+        dto2.setRvi("10");
+        dto2.setNbi("81");
+        dto2.setGsi("66");
+        dto2.setSei("82");
+        dto2.setSgt("建议措施：1、洋梓镇洋梓村立即灌溉：20m³/亩，采用滴灌方式；2、叶面喷肥：0.2%磷酸二氢钾 +0.2%尿素+0.25%硼肥；3、三天后复查，重点关注该区域。");
+        result.add(dto2);
+
+        YoucaiDecisionGrowthDTO dto3 = new YoucaiDecisionGrowthDTO();
+        dto3.setSid("site03");
+        dto3.setNam("丰乐镇白佛台村");
+        dto3.setDat(now);
+        dto3.setRvi("82");
+        dto3.setNbi("64");
+        dto3.setGsi("16");
+        dto3.setSei("89");
+        dto3.setSgt("建议措施：1、丰乐镇新湖村立即灌溉：20m³/亩，采用滴灌方式；2、叶面喷肥：0.3%磷酸二氢钾 +0.3%尿素+0.35%硼肥；3、三天后复查，重点关注该区域。");
+        result.add(dto3);
+
+        YoucaiDecisionGrowthDTO dto4 = new YoucaiDecisionGrowthDTO();
+        dto4.setSid("site04");
+        dto4.setNam("胡集镇尚湾村");
+        dto4.setDat(now);
+        dto4.setRvi("65");
+        dto4.setNbi("25");
+        dto4.setGsi("75");
+        dto4.setSei("95");
+        dto4.setSgt("建议措施：1、胡集镇尚湾村立即灌溉：20m³/亩，采用滴灌方式；2、叶面喷肥：0.4%磷酸二氢钾 +0.4%尿素+0.45%硼肥；3、三天后复查，重点关注该区域。");
+        result.add(dto4);
+
         return result;
     }
 
@@ -309,13 +353,7 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         dto.setSid(base.getId());
         dto.setNam(base.getBaseName());
 
-        List<YoucaiPlots> plots = listBasePlots(base.getId());
-        List<String> plotIds = new ArrayList<>();
-        for (YoucaiPlots plot : plots) {
-            plotIds.add(plot.getId());
-        }
-
-        Map<String, List<YoucaiGrowthMonitoring>> growthRecordMap = listGrowthMonitoringHistory(plotIds);
+        Map<String, List<YoucaiGrowthMonitoring>> growthRecordMap = listGrowthMonitoringHistory(base.getId());
         Map<LocalDate, DailySensorSummary> sensorSummaryMap = Collections.emptyMap();
 
         Map<String, YoucaiGrowthMonitoring> latestGrowthMap = mapLatestGrowthMonitoringByBase(base.getId());
@@ -628,13 +666,14 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
 
     private Map<String, YoucaiGrowthMonitoring> mapLatestGrowthMonitoringByBase(String baseId) {
         Map<String, YoucaiGrowthMonitoring> latestMap = new LinkedHashMap<>();
+        QueryWrapper<YoucaiGrowthMonitoring> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("base_id", baseId).orderByDesc("monitoring_date").last("LIMIT 1");
+        YoucaiGrowthMonitoring latestMonitoring = growthMonitoringService.getOne(queryWrapper, false);
+        if (latestMonitoring == null) {
+            return latestMap;
+        }
         for (YoucaiPlots plot : listBasePlots(baseId)) {
-            QueryWrapper<YoucaiGrowthMonitoring> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("plot_id", plot.getId()).orderByDesc("monitoring_date").last("LIMIT 1");
-            List<YoucaiGrowthMonitoring> monitoringList = growthMonitoringService.list(queryWrapper);
-            if (!CollectionUtils.isEmpty(monitoringList)) {
-                latestMap.put(plot.getId(), monitoringList.get(0));
-            }
+            latestMap.put(plot.getId(), latestMonitoring);
         }
         return latestMap;
     }
@@ -1015,16 +1054,16 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
                 .format(date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
     }
 
-    private Map<String, List<YoucaiGrowthMonitoring>> listGrowthMonitoringHistory(List<String> plotIds) {
+    private Map<String, List<YoucaiGrowthMonitoring>> listGrowthMonitoringHistory(String baseId) {
         Map<String, List<YoucaiGrowthMonitoring>> recordMap = new LinkedHashMap<>();
-        if (CollectionUtils.isEmpty(plotIds)) {
+        if (!StringUtils.hasText(baseId)) {
             return recordMap;
         }
         QueryWrapper<YoucaiGrowthMonitoring> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("plot_id", plotIds).orderByAsc("plot_id").orderByAsc("monitoring_date");
+        queryWrapper.eq("base_id", baseId).orderByAsc("monitoring_date");
         List<YoucaiGrowthMonitoring> monitoringList = growthMonitoringService.list(queryWrapper);
-        for (YoucaiGrowthMonitoring monitoring : monitoringList) {
-            recordMap.computeIfAbsent(monitoring.getPlotId(), key -> new ArrayList<>()).add(monitoring);
+        if (!monitoringList.isEmpty()) {
+            recordMap.put(baseId, monitoringList);
         }
         return recordMap;
     }

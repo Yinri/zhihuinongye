@@ -27,6 +27,11 @@ public class LodgingRiskAssessmentResponseDTO implements Serializable {
      */
     private String plotId;
 
+    /**
+     * 基地ID
+     */
+    private String baseId;
+
      /**
      * 地块名称
      */

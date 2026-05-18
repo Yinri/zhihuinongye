@@ -101,6 +101,7 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
 					videoId.getBytes(StandardCharsets.UTF_8));
 			AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
 					"lodging_video",
+					null,
 					cacheKey,
 					() -> {
 						try {
@@ -173,6 +174,7 @@ public class YoucaiLodgingRiskWarningController extends JeecgController<YoucaiLo
 					JSON.toJSONString(videoIds).getBytes(StandardCharsets.UTF_8));
 			AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
 					"lodging_video_batch",
+					null,
 					cacheKey,
 					() -> {
 						try {

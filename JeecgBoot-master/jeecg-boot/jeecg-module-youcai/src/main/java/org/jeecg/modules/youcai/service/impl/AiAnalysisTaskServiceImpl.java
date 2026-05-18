@@ -25,6 +25,8 @@ import java.util.function.Supplier;
 public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
     private static final String TASK_KEY_PREFIX = "youcai:ai:task:";
     private static final String CACHE_KEY_PREFIX = "youcai:ai:cache:";
+    private static final String CACHE_TIME_KEY_PREFIX = "youcai:ai:cache_time:";
+    private static final String DEFAULT_BASE_SCOPE = "global";
     private static final AtomicInteger THREAD_INDEX = new AtomicInteger(1);
 
     @Autowired
@@ -35,6 +37,9 @@ public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
 
     @Value("${youcai.ai.cache-expire-seconds:43200}")
     private int cacheExpireSeconds;
+
+    @Value("${youcai.ai.reuse-window-seconds:3600}")
+    private int reuseWindowSeconds;
 
     @Value("${youcai.ai.executor-size:4}")
     private int executorSize;
@@ -55,15 +60,17 @@ public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
     }
 
     @Override
-    public AiTaskSubmitResponseDTO submitTask(String taskType, String cacheKey, Supplier<String> resultSupplier) {
+    public AiTaskSubmitResponseDTO submitTask(String taskType, String baseScope, String eventKey, Supplier<String> resultSupplier) {
         long now = System.currentTimeMillis();
         String taskId = UUID.randomUUID().toString().replace("-", "");
-        String cachedResult = getCachedResult(cacheKey);
+        String normalizedBaseScope = normalizeBaseScope(baseScope);
+        String scopedEventKey = buildScopedEventKey(taskType, normalizedBaseScope, eventKey);
+        String cachedResult = getReusableCachedResult(scopedEventKey, now);
 
         AiTaskRecordDTO taskRecord = new AiTaskRecordDTO();
         taskRecord.setTaskId(taskId);
         taskRecord.setTaskType(taskType);
-        taskRecord.setCacheKey(cacheKey);
+        taskRecord.setCacheKey(scopedEventKey);
         taskRecord.setCreatedTime(now);
         taskRecord.setUpdatedTime(now);
 
@@ -86,7 +93,7 @@ public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
         taskRecord.setCached(false);
         saveTask(taskRecord);
 
-        executorService.submit(() -> runTask(taskId, taskType, cacheKey, resultSupplier));
+        executorService.submit(() -> runTask(taskId, taskType, scopedEventKey, resultSupplier));
 
         submitResponse.setStatus(AiTaskRecordDTO.STATUS_PENDING);
         submitResponse.setCached(false);
@@ -102,7 +109,7 @@ public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
         return JSON.parseObject(String.valueOf(raw), AiTaskRecordDTO.class);
     }
 
-    private void runTask(String taskId, String taskType, String cacheKey, Supplier<String> resultSupplier) {
+    private void runTask(String taskId, String taskType, String scopedEventKey, Supplier<String> resultSupplier) {
         AiTaskRecordDTO taskRecord = getTask(taskId);
         if (taskRecord == null) {
             return;
@@ -124,7 +131,7 @@ public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
             taskRecord.setFinishedTime(System.currentTimeMillis());
             taskRecord.setUpdatedTime(taskRecord.getFinishedTime());
             saveTask(taskRecord);
-            cacheResult(cacheKey, resultJson);
+            cacheResult(scopedEventKey, resultJson);
         } catch (Exception e) {
             log.error("AI任务执行失败, taskId={}, taskType={}", taskId, taskType, e);
             taskRecord.setStatus(AiTaskRecordDTO.STATUS_FAILED);
@@ -139,18 +146,38 @@ public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
         redisUtil.set(buildTaskKey(taskRecord.getTaskId()), JSON.toJSONString(taskRecord), taskExpireSeconds);
     }
 
-    private void cacheResult(String cacheKey, String resultJson) {
-        if (!StringUtils.hasText(cacheKey) || !StringUtils.hasText(resultJson)) {
+    private void cacheResult(String scopedEventKey, String resultJson) {
+        if (!StringUtils.hasText(scopedEventKey) || !StringUtils.hasText(resultJson)) {
             return;
         }
-        redisUtil.set(buildCacheKey(cacheKey), resultJson, cacheExpireSeconds);
+        long now = System.currentTimeMillis();
+        redisUtil.set(buildCacheKey(scopedEventKey), resultJson, cacheExpireSeconds);
+        redisUtil.set(buildCacheTimeKey(scopedEventKey), String.valueOf(now), cacheExpireSeconds);
     }
 
-    private String getCachedResult(String cacheKey) {
-        if (!StringUtils.hasText(cacheKey)) {
+    private String getReusableCachedResult(String scopedEventKey, long now) {
+        if (!StringUtils.hasText(scopedEventKey)) {
             return null;
         }
-        Object raw = redisUtil.get(buildCacheKey(cacheKey));
+        Object rawTime = redisUtil.get(buildCacheTimeKey(scopedEventKey));
+        if (rawTime == null) {
+            return null;
+        }
+
+        long cachedAt;
+        try {
+            cachedAt = Long.parseLong(String.valueOf(rawTime));
+        } catch (NumberFormatException e) {
+            log.warn("缓存时间戳格式错误, scopedEventKey={}, rawTime={}", scopedEventKey, rawTime);
+            return null;
+        }
+
+        long reuseWindowMillis = Math.max(0, reuseWindowSeconds) * 1000L;
+        if (now - cachedAt >= reuseWindowMillis) {
+            return null;
+        }
+
+        Object raw = redisUtil.get(buildCacheKey(scopedEventKey));
         return raw == null ? null : String.valueOf(raw);
     }
 
@@ -158,8 +185,21 @@ public class AiAnalysisTaskServiceImpl implements IAiAnalysisTaskService {
         return TASK_KEY_PREFIX + taskId;
     }
 
-    private String buildCacheKey(String cacheKey) {
-        return CACHE_KEY_PREFIX + cacheKey;
+    private String buildCacheKey(String scopedEventKey) {
+        return CACHE_KEY_PREFIX + scopedEventKey;
+    }
+
+    private String buildCacheTimeKey(String scopedEventKey) {
+        return CACHE_TIME_KEY_PREFIX + scopedEventKey;
+    }
+
+    private String normalizeBaseScope(String baseScope) {
+        return StringUtils.hasText(baseScope) ? baseScope.trim() : DEFAULT_BASE_SCOPE;
+    }
+
+    private String buildScopedEventKey(String taskType, String baseScope, String eventKey) {
+        String normalizedEventKey = StringUtils.hasText(eventKey) ? eventKey.trim() : taskType;
+        return taskType + ":" + baseScope + ":" + normalizedEventKey;
     }
 
     private static final class AiTaskThreadFactory implements ThreadFactory {

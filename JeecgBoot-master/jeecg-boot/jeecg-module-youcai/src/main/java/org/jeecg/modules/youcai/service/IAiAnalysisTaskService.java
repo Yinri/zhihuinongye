@@ -6,7 +6,7 @@ import org.jeecg.modules.youcai.dto.AiTaskSubmitResponseDTO;
 import java.util.function.Supplier;
 
 public interface IAiAnalysisTaskService {
-    AiTaskSubmitResponseDTO submitTask(String taskType, String cacheKey, Supplier<String> resultSupplier);
+    AiTaskSubmitResponseDTO submitTask(String taskType, String baseScope, String eventKey, Supplier<String> resultSupplier);
 
     AiTaskRecordDTO getTask(String taskId);
 }

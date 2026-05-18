@@ -66,7 +66,7 @@
                         <a-statistic
                           title="倒伏面积"
                           :value="analysisResult.lodgingArea"
-                          suffix="㎡"
+                          suffix="m²"
                         />
                       </a-col>
                       <a-col :span="8">
@@ -83,16 +83,16 @@
                   <div class="analysis-details">
                     <a-descriptions :column="2" size="small" bordered>
                       <a-descriptions-item label="健康区域">
-                        {{ analysisResult.details.healthyArea }} ㎡
+                        {{ formatAreaValue(analysisResult.details.healthyArea) }}
                       </a-descriptions-item>
                       <a-descriptions-item label="轻度倒伏">
-                        {{ analysisResult.details.mildLodgingArea }} ㎡
+                        {{ formatAreaValue(analysisResult.details.mildLodgingArea) }}
                       </a-descriptions-item>
                       <a-descriptions-item label="中度倒伏">
-                        {{ analysisResult.details.moderateLodgingArea }} ㎡
+                        {{ formatAreaValue(analysisResult.details.moderateLodgingArea) }}
                       </a-descriptions-item>
                       <a-descriptions-item label="重度倒伏">
-                        {{ analysisResult.details.severeLodgingArea }} ㎡
+                        {{ formatAreaValue(analysisResult.details.severeLodgingArea) }}
                       </a-descriptions-item>
                     </a-descriptions>
                   </div>
@@ -483,7 +483,7 @@ import {
   type VideoLodgingAnalysisResult
 } from './lodgingRisk.api';
 import { 
-  getLatestGrowthMonitoringByPlotId,
+  getLatestGrowthMonitoringByBaseId,
   addGrowthMonitoring,
   type GrowthMonitoringData
 } from '/@/api/rapeseed/growthMonitoring';
@@ -600,7 +600,8 @@ async function autoAnalyzeAllVideos() {
   analysisLoading.value = true;
   try {
     const submitResult = await submitBatchVideoLodgingAnalysis(videoIds);
-    const result = await pollBatchVideoLodgingAnalysisTask(submitResult.taskId, token);
+    // 命中后端缓存复用时提交即SUCCESS，先单次读取任务结果，避免进入轮询。
+    const result = await resolveBatchVideoLodgingResult(submitResult.taskId, submitResult.status, token);
     if (token !== latestVideoAnalysisToken) {
       return;
     }
@@ -616,6 +617,19 @@ async function autoAnalyzeAllVideos() {
       analysisLoading.value = false;
     }
   }
+}
+
+async function resolveBatchVideoLodgingResult(taskId: string, submitStatus: string, token: number) {
+  if (submitStatus === 'SUCCESS') {
+    const task = await getBatchVideoLodgingAnalysisTask(taskId);
+    if (token !== latestVideoAnalysisToken) {
+      throw new Error('分析任务已取消');
+    }
+    if (task.status === 'SUCCESS') {
+      return task.result || ({} as VideoLodgingAnalysisResult);
+    }
+  }
+  return pollBatchVideoLodgingAnalysisTask(taskId, token);
 }
 
 async function pollBatchVideoLodgingAnalysisTask(taskId: string, token: number) {
@@ -637,6 +651,15 @@ async function pollBatchVideoLodgingAnalysisTask(taskId: string, token: number) 
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+// 统一面积值展示，避免直接拼接"㎡"导致的字体观感不一致。
+function formatAreaValue(value?: number | string) {
+  const area = Number(value);
+  if (Number.isNaN(area)) {
+    return '-- m²';
+  }
+  return `${area.toFixed(2)} m²`;
 }
 
 function getRiskTagColor(level: string): string {
@@ -1137,8 +1160,13 @@ async function submitGrowthForm() {
   }
   
   // 构建提交数据
+  const targetBaseId = selectedPlotData.value?.baseId || selectStore.selectedBase?.baseId;
+  if (!targetBaseId) {
+    createMessage.warning('未获取到基地信息，无法提交生长监测数据');
+    return;
+  }
   const formData: GrowthMonitoringData = {
-    plotId: selectedPlotData.value?.plotId,
+    baseId: targetBaseId,
     growthStage: growthForm.growthStage,
     plantHeight: growthForm.plantHeight,
     stemDiameter: growthForm.stemDiameter,
@@ -1303,7 +1331,8 @@ const handlePlotClick = async (plotId) => {
   
   // 获取最新的生长监测数据
   try {
-    const growthData = await getLatestGrowthMonitoringByPlotId(plotId);
+    const currentBaseId = plot.baseId || selectStore.selectedBase?.baseId;
+    const growthData = currentBaseId ? await getLatestGrowthMonitoringByBaseId(currentBaseId) : null;
     if (growthData) {
       // 将生长监测数据添加到地块数据中
       selectedPlotData.value.growthData = growthData;
@@ -1767,8 +1796,8 @@ const refreshData = debounce(async () => {
     loading.value = true;
     dataLoaded.value = false;
     
-    // 重新加载数据
-    await loadLodgingRiskData();
+    // 刷新时同时重载风险数据与视频分析，避免右侧分析结果停留在旧状态。
+    await reloadRiskAndVideoData();
     
     createMessage.success('数据已更新');
     
@@ -1779,6 +1808,11 @@ const refreshData = debounce(async () => {
     loading.value = false;
   }
 }, 300);
+
+// 风险监测与视频分析需要保持同一批次刷新，避免页面局部数据不同步。
+async function reloadRiskAndVideoData() {
+  await Promise.all([loadLodgingRiskData(), loadVideoDevices()]);
+}
 
 // 节流处理的窗口大小变化监听
 const handleResize = throttle(() => {
@@ -1807,9 +1841,12 @@ watch(
     // 检查基地是否有变化
     const baseChanged = newBaseId !== oldBaseId;
     
-    if (baseChanged) {
+    if (baseChanged && newBaseId) {
       console.log('基地发生变化，重新加载数据');
-      loadLodgingRiskData();
+      void reloadRiskAndVideoData();
+    } else if (!newBaseId) {
+      videoDevices.value = [];
+      analysisResult.value = null;
     }
   },
   { immediate: true }
@@ -1837,12 +1874,8 @@ onMounted(() => {
   // 设置初始加载状态
   loading.value = true;
   
-  // 首先检查是否有选中的基地
-  if (selectStore.selectedBase?.baseId) {
-    console.log('已有选中的基地，加载数据');
-    loadLodgingRiskData();
-    loadVideoDevices();
-  } else {
+  // 首屏加载由上面的基地监听器(immediate)统一触发，避免重复请求。
+  if (!selectStore.selectedBase?.baseId) {
     console.log('没有选中的基地，请先选择基地');
     createMessage.warning('请先选择一个基地以查看倒伏风险数据');
   }

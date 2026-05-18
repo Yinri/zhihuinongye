@@ -324,8 +324,10 @@ import dayjs from 'dayjs';
 import { getLodgingRiskDataById } from './lodging-risk/lodgingRisk.api';
 import { addGrowthMonitoring } from '/@/api/rapeseed/growthMonitoring';
 import { Icon } from '/@/components/Icon';
+import { useSelectStore } from '/@/store/selectStore';
 
 const createMessage = message;
+const selectStore = useSelectStore();
 
 // 路由相关
 const route = useRoute();
@@ -747,8 +749,13 @@ async function submitGrowthForm() {
   }
   
   // 构建提交数据
+  const targetBaseId = plotData.value?.baseId || selectStore.selectedBase?.baseId;
+  if (!targetBaseId) {
+    createMessage.warning('未获取到基地信息，无法提交生长监测数据');
+    return;
+  }
   const formData = {
-    plotId: plotData.value?.plotId,
+    baseId: targetBaseId,
     growthStage: growthForm.value.growthStage,
     plantHeight: growthForm.value.plantHeight,
     stemDiameter: growthForm.value.stemDiameter,

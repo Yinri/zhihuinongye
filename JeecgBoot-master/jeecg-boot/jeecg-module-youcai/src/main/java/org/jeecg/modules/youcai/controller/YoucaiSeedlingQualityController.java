@@ -14,15 +14,13 @@ import org.jeecg.modules.youcai.service.ISeedlingQualityAnalysisService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.nio.charset.StandardCharsets;
 
 @Tag(name = "油菜苗情分析")
 @RestController
@@ -61,11 +59,10 @@ public class YoucaiSeedlingQualityController {
         }
         try {
             log.info("提交苗情分析任务, baseName={}, 图片数量={}", request.getBaseName(), imageCount);
-            String cacheKey = "seedling:" + DigestUtils.md5DigestAsHex(
-                    JSON.toJSONString(request).getBytes(StandardCharsets.UTF_8));
             AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
                     "seedling",
-                    cacheKey,
+                    StringUtils.hasText(request.getBaseName()) ? request.getBaseName().trim() : null,
+                    "seedling",
                     () -> JSON.toJSONString(seedlingQualityAnalysisService.analyzeSeedling(request))
             );
             return Result.OK(submitResponse);

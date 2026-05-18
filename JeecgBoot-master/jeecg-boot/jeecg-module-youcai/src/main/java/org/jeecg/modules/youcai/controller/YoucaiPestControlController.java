@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.nio.charset.StandardCharsets;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
@@ -27,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jeecg.common.system.base.controller.JeecgController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -210,11 +209,12 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 			return Result.error("图片URL列表不能为空");
 		}
 		try {
-			String cacheKey = "pest:" + DigestUtils.md5DigestAsHex(
-					JSON.toJSONString(req).getBytes(StandardCharsets.UTF_8));
+			String baseScope = StringUtils.hasText(req.getBaseId()) ? req.getBaseId().trim()
+					: (StringUtils.hasText(req.getBaseName()) ? req.getBaseName().trim() : null);
 			AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
 					"pest",
-					cacheKey,
+					baseScope,
+					"pest",
 					() -> {
 						try {
 							return JSON.toJSONString(youcaiPestControlService.aiAnalysis(req));

@@ -3,7 +3,7 @@
     <div class="growth-stage-tag-container">
       <div class="dropdown-group">
         <!-- 基地下拉下拉框 -->
-        <div class="custom-select" @click="toggleDropdown('base')">
+        <div class="custom-select base-select" @click="toggleDropdown('base')">
           <div class="select-value">{{ selectedBase?.baseName || '请选择基地' }}</div>
           <div class="select-icon" :class="{ open: isDropdownOpen.base }">▼</div>
           <div class="select-options" v-if="isDropdownOpen.base">
@@ -39,7 +39,7 @@
         </div>
       </div>
 
-      <div class="stage-tag-group" v-if="!hideGrowthStage && selectedPlot?.plotId && selectedPlot?.plotId !== 'all'">
+      <div class="stage-tag-group" v-if="!hideGrowthStage && selectedBase?.baseId">
         <div
           class="stage-tag"
           v-for="(stage, index) in stageList"
@@ -61,7 +61,7 @@
 <script setup lang="ts">
 import {ref, reactive, onMounted, watch, computed} from 'vue';
 import { useSelectStore } from '../../../../store/selectStore';
-import {getBaseList, getPlotsByBaseId,getPlotById} from '../../../../views/rapeseed/production-plan/center/base.api';
+import {getBaseList, getPlotsByBaseId, getGrowthMonitoringByBaseId} from '../../../../views/rapeseed/production-plan/center/base.api';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -109,7 +109,7 @@ interface BaseItem {
 const baseList = ref<BaseItem[]>([]);
 const plotList = ref<{ plotId: string | number; plotName: string }[]>([]);
 
-// 存储当前地块的生长阶段
+// 存储当前选中基地的生长阶段
 const currentGrowthStage = ref('');
 
 // 状态仓库实例
@@ -154,6 +154,16 @@ const showMessage = (text: string, isError = false) => {
   }, 2000);
 };
 
+const syncSelectedBase = (base: BaseItem) => {
+  selectedBase.value = base;
+  selectStore.updateSelectedBase({
+    baseId: base.baseId,
+    baseName: base.baseName,
+    longitude: base.longitude,
+    latitude: base.latitude,
+  });
+};
+
 // 获取基地列表
 const fetchBaseList = async () => {
   try {
@@ -168,13 +178,10 @@ const fetchBaseList = async () => {
       latitude: item.latitude || ''    // 添加纬度信息
     }));
     if (baseList.value.length > 0) {
-      selectedBase.value = baseList.value[3];
-      selectStore.updateSelectedBase({
-        baseId: selectedBase.value.baseId,
-        baseName: selectedBase.value.baseName,
-        longitude: selectedBase.value.longitude,  // 添加经度
-        latitude: selectedBase.value.latitude     // 添加纬度
-      });
+      const preferredBase = baseList.value.find(
+        (item) => String(item.baseId) === String(selectStore.selectedBase?.baseId || '')
+      ) || baseList.value[0];
+      syncSelectedBase(preferredBase);
       // 加载第一个基地的地块
       fetchPlotList();
     }
@@ -185,24 +192,13 @@ const fetchBaseList = async () => {
   }
 };
 
-// 获取当前选中基地的ID
-const getSelectedBaseId = (): string | number | null => {
-  if (!selectedBase.value) return null;
-  // 从基地列表中匹配选中的基地ID（双重校验）
-  const matchedBase = baseList.value.find(
-    item => item.baseName === selectedBase.value?.baseName
-  );
-  return matchedBase ? matchedBase.baseId : null;
-};
-
 // 获取地块列表（根据当前选中的基地ID）
 const fetchPlotList = async () => {
-  const currentBaseId = getSelectedBaseId();
+  const currentBaseId = selectedBase.value?.baseId;
   if (!currentBaseId) {
     plotList.value = [];
     selectedPlot.value = null;
     selectStore.updateSelectedPlot(null);
-    currentGrowthStage.value = ''; // 清空生长阶段
     return;
   }
   try {
@@ -218,12 +214,9 @@ const fetchPlotList = async () => {
     // 默认选择"全部地块"
     selectedPlot.value = plotList.value[0];
     selectStore.updateSelectedPlot(plotList.value[0]);
-    // 不获取生长阶段，因为选择的是"全部地块"
-    currentGrowthStage.value = '';
   } catch (error) {
     console.error('获取地块列表错误：', error);
     showMessage('获取地块列表失败，请检查网络', true);
-    currentGrowthStage.value = '';
   }
 };
 
@@ -246,18 +239,10 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
     // 匹配选中的基地对象
     const matchedBase = baseList.value.find(item => item.baseName === value);
     if (matchedBase) {
-      selectedBase.value = matchedBase;
-      // 更新全局状态，包含经纬度信息
-      selectStore.updateSelectedBase({
-        baseId: matchedBase.baseId,
-        baseName: matchedBase.baseName,
-        longitude: matchedBase.longitude,  // 添加经度
-        latitude: matchedBase.latitude     // 添加纬度
-      });
+      syncSelectedBase(matchedBase);
       // 重置地块选择
       selectedPlot.value = null;
       selectStore.updateSelectedPlot(null);
-      currentGrowthStage.value = '';
       // 加载该基地的地块
       fetchPlotList();
     }
@@ -272,14 +257,6 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
         plotName: matchedPlot.plotName
       });
       
-      // 只有在选择了具体地块时才获取生长阶段
-      if (matchedPlot.plotId !== 'all') {
-        // 获取地块生长阶段
-        fetchPlotGrowthStage(matchedPlot.plotId);
-      } else {
-        // 选择"全部地块"时清空生长阶段
-        currentGrowthStage.value = '';
-      }
     }
   }
   // 关闭下拉框
@@ -287,29 +264,28 @@ const selectItem = (type: 'base' | 'plot', value: string) => {
 };
 
 // 打开创建弹窗
-// 根据地块ID查询生长阶段
-const fetchPlotGrowthStage = async (plotId: string | number) => {
+// 根据基地ID查询生长阶段
+const fetchBaseGrowthStage = async (baseId: string | number) => {
   try {
-    const res = await getPlotById(plotId); // 后端接口：按plotId查地块详情
-    console.log(plotId);
-    currentGrowthStage.value = res.growthStage || ''; // 假设接口返回result.growthStage
+    const res = await getGrowthMonitoringByBaseId(baseId);
+    currentGrowthStage.value = res.growthStage || '';
   } catch (error) {
-    console.error('获取地块生长阶段失败：', error);
+    console.error('获取基地生长阶段失败：', error);
     currentGrowthStage.value = '';
   }
 };
 
-// 监听选中地块变化，实时更新生长阶段
+// 监听选中基地变化，实时更新生长阶段
 watch(
-  () => selectedPlot.value?.plotId,
-  (newPlotId) => {
-    if (newPlotId && newPlotId !== 'all') {
-      fetchPlotGrowthStage(newPlotId);
+  () => selectedBase.value?.baseId,
+  (newBaseId) => {
+    if (newBaseId) {
+      fetchBaseGrowthStage(newBaseId);
     } else {
-      currentGrowthStage.value = ''; // 未选地块或选择"全部地块"时清空
+      currentGrowthStage.value = '';
     }
   },
-  { immediate: true } // 初始加载时执行
+  { immediate: true }
 );
 </script>
 
@@ -417,6 +393,10 @@ watch(
           }
         }
       }
+    }
+
+    .base-select {
+      width: 180px;
     }
   }
 
