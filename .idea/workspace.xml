@@ -4,26 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="基地生产计划">
+    <list default="true" id="f3c81e75-a3fe-4730-a846-e15fe3263abe" name="更改" comment="最新">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/.trae/rules/project_rules.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/db/jeecg-boot-youcai.sql" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/db/jeecg-boot-youcai.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp/CropNutrientDemandForm.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp/CropNutrientDemandList.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp/YoucaiHistoricalYieldForm.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp/YoucaiHistoricalYieldList.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp3/CropNutrientDemandData.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp3/CropNutrientDemandForm.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp3/CropNutrientDemandList.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp3/YoucaiHistoricalYieldData.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp3/YoucaiHistoricalYieldForm.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/uniapp3/YoucaiHistoricalYieldList.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/vue3Native/YoucaiHistoricalYield.api.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/vue3Native/YoucaiHistoricalYield.data.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/vue3Native/YoucaiHistoricalYieldList.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/vue3Native/components/YoucaiHistoricalYieldForm.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/vue3Native/components/YoucaiHistoricalYieldModal.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/controller/YoucaiDecisionModelController.java" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/controller/YoucaiDecisionModelController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/service/IYoucaiDecisionModelService.java" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/service/IYoucaiDecisionModelService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/service/impl/YoucaiDecisionModelServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/service/impl/YoucaiDecisionModelServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/pnpm-lock.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/public/images/aerial-map.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/public/images/aerial-map.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/assets/icons/js/iconfont.js" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/assets/icons/js/iconfont.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/production-plan/center/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed/production-plan/center/index.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -85,7 +75,7 @@
     &quot;Spring Boot.JeecgSystemApplication.executor&quot;: &quot;Run&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/gitCode/zhihuinongye/JeecgBoot-master/jeecg-boot/jeecg-module-youcai/src/main/java/org/jeecg/modules/youcai/dto&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/gitCode/zhihuinongye/JeecgBoot-master/jeecgboot-vue3/src/views/rapeseed&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -95,7 +85,7 @@
     &quot;project.structure.last.edited&quot;: &quot;模块&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;Qoder&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;ts.external.directory.path&quot;: &quot;D:\\gitCode\\zhihuinongye\\JeecgBoot-master\\jeecgboot-vue3\\node_modules\\typescript\\lib&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
     &quot;应用程序.JeecgSystemApplication.executor&quot;: &quot;Run&quot;
@@ -111,13 +101,18 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot\jeecg-module-youcai\src\main\java\org\jeecg\modules\youcai\dto" />
-      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\public\images" />
-      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\src\views\rapeseed" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\public\resource\img" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\src\assets\loginmini\icon" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\src\assets\images" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\public" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot\jeecg-module-youcai\src\main\java\org\jeecg\modules\youcai\mapper\xml" />
+      <recent name="D:\gitCode\zhihuinongye\pythonService" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\src\views\rapeseed" />
       <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot\db" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecg-boot\jeecg-module-youcai\src\main\java\org\jeecg\modules\youcai\controller" />
+      <recent name="D:\gitCode\zhihuinongye\JeecgBoot-master\jeecgboot-vue3\public" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
       <recent name="org.jeecg.modules.youcai.dto" />
@@ -291,231 +286,54 @@
       <workItem from="1766128561697" duration="4743000" />
       <workItem from="1766281319073" duration="6790000" />
       <workItem from="1766585033746" duration="812000" />
-      <workItem from="1766640231649" duration="17654000" />
-    </task>
-    <task id="LOCAL-00020" summary="传感器api优化">
-      <option name="closed" value="true" />
-      <created>1762920081584</created>
-      <option name="number" value="00020" />
-      <option name="presentableId" value="LOCAL-00020" />
-      <option name="project" value="LOCAL" />
-      <updated>1762920081584</updated>
-    </task>
-    <task id="LOCAL-00021" summary="倒伏风险预警优化">
-      <option name="closed" value="true" />
-      <created>1762920130561</created>
-      <option name="number" value="00021" />
-      <option name="presentableId" value="LOCAL-00021" />
-      <option name="project" value="LOCAL" />
-      <updated>1762920130561</updated>
-    </task>
-    <task id="LOCAL-00022" summary="python服务">
-      <option name="closed" value="true" />
-      <created>1762920152553</created>
-      <option name="number" value="00022" />
-      <option name="presentableId" value="LOCAL-00022" />
-      <option name="project" value="LOCAL" />
-      <updated>1762920152553</updated>
-    </task>
-    <task id="LOCAL-00023" summary="多了个东西">
-      <option name="closed" value="true" />
-      <created>1762920242399</created>
-      <option name="number" value="00023" />
-      <option name="presentableId" value="LOCAL-00023" />
-      <option name="project" value="LOCAL" />
-      <updated>1762920242399</updated>
-    </task>
-    <task id="LOCAL-00024" summary="查询本地数据库">
-      <option name="closed" value="true" />
-      <created>1762939602951</created>
-      <option name="number" value="00024" />
-      <option name="presentableId" value="LOCAL-00024" />
-      <option name="project" value="LOCAL" />
-      <updated>1762939602951</updated>
-    </task>
-    <task id="LOCAL-00025" summary="新增表">
-      <option name="closed" value="true" />
-      <created>1762939619697</created>
-      <option name="number" value="00025" />
-      <option name="presentableId" value="LOCAL-00025" />
-      <option name="project" value="LOCAL" />
-      <updated>1762939619697</updated>
-    </task>
-    <task id="LOCAL-00026" summary="添加经纬度字段">
-      <option name="closed" value="true" />
-      <created>1762939671735</created>
-      <option name="number" value="00026" />
-      <option name="presentableId" value="LOCAL-00026" />
-      <option name="project" value="LOCAL" />
-      <updated>1762939671735</updated>
-    </task>
-    <task id="LOCAL-00027" summary="添加新的表对应的类">
-      <option name="closed" value="true" />
-      <created>1762939748314</created>
-      <option name="number" value="00027" />
-      <option name="presentableId" value="LOCAL-00027" />
-      <option name="project" value="LOCAL" />
-      <updated>1762939748314</updated>
-    </task>
-    <task id="LOCAL-00028" summary="倒伏风险页面增加数据加载提示">
-      <option name="closed" value="true" />
-      <created>1762953718574</created>
-      <option name="number" value="00028" />
-      <option name="presentableId" value="LOCAL-00028" />
-      <option name="project" value="LOCAL" />
-      <updated>1762953718574</updated>
-    </task>
-    <task id="LOCAL-00029" summary="youcai_plots表新增字段">
-      <option name="closed" value="true" />
-      <created>1762953755109</created>
-      <option name="number" value="00029" />
-      <option name="presentableId" value="LOCAL-00029" />
-      <option name="project" value="LOCAL" />
-      <updated>1762953755109</updated>
-    </task>
-    <task id="LOCAL-00030" summary="地图">
-      <option name="closed" value="true" />
-      <created>1763021854195</created>
-      <option name="number" value="00030" />
-      <option name="presentableId" value="LOCAL-00030" />
-      <option name="project" value="LOCAL" />
-      <updated>1763021854195</updated>
-    </task>
-    <task id="LOCAL-00031" summary="农事记录">
-      <option name="closed" value="true" />
-      <created>1763037935779</created>
-      <option name="number" value="00031" />
-      <option name="presentableId" value="LOCAL-00031" />
-      <option name="project" value="LOCAL" />
-      <updated>1763037935779</updated>
-    </task>
-    <task id="LOCAL-00032" summary="新的数据">
-      <option name="closed" value="true" />
-      <created>1763042443650</created>
-      <option name="number" value="00032" />
-      <option name="presentableId" value="LOCAL-00032" />
-      <option name="project" value="LOCAL" />
-      <updated>1763042443650</updated>
-    </task>
-    <task id="LOCAL-00033" summary="新的数据">
-      <option name="closed" value="true" />
-      <created>1763042994255</created>
-      <option name="number" value="00033" />
-      <option name="presentableId" value="LOCAL-00033" />
-      <option name="project" value="LOCAL" />
-      <updated>1763042994255</updated>
-    </task>
-    <task id="LOCAL-00034" summary="新的数据库表sql">
-      <option name="closed" value="true" />
-      <created>1763103439772</created>
-      <option name="number" value="00034" />
-      <option name="presentableId" value="LOCAL-00034" />
-      <option name="project" value="LOCAL" />
-      <updated>1763103439772</updated>
-    </task>
-    <task id="LOCAL-00035" summary="删除无用的sql文件">
-      <option name="closed" value="true" />
-      <created>1763103488392</created>
-      <option name="number" value="00035" />
-      <option name="presentableId" value="LOCAL-00035" />
-      <option name="project" value="LOCAL" />
-      <updated>1763103488392</updated>
-    </task>
-    <task id="LOCAL-00036" summary="农事记录">
-      <option name="closed" value="true" />
-      <created>1763111145590</created>
-      <option name="number" value="00036" />
-      <option name="presentableId" value="LOCAL-00036" />
-      <option name="project" value="LOCAL" />
-      <updated>1763111145590</updated>
-    </task>
-    <task id="LOCAL-00037" summary="农事记录">
-      <option name="closed" value="true" />
-      <created>1763112660924</created>
-      <option name="number" value="00037" />
-      <option name="presentableId" value="LOCAL-00037" />
-      <option name="project" value="LOCAL" />
-      <updated>1763112660924</updated>
-    </task>
-    <task id="LOCAL-00038" summary="移除验证码">
-      <option name="closed" value="true" />
-      <created>1763369082955</created>
-      <option name="number" value="00038" />
-      <option name="presentableId" value="LOCAL-00038" />
-      <option name="project" value="LOCAL" />
-      <updated>1763369082955</updated>
-    </task>
-    <task id="LOCAL-00039" summary="倒伏风险页面全局完善">
-      <option name="closed" value="true" />
-      <created>1763589574168</created>
-      <option name="number" value="00039" />
-      <option name="presentableId" value="LOCAL-00039" />
-      <option name="project" value="LOCAL" />
-      <updated>1763589574168</updated>
-    </task>
-    <task id="LOCAL-00040" summary="倒伏风险页面完善">
-      <option name="closed" value="true" />
-      <created>1763622485786</created>
-      <option name="number" value="00040" />
-      <option name="presentableId" value="LOCAL-00040" />
-      <option name="project" value="LOCAL" />
-      <updated>1763622485786</updated>
-    </task>
-    <task id="LOCAL-00041" summary="收获管理页面完善">
-      <option name="closed" value="true" />
-      <created>1763636978768</created>
-      <option name="number" value="00041" />
-      <option name="presentableId" value="LOCAL-00041" />
-      <option name="project" value="LOCAL" />
-      <updated>1763636978768</updated>
-    </task>
-    <task id="LOCAL-00042" summary="农药信息管理">
-      <option name="closed" value="true" />
-      <created>1763791146127</created>
-      <option name="number" value="00042" />
-      <option name="presentableId" value="LOCAL-00042" />
-      <option name="project" value="LOCAL" />
-      <updated>1763791146127</updated>
-    </task>
-    <task id="LOCAL-00043" summary="基地修改">
-      <option name="closed" value="true" />
-      <created>1763791424697</created>
-      <option name="number" value="00043" />
-      <option name="presentableId" value="LOCAL-00043" />
-      <option name="project" value="LOCAL" />
-      <updated>1763791424697</updated>
-    </task>
-    <task id="LOCAL-00044" summary="基地信息管理">
-      <option name="closed" value="true" />
-      <created>1763791466213</created>
-      <option name="number" value="00044" />
-      <option name="presentableId" value="LOCAL-00044" />
-      <option name="project" value="LOCAL" />
-      <updated>1763791466213</updated>
-    </task>
-    <task id="LOCAL-00045" summary="肥料信息管理">
-      <option name="closed" value="true" />
-      <created>1763791537092</created>
-      <option name="number" value="00045" />
-      <option name="presentableId" value="LOCAL-00045" />
-      <option name="project" value="LOCAL" />
-      <updated>1763791537092</updated>
-    </task>
-    <task id="LOCAL-00046" summary="农药信息管理后端代码">
-      <option name="closed" value="true" />
-      <created>1763791610172</created>
-      <option name="number" value="00046" />
-      <option name="presentableId" value="LOCAL-00046" />
-      <option name="project" value="LOCAL" />
-      <updated>1763791610172</updated>
-    </task>
-    <task id="LOCAL-00047" summary="收获管理">
-      <option name="closed" value="true" />
-      <created>1763797370813</created>
-      <option name="number" value="00047" />
-      <option name="presentableId" value="LOCAL-00047" />
-      <option name="project" value="LOCAL" />
-      <updated>1763797370813</updated>
+      <workItem from="1766640231649" duration="20765000" />
+      <workItem from="1774761404858" duration="5764000" />
+      <workItem from="1774878234551" duration="19777000" />
+      <workItem from="1775092889245" duration="10422000" />
+      <workItem from="1775123012249" duration="3652000" />
+      <workItem from="1775205622609" duration="7084000" />
+      <workItem from="1775225329552" duration="88000" />
+      <workItem from="1775225556305" duration="12844000" />
+      <workItem from="1775281945570" duration="5713000" />
+      <workItem from="1775293629010" duration="1438000" />
+      <workItem from="1775298353640" duration="3697000" />
+      <workItem from="1775303190508" duration="609000" />
+      <workItem from="1776076503632" duration="8097000" />
+      <workItem from="1776096695340" duration="31000" />
+      <workItem from="1776132309321" duration="1383000" />
+      <workItem from="1776133711154" duration="991000" />
+      <workItem from="1776134852128" duration="1679000" />
+      <workItem from="1776136659745" duration="19000" />
+      <workItem from="1776137258316" duration="3664000" />
+      <workItem from="1776160613878" duration="2932000" />
+      <workItem from="1776163773354" duration="2445000" />
+      <workItem from="1776168046308" duration="3688000" />
+      <workItem from="1776176865748" duration="2430000" />
+      <workItem from="1776249643960" duration="5251000" />
+      <workItem from="1776400904639" duration="198000" />
+      <workItem from="1776401208555" duration="763000" />
+      <workItem from="1776402054378" duration="937000" />
+      <workItem from="1776403051862" duration="4316000" />
+      <workItem from="1776426824792" duration="7320000" />
+      <workItem from="1776534354573" duration="2039000" />
+      <workItem from="1776769613184" duration="7469000" />
+      <workItem from="1776844893920" duration="1196000" />
+      <workItem from="1776864348063" duration="3751000" />
+      <workItem from="1776942723030" duration="464000" />
+      <workItem from="1776945025224" duration="1342000" />
+      <workItem from="1777092553383" duration="6860000" />
+      <workItem from="1777122767098" duration="16721000" />
+      <workItem from="1777264777158" duration="5322000" />
+      <workItem from="1777274288653" duration="5455000" />
+      <workItem from="1777293441573" duration="1015000" />
+      <workItem from="1777342901080" duration="3148000" />
+      <workItem from="1777396677510" duration="1719000" />
+      <workItem from="1778066341528" duration="185000" />
+      <workItem from="1778066581864" duration="5074000" />
+      <workItem from="1779068450233" duration="4593000" />
+      <workItem from="1779073512803" duration="987000" />
+      <workItem from="1779084089074" duration="1255000" />
+      <workItem from="1779335647551" duration="3465000" />
     </task>
     <task id="LOCAL-00048" summary="大更新">
       <option name="closed" value="true" />
@@ -685,7 +503,231 @@
       <option name="project" value="LOCAL" />
       <updated>1766731578060</updated>
     </task>
-    <option name="localTasksCounter" value="69" />
+    <task id="LOCAL-00069" summary="删除无用页面">
+      <option name="closed" value="true" />
+      <created>1766731690173</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1766731690173</updated>
+    </task>
+    <task id="LOCAL-00070" summary="header优化">
+      <option name="closed" value="true" />
+      <created>1775280850683</created>
+      <option name="number" value="00070" />
+      <option name="presentableId" value="LOCAL-00070" />
+      <option name="project" value="LOCAL" />
+      <updated>1775280850684</updated>
+    </task>
+    <task id="LOCAL-00071" summary="消息提示优化">
+      <option name="closed" value="true" />
+      <created>1775281118384</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1775281118384</updated>
+    </task>
+    <task id="LOCAL-00072" summary="接口url统一">
+      <option name="closed" value="true" />
+      <created>1775281249457</created>
+      <option name="number" value="00072" />
+      <option name="presentableId" value="LOCAL-00072" />
+      <option name="project" value="LOCAL" />
+      <updated>1775281249457</updated>
+    </task>
+    <task id="LOCAL-00073" summary="作业面积管理功能完善">
+      <option name="closed" value="true" />
+      <created>1775281405510</created>
+      <option name="number" value="00073" />
+      <option name="presentableId" value="LOCAL-00073" />
+      <option name="project" value="LOCAL" />
+      <updated>1775281405510</updated>
+    </task>
+    <task id="LOCAL-00074" summary="删除数据对接功能">
+      <option name="closed" value="true" />
+      <created>1775285105622</created>
+      <option name="number" value="00074" />
+      <option name="presentableId" value="LOCAL-00074" />
+      <option name="project" value="LOCAL" />
+      <updated>1775285105622</updated>
+    </task>
+    <task id="LOCAL-00075" summary="修改bug">
+      <option name="closed" value="true" />
+      <created>1775285179244</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1775285179244</updated>
+    </task>
+    <task id="LOCAL-00076" summary="修改bug">
+      <option name="closed" value="true" />
+      <created>1775285244594</created>
+      <option name="number" value="00076" />
+      <option name="presentableId" value="LOCAL-00076" />
+      <option name="project" value="LOCAL" />
+      <updated>1775285244594</updated>
+    </task>
+    <task id="LOCAL-00077" summary="header显示问题">
+      <option name="closed" value="true" />
+      <created>1775303640543</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1775303640543</updated>
+    </task>
+    <task id="LOCAL-00078" summary="收获模块">
+      <option name="closed" value="true" />
+      <created>1775303751393</created>
+      <option name="number" value="00078" />
+      <option name="presentableId" value="LOCAL-00078" />
+      <option name="project" value="LOCAL" />
+      <updated>1775303751393</updated>
+    </task>
+    <task id="LOCAL-00079" summary="倒伏风险update">
+      <option name="closed" value="true" />
+      <created>1775303797129</created>
+      <option name="number" value="00079" />
+      <option name="presentableId" value="LOCAL-00079" />
+      <option name="project" value="LOCAL" />
+      <updated>1775303797129</updated>
+    </task>
+    <task id="LOCAL-00080" summary="修改">
+      <option name="closed" value="true" />
+      <created>1776096050290</created>
+      <option name="number" value="00080" />
+      <option name="presentableId" value="LOCAL-00080" />
+      <option name="project" value="LOCAL" />
+      <updated>1776096050291</updated>
+    </task>
+    <task id="LOCAL-00081" summary="差异">
+      <option name="closed" value="true" />
+      <created>1776132456964</created>
+      <option name="number" value="00081" />
+      <option name="presentableId" value="LOCAL-00081" />
+      <option name="project" value="LOCAL" />
+      <updated>1776132456964</updated>
+    </task>
+    <task id="LOCAL-00082" summary="病虫害">
+      <option name="closed" value="true" />
+      <created>1776166634404</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1776166634405</updated>
+    </task>
+    <task id="LOCAL-00083" summary="logo">
+      <option name="closed" value="true" />
+      <created>1776166677705</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1776166677705</updated>
+    </task>
+    <task id="LOCAL-00084" summary="前端界面">
+      <option name="closed" value="true" />
+      <created>1776166753974</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1776166753974</updated>
+    </task>
+    <task id="LOCAL-00085" summary="python服务">
+      <option name="closed" value="true" />
+      <created>1776249808373</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1776249808374</updated>
+    </task>
+    <task id="LOCAL-00086" summary="fix(编译): 修复支付回调签名验证失败问题&#10;原因是签名计算时遗漏了时间戳参数，导致验签失败。&#10;Fixes">
+      <option name="closed" value="true" />
+      <created>1776498269489</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1776498269490</updated>
+    </task>
+    <task id="LOCAL-00087" summary="feat(diseaseControl): 添加显示监控截图 孢子捕捉仪功能&#10;- 实现监控截图获取接口&#10;- 完成孢子捕捉仪数据获取">
+      <option name="closed" value="true" />
+      <created>1776498591451</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1776498591451</updated>
+    </task>
+    <task id="LOCAL-00088" summary="feat(pestControl): 添加虫情图像获取和展示，虫情统计功能">
+      <option name="closed" value="true" />
+      <created>1776498874420</created>
+      <option name="number" value="00088" />
+      <option name="presentableId" value="LOCAL-00088" />
+      <option name="project" value="LOCAL" />
+      <updated>1776498874420</updated>
+    </task>
+    <task id="LOCAL-00089" summary="feat(pestControl): 添加监控截图获取服务">
+      <option name="closed" value="true" />
+      <created>1776498965422</created>
+      <option name="number" value="00089" />
+      <option name="presentableId" value="LOCAL-00089" />
+      <option name="project" value="LOCAL" />
+      <updated>1776498965422</updated>
+    </task>
+    <task id="LOCAL-00090" summary="feat(pestControl): 添加注解">
+      <option name="closed" value="true" />
+      <created>1776499029523</created>
+      <option name="number" value="00090" />
+      <option name="presentableId" value="LOCAL-00090" />
+      <option name="project" value="LOCAL" />
+      <updated>1776499029523</updated>
+    </task>
+    <task id="LOCAL-00091" summary="fix(payment): 修复header地块显示">
+      <option name="closed" value="true" />
+      <created>1776499074120</created>
+      <option name="number" value="00091" />
+      <option name="presentableId" value="LOCAL-00091" />
+      <option name="project" value="LOCAL" />
+      <updated>1776499074120</updated>
+    </task>
+    <task id="LOCAL-00092" summary="fix(payment): 修复苗期模块">
+      <option name="closed" value="true" />
+      <created>1777268404395</created>
+      <option name="number" value="00092" />
+      <option name="presentableId" value="LOCAL-00092" />
+      <option name="project" value="LOCAL" />
+      <updated>1777268404397</updated>
+    </task>
+    <task id="LOCAL-00093" summary="fix(payment): 新版本">
+      <option name="closed" value="true" />
+      <created>1777268620113</created>
+      <option name="number" value="00093" />
+      <option name="presentableId" value="LOCAL-00093" />
+      <option name="project" value="LOCAL" />
+      <updated>1777268620113</updated>
+    </task>
+    <task id="LOCAL-00094" summary="fix(payment): 闸门">
+      <option name="closed" value="true" />
+      <created>1777279993830</created>
+      <option name="number" value="00094" />
+      <option name="presentableId" value="LOCAL-00094" />
+      <option name="project" value="LOCAL" />
+      <updated>1777279993831</updated>
+    </task>
+    <task id="LOCAL-00095" summary="fix(payment): 倒伏风险">
+      <option name="closed" value="true" />
+      <created>1777280118630</created>
+      <option name="number" value="00095" />
+      <option name="presentableId" value="LOCAL-00095" />
+      <option name="project" value="LOCAL" />
+      <updated>1777280118630</updated>
+    </task>
+    <task id="LOCAL-00096" summary="最新">
+      <option name="closed" value="true" />
+      <created>1779068739755</created>
+      <option name="number" value="00096" />
+      <option name="presentableId" value="LOCAL-00096" />
+      <option name="project" value="LOCAL" />
+      <updated>1779068739755</updated>
+    </task>
+    <option name="localTasksCounter" value="97" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -711,38 +753,50 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="origin/master" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="基地修改" />
-    <MESSAGE value="基地信息管理" />
-    <MESSAGE value="肥料信息管理" />
-    <MESSAGE value="农药信息管理后端代码" />
-    <MESSAGE value="收获管理" />
-    <MESSAGE value="大更新" />
-    <MESSAGE value="数据库更新" />
-    <MESSAGE value="修改获取地块最新生长阶段bug" />
-    <MESSAGE value="农事记录bug修复" />
-    <MESSAGE value="收获列表查询bug修复" />
-    <MESSAGE value="收获列表bug修复" />
-    <MESSAGE value="收获相关bug修复" />
-    <MESSAGE value="数据库文件" />
-    <MESSAGE value="首页预警信息demo" />
-    <MESSAGE value="首页预警信息完善" />
-    <MESSAGE value="数据库修改" />
-    <MESSAGE value="修改了菜单" />
-    <MESSAGE value="地块选择框修改" />
-    <MESSAGE value="数据对接" />
-    <MESSAGE value="油菜预警" />
-    <MESSAGE value="地图传感器标记" />
-    <MESSAGE value="首页默认基地" />
-    <MESSAGE value="设备管理" />
-    <MESSAGE value="地块生产计划" />
-    <MESSAGE value="基地生产计划" />
-    <option name="LAST_COMMIT_MESSAGE" value="基地生产计划" />
+    <MESSAGE value="接口url统一" />
+    <MESSAGE value="作业面积管理功能完善" />
+    <MESSAGE value="header优化" />
+    <MESSAGE value="删除数据对接功能" />
+    <MESSAGE value="修改bug" />
+    <MESSAGE value="header显示问题" />
+    <MESSAGE value="收获模块" />
+    <MESSAGE value="倒伏风险update" />
+    <MESSAGE value="修改" />
+    <MESSAGE value="差异" />
+    <MESSAGE value="病虫害" />
+    <MESSAGE value="logo" />
+    <MESSAGE value="前端界面" />
+    <MESSAGE value="python服务" />
+    <MESSAGE value="fix(编译): 修复支付回调签名验证失败问题&#10;原因是签名计算时遗漏了时间戳参数，导致验签失败。&#10;Fixes" />
+    <MESSAGE value="feat(diseaseControl): 添加显示监控截图 孢子捕捉仪功能&#10;- 实现监控截图获取接口&#10;- 完成孢子捕捉仪数据获取" />
+    <MESSAGE value="feat(pestControl): 添加虫情图像获取和展示，虫情统计功能" />
+    <MESSAGE value="feat(pestControl): 添加监控截图获取服务" />
+    <MESSAGE value="feat(pestControl): 添加注解" />
+    <MESSAGE value="fix(payment): 修复header地块显示" />
+    <MESSAGE value="fix(payment): 修复苗期模块" />
+    <MESSAGE value="fix(payment): 新版本" />
+    <MESSAGE value="fix(payment): 闸门" />
+    <MESSAGE value="fix(payment): 倒伏风险" />
+    <MESSAGE value="最新" />
+    <option name="LAST_COMMIT_MESSAGE" value="最新" />
   </component>
 </project>

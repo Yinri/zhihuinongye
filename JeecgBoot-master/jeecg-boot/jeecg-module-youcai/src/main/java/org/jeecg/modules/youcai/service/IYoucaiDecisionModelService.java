@@ -3,6 +3,7 @@ package org.jeecg.modules.youcai.service;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionGrowthDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionHeightRiskDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionLodgingDTO;
+import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestControlDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionSoilDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionYieldDTO;
@@ -43,4 +44,10 @@ public interface IYoucaiDecisionModelService {
      * 接口6：基地近15天植株高度和倒伏概率
      */
     List<YoucaiDecisionHeightRiskDTO> getInterface6Data();
+
+    /**
+     * 接口7：根据害虫名称获取防治建议
+     * @param pestNames 害虫名称，多个用逗号拼接
+     */
+    List<YoucaiDecisionPestControlDTO> getPestControlSuggestions(String pestNames);
 }

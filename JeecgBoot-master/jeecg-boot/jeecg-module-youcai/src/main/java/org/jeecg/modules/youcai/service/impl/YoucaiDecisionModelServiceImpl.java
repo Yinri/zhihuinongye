@@ -6,6 +6,7 @@ import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionGrowthDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionHeightRiskDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionLodgingDTO;
+import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestControlDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionSoilDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionYieldDTO;
@@ -14,6 +15,7 @@ import org.jeecg.modules.youcai.entity.YoucaiFarmingRecords;
 import org.jeecg.modules.youcai.entity.YoucaiFertilization;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
 import org.jeecg.modules.youcai.entity.YoucaiHistoricalYield;
+import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import org.jeecg.modules.youcai.entity.YoucaiPlots;
 import org.jeecg.modules.youcai.mapper.YoucaiFertilizationMapper;
 import org.jeecg.modules.youcai.service.IIrrigationService;
@@ -39,16 +41,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -494,6 +487,101 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
             return "防治建议：当前以" + joinedNames + "为主，建议加强田间巡查，结合黄板诱杀、清沟除草等绿色防控措施。";
         }
         return "防治建议：" + joinedNames + "处于低位发生阶段，建议继续监测，发现局部聚集时及时点状处置。";
+    }
+
+    private List<String> parsePestNames(String pestNames) {
+        if (!StringUtils.hasText(pestNames)) {
+            return Collections.emptyList();
+        }
+        Set<String> names = new LinkedHashSet<>();
+        Arrays.stream(pestNames.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .forEach(names::add);
+        return new ArrayList<>(names);
+    }
+
+    private String buildPestControlSuggestion(String pestName) {
+        QueryWrapper<YoucaiPestControl> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("pest_name", pestName)
+                .orderByDesc("control_date")
+                .orderByDesc("create_time");
+        List<YoucaiPestControl> controls = pestControlService.list(queryWrapper);
+        if (CollectionUtils.isEmpty(controls)) {
+            return "防治建议：" + pestName + "暂无历史防控记录，建议先加强田间巡查和虫情监测，达到防控阈值后优先采用诱捕、清沟除草、点片处置等绿色防控措施。";
+        }
+
+        List<String> suggestions = new ArrayList<>();
+        List<String> controlMethods = distinctText(controls, "controlMethod", 2);
+        if (!controlMethods.isEmpty()) {
+            suggestions.add("采用" + String.join("、", controlMethods));
+        }
+        List<String> applicationMethods = distinctText(controls, "applicationMethod", 2);
+        if (!applicationMethods.isEmpty()) {
+            suggestions.add("施用方式以" + String.join("、", applicationMethods) + "为主");
+        }
+        List<String> pesticideNames = distinctText(controls, "pesticideName", 2);
+        if (!pesticideNames.isEmpty()) {
+            suggestions.add("可参考历史药剂" + String.join("、", pesticideNames) + "并按农药标签和当地植保要求使用");
+        }
+        String latestNote = firstText(controls, "notes");
+        if (StringUtils.hasText(latestNote)) {
+            suggestions.add(latestNote);
+        }
+        if (suggestions.isEmpty()) {
+            suggestions.add("结合田间虫量、发生阶段和天气条件开展分区防控，虫量低时以持续监测和局部处置为主");
+        }
+        return "防治建议：" + pestName + "建议" + String.join("；", suggestions) + "。";
+    }
+
+    private List<String> distinctText(List<YoucaiPestControl> controls, String fieldName, int limit) {
+        List<String> values = new ArrayList<>();
+        for (YoucaiPestControl control : controls) {
+            String value = getPestControlText(control, fieldName);
+            if (!StringUtils.hasText(value) || values.contains(value)) {
+                continue;
+            }
+            values.add(value);
+            if (values.size() >= limit) {
+                break;
+            }
+        }
+        return values;
+    }
+
+    private String firstText(List<YoucaiPestControl> controls, String fieldName) {
+        for (YoucaiPestControl control : controls) {
+            String value = getPestControlText(control, fieldName);
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private String getPestControlText(YoucaiPestControl control, String fieldName) {
+        if (control == null) {
+            return "";
+        }
+        String value;
+        switch (fieldName) {
+            case "controlMethod":
+                value = control.getControlMethod();
+                break;
+            case "applicationMethod":
+                value = control.getApplicationMethod();
+                break;
+            case "pesticideName":
+                value = control.getPesticideName();
+                break;
+            case "notes":
+                value = control.getNotes();
+                break;
+            default:
+                value = "";
+                break;
+        }
+        return value == null ? "" : value.trim();
     }
 
     private String buildWaterSuggestion(Map<String, Object> irrigationAdvice) {
@@ -1374,5 +1462,43 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
             return "";
         }
         return String.valueOf(value).trim();
+    }
+
+    @Override
+    public List<YoucaiDecisionPestControlDTO> getPestControlSuggestions(String pestNames) {
+        List<YoucaiDecisionPestControlDTO> result = new ArrayList<>();
+        if (!StringUtils.hasText(pestNames)) {
+            return result;
+        }
+        Map<String, String> pestSuggestions = new HashMap<>();
+        pestSuggestions.put("蚜虫", "防治建议：1、物理防治：设置黄板诱杀蚜虫，每亩悬挂20-30块；2、生物防治：保护和利用瓢虫、食蚜蝇等天敌，可用0.3%苦参碱水剂800倍液喷雾；3、化学防治：可选用10%吡虫啉可湿性粉剂2000倍液或50%抗蚜威可湿性粉剂3000倍液喷雾。");
+        pestSuggestions.put("菜粉蝶", "防治建议：1、生物防治：使用Bt（苏云金杆菌）制剂500-1000倍液在幼虫3龄前喷雾；2、化学防治：可选用2.5%高效氯氟氰菊酯乳油2000倍液或20%氰戊菊酯乳油2000倍液喷雾；3、农业防治：及时清除田间残枝落叶，减少越冬虫源。");
+        pestSuggestions.put("小菜蛾", "防治建议：1、生物防治：选用Bt制剂500-1000倍液或1.8%阿维菌素乳油3000倍液喷雾；2、化学防治：可选用5%氟啶脲乳油1500倍液或15%茚虫威悬浮剂3000倍液；3、物理防治：安装频振式杀虫灯诱杀成虫。");
+        pestSuggestions.put("甜菜夜蛾", "防治建议：1、化学防治：在幼虫3龄前选用5%氟铃脲乳油2000倍液或15%茚虫威悬浮剂3000倍液喷雾；2、生物防治：可用Bt制剂500倍液或20亿PIB/mL甘蓝夜蛾核型多角体病毒悬浮剂1000倍液；3、农业防治：及时清除田间杂草和残叶。");
+        pestSuggestions.put("斜纹夜蛾", "防治建议：1、化学防治：可选用5%氟啶脲乳油2000倍液或20%氯虫苯甲酰胺悬浮剂5000倍液喷雾；2、生物防治：可用Bt制剂500倍液或核型多角体病毒制剂1000倍液；3、物理防治：利用性诱剂诱杀成虫。");
+        pestSuggestions.put("稻纵卷叶螟", "防治建议：1、化学防治：选用20%氯虫苯甲酰胺悬浮剂5000倍液或10%四氯虫酰胺悬浮剂2000倍液喷雾；2、生物防治：释放赤眼蜂寄生卵块，每亩放蜂量1.5万头；3、农业防治：合理施肥，避免偏施氮肥导致叶片嫩绿诱蛾产卵。");
+        pestSuggestions.put("二化螟", "防治建议：1、化学防治：选用20%氯虫苯甲酰胺悬浮剂5000倍液或10%四氯虫酰胺悬浮剂2000倍液喷雾；2、生物防治：释放赤眼蜂，每亩释放1.5-2万头；3、农业防治：冬前处理稻茬，减少越冬虫源基数。");
+        pestSuggestions.put("三化螟", "防治建议：1、化学防治：选用20%氯虫苯甲酰胺悬浮剂4000倍液或10%烯啶虫胺可溶性液剂2000倍液喷雾；2、农业防治：合理安排品种布局，避免混栽；3、物理防治：安装频振式杀虫灯诱杀成虫。");
+        pestSuggestions.put("稻螟蛉", "防治建议：1、化学防治：可选用20%氯虫苯甲酰胺悬浮剂5000倍液或5%甲维盐微乳剂3000倍液喷雾；2、生物防治：保护和利用稻田蜘蛛、蜻蜓等天敌；3、物理防治：灯光诱杀成虫。");
+        pestSuggestions.put("草地贪夜蛾", "防治建议：1、化学防治：选用20%氯虫苯甲酰胺悬浮剂5000倍液或5%甲维盐微乳剂3000倍液或60%乙基多杀菌素悬浮剂2000倍液喷雾；2、生物防治：释放夜蛾黑卵蜂等天敌，可用Bt制剂500倍液；3、物理防治：安装性诱捕器诱杀雄虫。");
+        pestSuggestions.put("隐翅虫", "防治建议：1、农业防治：保持田间清洁，及时清除杂草和枯枝落叶；2、化学防治：可选用2.5%高效氯氟氰菊酯乳油2000倍液或10%吡虫啉可湿性粉剂2000倍液喷雾；3、物理防治：利用灯光诱杀。注意：隐翅虫体液有腐蚀性，避免直接接触。");
+        pestSuggestions.put("蓟马", "防治建议：1、化学防治：可选用60%乙基多杀菌素悬浮剂3000倍液或10%溴氰虫酰胺可分散油悬浮剂3000倍液喷雾；2、生物防治：释放捕食螨等天敌；3、物理防治：悬挂蓝色粘虫板诱杀成虫。");
+        pestSuggestions.put("黄曲条跳甲", "防治建议：1、化学防治：可选用5%啶虫脒可湿性粉剂2000倍液或20%氰戊菊酯乳油2000倍液喷雾；2、农业防治：与非十字花科作物轮作2年以上；3、物理防治：铺设地膜阻止成虫出土。");
+        pestSuggestions.put("猿叶虫", "防治建议：1、化学防治：可选用2.5%高效氯氟氰菊酯乳油2000倍液或20%氰戊菊酯乳油2000倍液喷雾；2、农业防治：及时清理田间残叶；3、物理防治：利用假死性振落捕杀成虫。");
+        pestSuggestions.put("油菜茎象甲", "防治建议：1、化学防治：在成虫产卵前选用40%毒死蜱乳油1000倍液或2.5%高效氯氟氰菊酯乳油2000倍液喷雾；2、农业防治：深翻土壤，减少越冬虫源；3、物理防治：利用成虫假死性振落捕杀。");
+
+        String[] names = pestNames.split(",");
+        for (String name : names) {
+            String trimmed = name.trim();
+            if (!StringUtils.hasText(trimmed)) {
+                continue;
+            }
+            String suggestion = pestSuggestions.get(trimmed);
+            if (suggestion == null) {
+                suggestion = "暂无针对\"" + trimmed + "\"的防治建议，建议咨询当地农业技术推广部门获取专业防治方案。";
+            }
+            result.add(new YoucaiDecisionPestControlDTO(trimmed, suggestion));
+        }
+        return result;
     }
 }

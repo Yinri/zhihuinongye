@@ -81,9 +81,9 @@
               <div class="stat-content">
                 <div class="stat-label">播种收获</div>
                 <div class="stat-value schedule-value">
-                  <span class="schedule-dot sowing"></span>{{ formData.plannedSowingDate ? formatDate(formData.plannedSowingDate) : '未设置' }}
+                  <span class="schedule-dot sowing"></span>预计播种时间：{{ formData.plannedSowingDate ? formatDate(formData.plannedSowingDate) : '未设置' }}
                 </div>
-                <div class="stat-sub"><span class="schedule-dot harvest"></span>{{ formData.plannedHarvestDate ? formatDate(formData.plannedHarvestDate) : '未设置' }}</div>
+                <div class="stat-sub"><span class="schedule-dot harvest"></span>预计收获时间：{{ formData.plannedHarvestDate ? formatDate(formData.plannedHarvestDate) : '未设置' }}</div>
               </div>
             </a-card>
           </a-col>
@@ -222,11 +222,7 @@
           <a-row :gutter="24">
             <a-col :span="24">
               <a-form-item label="选择肥料">
-                <a-select v-model:value="selectedFertilizerIds" mode="multiple" style="width: 100%" placeholder="请选择肥料（可多选）" @change="onFertilizerChange">
-                  <a-select-option v-for="f in fertilizerList" :key="f.id" :value="f.id">
-                    {{ f.fertilizerName }} ({{ f.fertilizerType }} - NPK: {{ f.npkRatio || '未设置' }})
-                  </a-select-option>
-                </a-select>
+                <a-select v-if="fertilizerList.length > 0" v-model:value="selectedFertilizerIds" mode="multiple" style="width: 100%" placeholder="请选择肥料（可多选）" :options="fertilizerOptions" @change="onFertilizerChange" />
               </a-form-item>
             </a-col>
             <a-col :span="8">
@@ -250,11 +246,7 @@
           <a-row :gutter="24">
             <a-col :span="24">
               <a-form-item label="选择农药">
-                <a-select v-model:value="selectedPesticideIds" mode="multiple" style="width: 100%" placeholder="请选择农药（可多选）" @change="onPesticideChange">
-                  <a-select-option v-for="p in pesticideList" :key="p.id" :value="p.id">
-                    {{ p.pesticideName }} ({{ p.pesticideType }} - {{ p.activeIngredient }})
-                  </a-select-option>
-                </a-select>
+                <a-select v-if="pesticideList.length > 0" v-model:value="selectedPesticideIds" mode="multiple" style="width: 100%" placeholder="请选择农药（可多选）" :options="pesticideOptions" @change="onPesticideChange" />
               </a-form-item>
             </a-col>
             <a-col :span="12">
@@ -370,8 +362,22 @@ const selectedFertilizerNames = computed(() => {
 // 显示选中的农药名称列表
 const selectedPesticideNames = computed(() => {
   if (!selectedPesticide.value || selectedPesticide.value.length === 0) return '-';
-  return selectedPesticide.value.map((p: any) => p.pesticideName).join('、');
+  return selectedPesticide.value.map((p: any) => p.pesticideName || p.name).join('、');
 });
+
+// 肥料下拉选项
+const fertilizerOptions = computed(() => fertilizerList.value.map((f: any) => ({
+  value: f.id,
+  label: f.fertilizerName,
+  fullLabel: `${f.fertilizerName} (${f.fertilizerType} - NPK: ${f.npkRatio || '未设置'})`,
+})));
+
+// 农药下拉选项
+const pesticideOptions = computed(() => pesticideList.value.map((p: any) => ({
+  value: p.id,
+  label: p.pesticideName,
+  fullLabel: `${p.pesticideName} (${p.pesticideType} - ${p.activeIngredient})`,
+})));
 
 // 选中的农药类型
 const selectedPesticideTypes = computed(() => {
@@ -395,7 +401,7 @@ function getStatusColor(status: string) {
 function formatDate(date: any) {
   if (!date) return '-';
   if (typeof date === 'string') return date;
-  if (date.format) return date.format('MM-DD');
+  if (date.format) return date.format('YYYY-MM-DD');
   return String(date);
 }
 
@@ -424,8 +430,8 @@ function initFormData(plan: any) {
     try {
       const fertCombo = typeof plan.fertilizerCombination === 'string' ? JSON.parse(plan.fertilizerCombination) : plan.fertilizerCombination;
       if (Array.isArray(fertCombo)) {
-        selectedFertilizerIds.value = fertCombo.map((f: any) => f.id);
-        selectedFertilizer.value = fertCombo.map((f: any) => fertilizerList.value.find(item => item.id === f.id) || f);
+        selectedFertilizerIds.value = fertCombo.map((f: any) => f.fertilizerId || f.id);
+        selectedFertilizer.value = fertCombo.map((f: any) => fertilizerList.value.find(item => item.id === (f.fertilizerId || f.id)) || f);
       }
     } catch (e) { console.error('解析肥料组合失败', e); }
   } else {
@@ -437,8 +443,8 @@ function initFormData(plan: any) {
     try {
       const pestCombo = typeof plan.pesticideCombination === 'string' ? JSON.parse(plan.pesticideCombination) : plan.pesticideCombination;
       if (Array.isArray(pestCombo)) {
-        selectedPesticideIds.value = pestCombo.map((p: any) => p.id);
-        selectedPesticide.value = pestCombo.map((p: any) => pesticideList.value.find(item => item.id === p.id) || p);
+        selectedPesticideIds.value = pestCombo.map((p: any) => p.pesticideId || p.id);
+        selectedPesticide.value = pestCombo.map((p: any) => pesticideList.value.find(item => item.id === (p.pesticideId || p.id)) || p);
       }
     } catch (e) { console.error('解析农药组合失败', e); }
   } else {
@@ -610,6 +616,36 @@ onMounted(() => { loadAllData(); });
 watch(() => selectedBase.value.baseId, (id) => { if (id) { loadPlots(id); loadSoilData(id); } }, { immediate: true });
 watch(currentPlan, (plan) => { if (plan) initFormData(plan); });
 watch(() => selectStore.selectedPlot.plotId, () => { if (selectStore.selectedPlot.plotId) { selectedPlotId.value = selectStore.selectedPlot.plotId; } });
+
+// 肥料/农药列表加载完成后，重新同步选中值（解决时序导致的反显ID问题）
+watch(fertilizerList, (list) => {
+  if (list.length > 0) {
+    const plan = currentPlan.value;
+    if (plan?.fertilizerCombination) {
+      try {
+        const fertCombo = typeof plan.fertilizerCombination === 'string' ? JSON.parse(plan.fertilizerCombination) : plan.fertilizerCombination;
+        if (Array.isArray(fertCombo)) {
+          selectedFertilizerIds.value = fertCombo.map((f: any) => f.fertilizerId || f.id);
+          selectedFertilizer.value = fertCombo.map((f: any) => list.find(item => item.id === (f.fertilizerId || f.id)) || f);
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }
+});
+watch(pesticideList, (list) => {
+  if (list.length > 0) {
+    const plan = currentPlan.value;
+    if (plan?.pesticideCombination) {
+      try {
+        const pestCombo = typeof plan.pesticideCombination === 'string' ? JSON.parse(plan.pesticideCombination) : plan.pesticideCombination;
+        if (Array.isArray(pestCombo)) {
+          selectedPesticideIds.value = pestCombo.map((p: any) => p.pesticideId || p.id);
+          selectedPesticide.value = pestCombo.map((p: any) => list.find(item => item.id === (p.pesticideId || p.id)) || p);
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }
+});
 </script>
 
 <style lang="less" scoped>
