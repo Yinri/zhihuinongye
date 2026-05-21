@@ -6,6 +6,7 @@ import org.jeecg.common.api.vo.Result;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionGrowthDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionHeightRiskDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionLodgingDTO;
+import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestControlDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionSoilDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionYieldDTO;
@@ -13,6 +14,7 @@ import org.jeecg.modules.youcai.service.IYoucaiDecisionModelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -59,5 +61,14 @@ public class YoucaiDecisionModelController {
     @GetMapping("/height-risk-trends")
     public Result<List<YoucaiDecisionHeightRiskDTO>> getHeightRiskTrends() {
         return Result.OK(decisionModelService.getInterface6Data());
+    }
+
+    @Operation(summary = "接口7：根据害虫名称获取防治建议")
+    @GetMapping("/pest-control-suggestions")
+    public Result<List<YoucaiDecisionPestControlDTO>> getPestControlSuggestions(
+            @RequestParam("pestNames") String pestNames) {
+        // 适配中英文逗号
+        String normalizedNames = pestNames.replace("，", ",");
+        return Result.OK(decisionModelService.getPestControlSuggestions(normalizedNames));
     }
 }
