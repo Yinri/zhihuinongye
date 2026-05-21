@@ -152,7 +152,7 @@
           <a-col :span="24">
             <div class="action-bar">
               <div class="action-left">
-                <a-button type="primary" size="large" class="action-btn primary-btn" @click="editModalVisible = true">
+                <a-button type="primary" size="large" class="action-btn primary-btn" @click="openEditModal">
                   <EditOutlined /> {{ formData.status === '草稿' ? '编辑修改' : '查看/编辑' }}
                 </a-button>
                 <a-button type="primary" size="large" class="action-btn success-btn" @click="confirmPlan" v-if="formData.status === '草稿'" :loading="confirming">
@@ -175,19 +175,19 @@
     </a-spin>
 
     <!-- 编辑弹窗 -->
-    <a-modal v-model:open="editModalVisible" title="编辑生产计划" width="900px" centered class="edit-plan-modal" :footer="null" @cancel="editModalVisible = false">
+    <a-modal v-model:open="editModalVisible" title="编辑生产计划" width="900px" centered class="edit-plan-modal" :footer="null" @cancel="closeEditModal">
       <div class="modal-content">
-        <a-form :model="formData" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }" class="edit-form">
+        <a-form :model="editFormData" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }" class="edit-form">
           <a-divider orientation="left"><span class="divider-title"><EnvironmentOutlined /> 基本信息</span></a-divider>
           <a-row :gutter="24">
             <a-col :span="12">
               <a-form-item label="目标产量">
-                <a-input-number v-model:value="formData.targetYield" style="width: 100%" :min="0" placeholder="kg/亩" />
+                <a-input-number v-model:value="editFormData.targetYield" style="width: 100%" :min="0" placeholder="kg/亩" />
               </a-form-item>
             </a-col>
             <a-col :span="12">
               <a-form-item label="种植面积">
-                <a-input-number v-model:value="formData.plantingArea" style="width: 100%" :min="0" placeholder="亩" />
+                <a-input-number v-model:value="editFormData.plantingArea" style="width: 100%" :min="0" placeholder="亩" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -196,24 +196,24 @@
           <a-row :gutter="24">
             <a-col :span="12">
               <a-form-item label="油菜品种">
-                <a-select v-model:value="formData.varietyId" style="width: 100%" @change="onVarietyChange" placeholder="请选择品种">
+                <a-select v-model:value="editFormData.varietyId" style="width: 100%" @change="onEditVarietyChange" placeholder="请选择品种">
                   <a-select-option v-for="v in varietyList" :key="v.id" :value="v.id">{{ v.varietyName }}</a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
             <a-col :span="12">
               <a-form-item label="计划播种日期">
-                <a-date-picker v-model:value="formData.plannedSowingDate" style="width: 100%" placeholder="选择日期" />
+                <a-date-picker v-model:value="editFormData.plannedSowingDate" style="width: 100%" placeholder="选择日期" />
               </a-form-item>
             </a-col>
             <a-col :span="12">
               <a-form-item label="计划收获日期">
-                <a-date-picker v-model:value="formData.plannedHarvestDate" style="width: 100%" placeholder="选择日期" />
+                <a-date-picker v-model:value="editFormData.plannedHarvestDate" style="width: 100%" placeholder="选择日期" />
               </a-form-item>
             </a-col>
             <a-col :span="12">
               <a-form-item label="种子总量">
-                <a-input-number v-model:value="formData.seedTotal" style="width: 100%" :min="0" placeholder="kg" />
+                <a-input-number v-model:value="editFormData.seedTotal" style="width: 100%" :min="0" placeholder="kg" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -222,22 +222,22 @@
           <a-row :gutter="24">
             <a-col :span="24">
               <a-form-item label="选择肥料">
-                <a-select v-if="fertilizerList.length > 0" v-model:value="selectedFertilizerIds" mode="multiple" style="width: 100%" placeholder="请选择肥料（可多选）" :options="fertilizerOptions" @change="onFertilizerChange" />
+                <a-select v-if="fertilizerList.length > 0" v-model:value="editSelectedFertilizerIds" mode="multiple" style="width: 100%" placeholder="请选择肥料（可多选）" :options="fertilizerOptions" @change="onEditFertilizerChange" />
               </a-form-item>
             </a-col>
             <a-col :span="8">
               <a-form-item label="氮 N">
-                <a-input-number v-model:value="formData.fertilizerTotalN" style="width: 100%" :min="0" :step="0.1" placeholder="kg" />
+                <a-input-number v-model:value="editFormData.fertilizerTotalN" style="width: 100%" :min="0" :step="0.1" placeholder="kg" />
               </a-form-item>
             </a-col>
             <a-col :span="8">
               <a-form-item label="磷 P₂O₅">
-                <a-input-number v-model:value="formData.fertilizerTotalP" style="width: 100%" :min="0" :step="0.1" placeholder="kg" />
+                <a-input-number v-model:value="editFormData.fertilizerTotalP" style="width: 100%" :min="0" :step="0.1" placeholder="kg" />
               </a-form-item>
             </a-col>
             <a-col :span="8">
               <a-form-item label="钾 K₂O">
-                <a-input-number v-model:value="formData.fertilizerTotalK" style="width: 100%" :min="0" :step="0.1" placeholder="kg" />
+                <a-input-number v-model:value="editFormData.fertilizerTotalK" style="width: 100%" :min="0" :step="0.1" placeholder="kg" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -246,24 +246,24 @@
           <a-row :gutter="24">
             <a-col :span="24">
               <a-form-item label="选择农药">
-                <a-select v-if="pesticideList.length > 0" v-model:value="selectedPesticideIds" mode="multiple" style="width: 100%" placeholder="请选择农药（可多选）" :options="pesticideOptions" @change="onPesticideChange" />
+                <a-select v-if="pesticideList.length > 0" v-model:value="editSelectedPesticideIds" mode="multiple" style="width: 100%" placeholder="请选择农药（可多选）" :options="pesticideOptions" @change="onEditPesticideChange" />
               </a-form-item>
             </a-col>
             <a-col :span="12">
               <a-form-item label="农药总量">
-                <a-input-number v-model:value="formData.pesticideTotal" style="width: 100%" :min="0" placeholder="ml" />
+                <a-input-number v-model:value="editFormData.pesticideTotal" style="width: 100%" :min="0" placeholder="ml" />
               </a-form-item>
             </a-col>
             <a-col :span="12">
               <a-form-item label="农药备注">
-                <a-input v-model:value="formData.pesticideNote" placeholder="用药说明" />
+                <a-input v-model:value="editFormData.pesticideNote" placeholder="用药说明" />
               </a-form-item>
             </a-col>
           </a-row>
         </a-form>
         
         <div class="modal-footer">
-          <a-button @click="editModalVisible = false" size="large">取消</a-button>
+          <a-button @click="closeEditModal" size="large">取消</a-button>
           <a-button type="primary" @click="saveDraft" :loading="saving" size="large" class="save-btn">保存修改</a-button>
         </div>
       </div>
@@ -302,12 +302,18 @@ const selectedFertilizer = ref<any>(null);
 const selectedPesticide = ref<any>(null);
 const selectedFertilizerIds = ref<string[]>([]);
 const selectedPesticideIds = ref<string[]>([]);
+const editSelectedVariety = ref<any>(null);
+const editSelectedFertilizer = ref<any[]>([]);
+const editSelectedPesticide = ref<any[]>([]);
+const editSelectedFertilizerIds = ref<string[]>([]);
+const editSelectedPesticideIds = ref<string[]>([]);
 
 const formData = ref<any>({
   targetYield: 0, plantingArea: 0, varietyId: '', plannedSowingDate: null, plannedHarvestDate: null,
   seedTotal: 0, fertilizerTotalN: 0, fertilizerTotalP: 0, fertilizerTotalK: 0,
   pesticideTotal: 0, pesticideNote: '', status: '草稿'
 });
+const editFormData = ref<any>({ ...formData.value });
 
 const currentPlan = computed(() => selectedPlotId.value ? plotPlans.value.get(selectedPlotId.value) : null);
 const selectedPlotInfo = computed(() => selectedPlotId.value ? plotList.value.find(p => p.id === selectedPlotId.value) : null);
@@ -453,18 +459,70 @@ function initFormData(plan: any) {
   }
 }
 
-function onVarietyChange(varietyId: string) {
-  selectedVariety.value = varietyList.value.find(v => v.id === varietyId) || null;
+function initEditFormData(plan: any) {
+  editFormData.value = {
+    targetYield: plan?.targetYield || 0,
+    plantingArea: plan?.plantingArea || selectedPlotInfo.value?.area || 0,
+    varietyId: plan?.varietyId || '',
+    plannedSowingDate: plan?.plannedSowingDate ? dayjs(plan.plannedSowingDate) : null,
+    plannedHarvestDate: plan?.plannedHarvestDate ? dayjs(plan.plannedHarvestDate) : null,
+    seedTotal: plan?.seedTotal || 0,
+    fertilizerTotalN: plan?.fertilizerTotalN || 0,
+    fertilizerTotalP: plan?.fertilizerTotalP || 0,
+    fertilizerTotalK: plan?.fertilizerTotalK || 0,
+    pesticideTotal: plan?.pesticideTotal || 0,
+    pesticideNote: plan?.pesticideNote || '',
+    status: plan?.status || '草稿',
+    id: plan?.id || ''
+  };
+  editSelectedVariety.value = plan?.varietyId ? varietyList.value.find(v => v.id === plan.varietyId) || null : null;
+  if (plan?.fertilizerCombination) {
+    try {
+      const fertCombo = typeof plan.fertilizerCombination === 'string' ? JSON.parse(plan.fertilizerCombination) : plan.fertilizerCombination;
+      if (Array.isArray(fertCombo)) {
+        editSelectedFertilizerIds.value = fertCombo.map((f: any) => f.fertilizerId || f.id);
+        editSelectedFertilizer.value = fertCombo.map((f: any) => fertilizerList.value.find(item => item.id === (f.fertilizerId || f.id)) || f);
+      }
+    } catch (e) { console.error('解析编辑肥料组合失败', e); }
+  } else {
+    editSelectedFertilizerIds.value = [];
+    editSelectedFertilizer.value = [];
+  }
+  if (plan?.pesticideCombination) {
+    try {
+      const pestCombo = typeof plan.pesticideCombination === 'string' ? JSON.parse(plan.pesticideCombination) : plan.pesticideCombination;
+      if (Array.isArray(pestCombo)) {
+        editSelectedPesticideIds.value = pestCombo.map((p: any) => p.pesticideId || p.id);
+        editSelectedPesticide.value = pestCombo.map((p: any) => pesticideList.value.find(item => item.id === (p.pesticideId || p.id)) || p);
+      }
+    } catch (e) { console.error('解析编辑农药组合失败', e); }
+  } else {
+    editSelectedPesticideIds.value = [];
+    editSelectedPesticide.value = [];
+  }
 }
 
-function onFertilizerChange(values: string[]) {
-  selectedFertilizerIds.value = values;
-  selectedFertilizer.value = values.map(id => fertilizerList.value.find(f => f.id === id)).filter(Boolean);
+function openEditModal() {
+  initEditFormData(currentPlan.value || formData.value);
+  editModalVisible.value = true;
 }
 
-function onPesticideChange(values: string[]) {
-  selectedPesticideIds.value = values;
-  selectedPesticide.value = values.map(id => pesticideList.value.find(p => p.id === id)).filter(Boolean);
+function closeEditModal() {
+  editModalVisible.value = false;
+}
+
+function onEditVarietyChange(varietyId: string) {
+  editSelectedVariety.value = varietyList.value.find(v => v.id === varietyId) || null;
+}
+
+function onEditFertilizerChange(values: string[]) {
+  editSelectedFertilizerIds.value = values;
+  editSelectedFertilizer.value = values.map(id => fertilizerList.value.find(f => f.id === id)).filter(Boolean);
+}
+
+function onEditPesticideChange(values: string[]) {
+  editSelectedPesticideIds.value = values;
+  editSelectedPesticide.value = values.map(id => pesticideList.value.find(p => p.id === id)).filter(Boolean);
 }
 
 async function loadAllData() {
@@ -550,22 +608,22 @@ async function saveDraft() {
     const plotName = selectedPlotInfo.value?.plotName || '';
     const planName = `${baseName}-${plotName}-${currentYear}生产计划`;
 
-    const fertilizerCombinationData = selectedFertilizer.value ? selectedFertilizer.value.map((f: any) => ({
-      id: f.id,
+    const fertilizerCombinationData = editSelectedFertilizer.value ? editSelectedFertilizer.value.map((f: any) => ({
+      id: f.id || f.fertilizerId,
       fertilizerName: f.fertilizerName,
       fertilizerType: f.fertilizerType,
       npkRatio: f.npkRatio
     })) : [];
 
-    const pesticideCombinationData = selectedPesticide.value ? selectedPesticide.value.map((p: any) => ({
-      id: p.id,
+    const pesticideCombinationData = editSelectedPesticide.value ? editSelectedPesticide.value.map((p: any) => ({
+      id: p.id || p.pesticideId,
       pesticideName: p.pesticideName,
       pesticideType: p.pesticideType,
       activeIngredient: p.activeIngredient
     })) : [];
 
     const data = {
-      ...formData.value,
+      ...editFormData.value,
       baseId: selectedBase.value.baseId,
       plotId: selectedPlotId.value,
       planYear: currentYear,
@@ -576,13 +634,13 @@ async function saveDraft() {
     if (data.plannedSowingDate) data.plannedSowingDate = data.plannedSowingDate.format('YYYY-MM-DD');
     if (data.plannedHarvestDate) data.plannedHarvestDate = data.plannedHarvestDate.format('YYYY-MM-DD');
 
-    if (formData.value.id) {
+    if (editFormData.value.id) {
       await defHttp.put({ url: '/youcai/youcaiProductionPlans/edit', data });
     } else {
       await defHttp.post({ url: '/youcai/youcaiProductionPlans/add', data });
     }
     message.success('保存成功！');
-    editModalVisible.value = false;
+    closeEditModal();
     loadPlots(selectedBase.value.baseId);
   } catch (e: any) { message.error('保存失败: ' + (e?.message || e)); }
   finally { saving.value = false; }
