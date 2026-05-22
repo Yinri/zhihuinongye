@@ -222,12 +222,12 @@ const initMap = async () => {
     
     if (!mapContainer.value) return;
     
-    // 创建地图实例
-    mapInstance = new T.Map(mapContainer.value);
-    
+    // 创建地图实例，启用滚轮缩放
+    mapInstance = new T.Map(mapContainer.value, { enableScrollWheelZoom: true });
+
     // 设置地图类型为卫星图
     mapInstance.setMapType(window.TMAP_SATELLITE_MAP);
-    
+
     // 设置地图中心和缩放级别
     // 优先使用store中的基地经纬度信息，如果没有则使用默认坐标
     if (selectedBase.value.longitude && selectedBase.value.latitude) {
@@ -238,9 +238,12 @@ const initMap = async () => {
       console.log('使用默认坐标设置地图中心');
       mapInstance.centerAndZoom(new T.LngLat(116.40969, 39.89945), 5);
     }
-    
-    // 不添加缩放控件，因为缩放级别已固定
-    
+
+    // 显式启用滚轮缩放（兼容不同版本）
+    if (typeof mapInstance.enableScrollWheelZoom === 'function') {
+      mapInstance.enableScrollWheelZoom();
+    }
+
     // 如果有选中的基地，调整地图视图
     if (selectedBaseId.value) {
       await loadBaseLocation();
@@ -265,6 +268,16 @@ const initMap = async () => {
         closePlotInfo();
       }
     });
+
+    // Firefox 滚轮缩放兜底：手动监听 wheel 事件
+    if (mapContainer.value) {
+      mapContainer.value.addEventListener('wheel', (e: WheelEvent) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -1 : 1;
+        const currentZoom = mapInstance.getZoom();
+        mapInstance.setZoom(currentZoom + delta);
+      }, { passive: false });
+    }
   } catch (error) {
     console.error('初始化地图失败:', error);
     createMessage.error('地图初始化失败，请刷新页面重试');
