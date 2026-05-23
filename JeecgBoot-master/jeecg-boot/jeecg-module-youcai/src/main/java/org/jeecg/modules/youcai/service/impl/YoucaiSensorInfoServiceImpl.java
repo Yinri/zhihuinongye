@@ -25,9 +25,12 @@ import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -42,6 +45,8 @@ import java.util.concurrent.ExecutionException;
 @Service
 @Slf4j
 public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMapper, YoucaiSensorInfo> implements IYoucaiSensorInfoService {
+    private static final String HUJI_WATER_GATE_DEVICE_CODE = "HJ-WATER-GATE";
+    private static final String HUJI_WATER_GATE_DEVICE_TYPE = "水阀控制设备";
     
     @Autowired
     private IoTApiUtil ioTApiUtil;
@@ -147,6 +152,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         Integer projectId = getProjectId();
         if (projectId == null) {
             log.warn("获取项目ID失败");
+            appendHujiWaterGateDevices(result, base);
             return Result.OK(result);
         }
 
@@ -234,8 +240,170 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
             log.error("获取视频设备列表异常: {}", e.getMessage(), e);
         }
 
+        appendHujiWaterGateDevices(result, base);
+
         log.info("基地 '{}' 共匹配到 {} 个设备", baseName, result.size());
         return Result.OK(result);
+    }
+
+    private void appendHujiWaterGateDevices(List<UnifiedDeviceDto> result, YoucaiBases base) {
+        if (!isHujiWaterGateBase(base) || base.getLongitude() == null || base.getLatitude() == null) {
+            return;
+        }
+
+        List<Map<String, Object>> waterGates = fetchWaterGateItems();
+        if (waterGates.isEmpty()) {
+            log.warn("胡集基地未获取到水阀列表，首页地图不追加水阀设备");
+            return;
+        }
+
+        for (int i = 0; i < waterGates.size(); i++) {
+            Map<String, Object> gate = waterGates.get(i);
+            UnifiedDeviceDto dto = new UnifiedDeviceDto();
+            String id = stringValue(firstExistingValue(gate, "id", "gateId", "deviceId", "equipmentCode", "serialNo", "sn", "code"));
+            String name = stringValue(firstExistingValue(gate, "name", "gateName", "deviceName", "equipmentName", "title", "gateNo", "alias"));
+            Object state = firstExistingValue(gate, "status", "workState", "state", "runState", "gateStatus", "online", "isOnline", "onLine", "deviceOnline");
+            String lng = stringValue(firstExistingValue(gate, "lng", "Lng", "longitude", "Longitude", "lon", "x"));
+            String lat = stringValue(firstExistingValue(gate, "lat", "Lat", "latitude", "Latitude", "y"));
+
+            dto.setDeviceCode(id != null ? id : HUJI_WATER_GATE_DEVICE_CODE + "-" + (i + 1));
+            dto.setDeviceName(name != null ? name : "水阀" + (i + 1));
+            dto.setDeviceType(HUJI_WATER_GATE_DEVICE_TYPE);
+            dto.setState(parseWaterGateState(state));
+            if (lng != null && lat != null) {
+                dto.setLng(lng);
+                dto.setLat(lat);
+            } else {
+                dto.setLng(offsetCoordinate(base.getLongitude(), i, true));
+                dto.setLat(offsetCoordinate(base.getLatitude(), i, false));
+            }
+            result.add(dto);
+        }
+    }
+
+    private List<Map<String, Object>> fetchWaterGateItems() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        try {
+            ApiResponse response = ioTApiUtil.getZxWaterGateList().block();
+            if (response == null || (response.getCode() != 200 && response.getCode() != 1)) {
+                log.warn("获取水阀列表失败: {}", response != null ? response.getMsg() : "响应为空");
+                return result;
+            }
+
+            Object candidate = unwrapListCandidate(response.getData());
+            JSONArray array = convertToJsonArray(candidate);
+            if (array != null) {
+                for (int i = 0; i < array.size(); i++) {
+                    result.add(toPlainMap(array.get(i)));
+                }
+                return result;
+            }
+            if (candidate != null) {
+                result.add(toPlainMap(candidate));
+            }
+        } catch (Exception e) {
+            log.error("获取水阀列表异常", e);
+        }
+        return result;
+    }
+
+    private boolean isHujiWaterGateBase(YoucaiBases base) {
+        if (base == null) {
+            return false;
+        }
+
+        String baseName = base.getBaseName();
+        String address = base.getAddress();
+        String codePrefix = base.getCodePrefix();
+        return "HJ".equalsIgnoreCase(codePrefix)
+            || (baseName != null && baseName.contains("胡集"))
+            || (address != null && address.contains("胡集镇尚湾村"));
+    }
+
+    private Object unwrapListCandidate(Object data) {
+        Object candidate = data;
+        int guard = 0;
+        while (candidate instanceof JSONObject && guard < 5) {
+            JSONObject jsonObject = (JSONObject) candidate;
+            if (jsonObject.containsKey("list")) {
+                candidate = jsonObject.get("list");
+            } else if (jsonObject.containsKey("rows")) {
+                candidate = jsonObject.get("rows");
+            } else if (jsonObject.containsKey("data")) {
+                candidate = jsonObject.get("data");
+            } else if (jsonObject.containsKey("items")) {
+                candidate = jsonObject.get("items");
+            } else {
+                break;
+            }
+            guard++;
+        }
+        return candidate;
+    }
+
+    private Map<String, Object> toPlainMap(Object value) {
+        if (value == null) {
+            return new LinkedHashMap<>();
+        }
+        if (value instanceof Map<?, ?>) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            ((Map<?, ?>) value).forEach((key, itemValue) -> result.put(String.valueOf(key), itemValue));
+            return result;
+        }
+        return JSONObject.parseObject(JSONObject.toJSONString(value));
+    }
+
+    private Object firstExistingValue(Map<String, Object> source, String... keys) {
+        for (String key : keys) {
+            Object value = source.get(key);
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof String && ((String) value).trim().isEmpty()) {
+                continue;
+            }
+            return value;
+        }
+        Object raw = source.get("raw");
+        if (raw != null && raw != source) {
+            return firstExistingValue(toPlainMap(raw), keys);
+        }
+        return null;
+    }
+
+    private String stringValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String str = String.valueOf(value).trim();
+        return str.isEmpty() ? null : str;
+    }
+
+    private Integer parseWaterGateState(Object value) {
+        if (value == null) {
+            return 1;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue() == 0 ? 0 : 1;
+        }
+        String state = String.valueOf(value).trim();
+        if (state.isEmpty()) {
+            return 1;
+        }
+        if ("0".equals(state) || "false".equalsIgnoreCase(state) || "offline".equalsIgnoreCase(state) || state.contains("离线")) {
+            return 0;
+        }
+        return 1;
+    }
+
+    private String offsetCoordinate(BigDecimal baseCoordinate, int index, boolean longitude) {
+        int ringIndex = index + 1;
+        int direction = ringIndex % 2 == 0 ? -1 : 1;
+        int step = (ringIndex + 1) / 2;
+        BigDecimal offset = BigDecimal.valueOf(step)
+            .multiply(new BigDecimal(longitude ? "0.00018" : "0.00012"))
+            .multiply(BigDecimal.valueOf(direction));
+        return baseCoordinate.add(offset).setScale(6, RoundingMode.HALF_UP).toPlainString();
     }
 
     private Integer getProjectId() {
