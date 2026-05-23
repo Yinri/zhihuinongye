@@ -46,26 +46,26 @@
                 <Icon icon="ant-design:cloud-outlined" /> 空气环境
               </div>
               <div class="weather-summary-grid">
-                <a-card :bordered="false" class="data-card weather-card compact-card">
-                  <div class="data-item">
-                    <div class="data-icon weather-icon temperature"><Icon icon="ant-design:cloud-outlined" /></div>
-                    <div class="data-content">
-                      <div class="data-label">空气温度</div>
-                      <div class="data-value">{{ penmanInputs.temp?.[0] || '-' }} <span class="unit">℃</span></div>
-                      <div class="data-status" :class="getTemperatureStatus(penmanInputs.temp?.[0])">{{ getTemperatureStatusText(penmanInputs.temp?.[0]) }}</div>
-                    </div>
+                <div class="env-weather-item temperature">
+                  <div class="env-weather-icon">
+                    <Icon icon="ant-design:thermometer-outlined" />
                   </div>
-                </a-card>
-                <a-card :bordered="false" class="data-card weather-card compact-card">
-                  <div class="data-item">
-                    <div class="data-icon weather-icon humidity"><Icon icon="ant-design:water-outlined" /></div>
-                    <div class="data-content">
-                      <div class="data-label">空气湿度</div>
-                      <div class="data-value">{{ penmanInputs.humidity?.[0] || '-' }} <span class="unit">%</span></div>
-                      <div class="data-status" :class="getHumidityStatus(penmanInputs.humidity?.[0])">{{ getHumidityStatusText(penmanInputs.humidity?.[0]) }}</div>
-                    </div>
+                  <div class="env-weather-info">
+                    <span class="env-weather-label">空气温度</span>
+                    <span class="env-weather-value">{{ formatNumber(penmanInputs.temp?.[penmanInputs.temp?.length - 1]) || formatNumber(penmanInputs.temp?.[0]) || '-' }}<small>℃</small></span>
+                    <span class="env-weather-status" :class="getTemperatureStatus(penmanInputs.temp?.[0])">{{ getTemperatureStatusText(penmanInputs.temp?.[0]) }}</span>
                   </div>
-                </a-card>
+                </div>
+                <div class="env-weather-item humidity">
+                  <div class="env-weather-icon">
+                    <Icon icon="ant-design:water-outlined" />
+                  </div>
+                  <div class="env-weather-info">
+                    <span class="env-weather-label">空气湿度</span>
+                    <span class="env-weather-value">{{ formatNumber(penmanInputs.humidity?.[penmanInputs.humidity?.length - 1]) || formatNumber(penmanInputs.humidity?.[0]) || '-' }}<small>%</small></span>
+                    <span class="env-weather-status" :class="getHumidityStatus(penmanInputs.humidity?.[0])">{{ getHumidityStatusText(penmanInputs.humidity?.[0]) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1508,6 +1508,13 @@ function getHumidityStatusText(humidity: any): string {
   return '非常潮湿';
 }
 
+function formatNumber(val: any): string {
+  if (val === null || val === undefined || val === '') return '';
+  const n = Number(val);
+  if (isNaN(n)) return String(val);
+  return n.toFixed(1);
+}
+
 function downloadReportAsWord() {
   const elId = reportType.value === 'risk' ? 'riskReport' : 'irrigationReport';
   const el = document.getElementById(elId);
@@ -1614,6 +1621,115 @@ function exportReport() {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.env-weather-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #eef2f7;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+  }
+
+  &.temperature {
+    .env-weather-icon {
+      background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    }
+  }
+
+  &.humidity {
+    .env-weather-icon {
+      background: linear-gradient(135deg, #4ECDC4 0%, #45B7D1 100%);
+    }
+  }
+}
+
+.env-weather-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.env-weather-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.env-weather-label {
+  font-size: 13px;
+  color: #888;
+  font-weight: 500;
+}
+
+.env-weather-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.2;
+
+  small {
+    font-size: 14px;
+    font-weight: 500;
+    color: #999;
+    margin-left: 2px;
+  }
+}
+
+.env-weather-status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 10px;
+  display: inline-block;
+  width: fit-content;
+  margin-top: 1px;
+
+  &.cold {
+    background: #E3F2FD;
+    color: #1976D2;
+  }
+
+  &.comfortable {
+    background: #E8F5E9;
+    color: #388E3C;
+  }
+
+  &.hot {
+    background: #FFF3E0;
+    color: #F57C00;
+  }
+
+  &.dry {
+    background: #FFF3E0;
+    color: #E65100;
+  }
+
+  &.humid {
+    background: #E3F2FD;
+    color: #0277BD;
+  }
+
+  &.very-humid {
+    background: #E8EAF6;
+    color: #283593;
+  }
 }
 
 .compact-card {
