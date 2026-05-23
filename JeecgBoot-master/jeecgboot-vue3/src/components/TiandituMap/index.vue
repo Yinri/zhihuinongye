@@ -627,6 +627,7 @@ const displaySensors = () => {
       '土壤传感器': '#8B4513',
       '光谱设备': '#9B59B6',
       '视频设备': '#FF6347',
+      '水阀控制设备': '#1890FF',
       '未知设备': '#95A5A6'
     };
     const color = iconColors[deviceType] || iconColors['未知设备'];
@@ -718,6 +719,16 @@ const displaySensors = () => {
           <circle cx="${hs - 2}" cy="${hs - 2.5}" r="2" fill="none" stroke="#fff" stroke-width="0.8"/>
           <circle cx="${hs - 2}" cy="${hs - 2.5}" r="0.8" fill="#fff"/>
           ${label('视频')}
+        `);
+        break;
+      case '水阀控制设备':
+        svgIcon = makeSvg(`
+          <path d="M${hs - 8} ${hs - 2} H${hs + 8}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="${hs - 5}" y="${hs - 6}" width="10" height="8" rx="1.5" fill="none" stroke="#fff" stroke-width="1.2"/>
+          <path d="M${hs - 4} ${hs - 6} L${hs + 4} ${hs + 2} M${hs + 4} ${hs - 6} L${hs - 4} ${hs + 2}" stroke="#fff" stroke-width="1"/>
+          <line x1="${hs}" y1="${hs - 8}" x2="${hs}" y2="${hs - 11}" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="${hs - 3}" y1="${hs - 11}" x2="${hs + 3}" y2="${hs - 11}" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+          ${label('水阀')}
         `);
         break;
       default:
@@ -923,12 +934,13 @@ const showPlotInfo = async (plot, event) => {
 };
 
 // 显示传感器信息
-const showSensorInfo = (sensor, event) => {
+const showSensorInfo = (sensor, _event) => {
   try {
     // 创建传感器信息弹窗内容
     const content = `
       <div style="padding: 10px; max-width: 280px;">
-        <p style="margin: 5px 0; font-size: 14px;"><strong>类型:</strong> ${sensor.name || '未知'}</p>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>名称:</strong> ${sensor.name || '未知'}</p>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>类型:</strong> ${sensor.type || '未知设备'}</p>
         <p style="margin: 5px 0; font-size: 14px;"><strong>状态:</strong> 
           <span style="color: ${sensor.status === 1 ? '#52c41a' : '#ff4d4f'}; font-weight: bold;">
             ${sensor.status === 1 ? '在线' : '离线'}
