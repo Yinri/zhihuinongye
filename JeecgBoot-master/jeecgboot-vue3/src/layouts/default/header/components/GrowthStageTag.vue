@@ -127,7 +127,7 @@ const isDropdownOpen = ref({
 
 // 生育阶段数据
 const stageList = ref([
-  '未播种', '已播种', '苗期', '蕾薹期', '开花期', '角果成熟期', '收获'
+  '发芽出苗期', '苗期', '蕾薹期', '开花期', '角果发育成熟期'
 ]);
 
 // 弹窗状态与表单数据
@@ -407,7 +407,7 @@ watch(
 
     .stage-tag {
       position: relative;
-      width: 100px;
+      width: 140px;
       text-align: center;
       padding: 8px 0;
       color: #333;
