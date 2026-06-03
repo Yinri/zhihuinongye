@@ -144,7 +144,7 @@ public class YoucaiGrowthMonitoringController extends JeecgController<YoucaiGrow
 	  * @return
 	  */
 	 @AutoLog(value = "生长监控表-通过baseId查询")
-	 @Operation(summary = "生长监控表-通过baseId查询（返回最新数据）")
+	 @Operation(summary = "生长监控表-通过baseId查询（返回最新数据，超30天按日期推算）")
 	 @GetMapping(value = "/queryByBaseId")
 	 public Result<YoucaiGrowthMonitoring> queryByBaseId(@RequestParam(name = "baseId", required = true) String baseId) {
 		 log.info("查询生长监控数据（最新），baseId：{}", baseId);
@@ -154,12 +154,47 @@ public class YoucaiGrowthMonitoringController extends JeecgController<YoucaiGrow
 				 .last("LIMIT 1");
 
 		 YoucaiGrowthMonitoring latestData = youcaiGrowthMonitoringService.getOne(queryWrapper);
-		 if (latestData == null) {
-			 log.warn("baseId：{} 未查询到生长监控数据", baseId);
-			 return Result.error("该基地暂无生长监控数据");
+		 if (latestData != null && latestData.getMonitoringDate() != null) {
+			 long daysAgo = (System.currentTimeMillis() - latestData.getMonitoringDate().getTime())
+					 / (1000 * 60 * 60 * 24);
+			 if (daysAgo <= 30) {
+				 log.info("baseId：{} 监测数据在有效期内（{}天前），直接返回", baseId, daysAgo);
+				 return Result.OK(latestData);
+			 }
+			 String inferred = inferGrowthStageByDate();
+			 log.info("baseId：{} 监测数据已过期（{}天前），推算为：{}", baseId, daysAgo, inferred);
+			 latestData.setGrowthStage(inferred);
+			 return Result.OK(latestData);
 		 }
-		 log.info("baseId：{} 成功查询到最新生长监控数据", baseId);
-		 return Result.OK(latestData);
+
+		 log.warn("baseId：{} 无监测数据，按日期推算", baseId);
+		 YoucaiGrowthMonitoring fallback = new YoucaiGrowthMonitoring();
+		 fallback.setBaseId(baseId);
+		 fallback.setGrowthStage(inferGrowthStageByDate());
+		 return Result.OK(fallback);
+	 }
+
+	 private String inferGrowthStageByDate() {
+		 java.util.Calendar cal = java.util.Calendar.getInstance();
+		 int month = cal.get(java.util.Calendar.MONTH) + 1;
+		 int day = cal.get(java.util.Calendar.DAY_OF_MONTH);
+
+		 if (month == 9 && day >= 15 || month == 10) {
+			 return "发芽出苗期";
+		 }
+		 if (month == 11 || month == 12 || month == 1 || month == 2) {
+			 return "苗期";
+		 }
+		 if (month == 3 && day <= 15) {
+			 return "蕾薹期";
+		 }
+		 if (month == 3 && day > 15 || month == 4) {
+			 return "开花期";
+		 }
+		 if (month == 5 && day <= 15) {
+			 return "角果发育成熟期";
+		 }
+		 return "";
 	 }
     /**
     * 导出excel

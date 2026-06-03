@@ -11,18 +11,14 @@ import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionSoilDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionYieldDTO;
 import org.jeecg.modules.youcai.entity.YoucaiBases;
-import org.jeecg.modules.youcai.entity.YoucaiFarmingRecords;
-import org.jeecg.modules.youcai.entity.YoucaiFertilization;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
 import org.jeecg.modules.youcai.entity.YoucaiHistoricalYield;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import org.jeecg.modules.youcai.entity.YoucaiPlots;
-import org.jeecg.modules.youcai.mapper.YoucaiFertilizationMapper;
 import org.jeecg.modules.youcai.service.IIrrigationService;
 import org.jeecg.modules.youcai.service.IFertilizationService;
 import org.jeecg.modules.youcai.service.IYoucaiBasesService;
 import org.jeecg.modules.youcai.service.IYoucaiDecisionModelService;
-import org.jeecg.modules.youcai.service.IYoucaiFarmingRecordsService;
 import org.jeecg.modules.youcai.service.IYoucaiGrowthMonitoringService;
 import org.jeecg.modules.youcai.service.IYoucaiHistoricalYieldService;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
@@ -61,12 +57,6 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
 
     @Autowired
     private IYoucaiHistoricalYieldService historicalYieldService;
-
-    @Autowired
-    private IYoucaiFarmingRecordsService farmingRecordsService;
-
-    @Autowired
-    private YoucaiFertilizationMapper fertilizationMapper;
 
     @Autowired
     private IIrrigationService irrigationService;
@@ -195,7 +185,7 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         YoucaiDecisionYieldDTO dto = new YoucaiDecisionYieldDTO();
         dto.setSid(base.getId());
         dto.setNam(base.getBaseName());
-        dto.setStg(resolveGrowthStage(base.getId()));
+        dto.setStg(stageToNumber(resolveGrowthStage(base.getId())));
         dto.setSqr(formatArea(base.getArea()));
         dto.setNmb(formatDecimal(calculatePredictedYield(base), 2));
         return dto;
@@ -883,17 +873,20 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
     }
 
     private BigDecimal defaultHeightByStage(String stage) {
-        if ("1".equals(stage)) {
-            return new BigDecimal("15");
+        if ("发芽出苗期".equals(stage)) {
+            return new BigDecimal("10");
         }
-        if ("2".equals(stage)) {
-            return new BigDecimal("45");
+        if ("苗期".equals(stage)) {
+            return new BigDecimal("25");
         }
-        if ("4".equals(stage)) {
+        if ("蕾薹期".equals(stage)) {
+            return new BigDecimal("50");
+        }
+        if ("开花期".equals(stage)) {
             return new BigDecimal("145");
         }
-        if ("5".equals(stage)) {
-            return new BigDecimal("135");
+        if ("角果发育成熟期".equals(stage)) {
+            return new BigDecimal("165");
         }
         return new BigDecimal("120");
     }
@@ -1338,97 +1331,78 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
     }
 
     private String resolveGrowthStage(String baseId) {
-        QueryWrapper<YoucaiFarmingRecords> farmingQuery = new QueryWrapper<>();
-        farmingQuery.eq("base_id", baseId).orderByDesc("farming_date");
-        List<YoucaiFarmingRecords> records = farmingRecordsService.list(farmingQuery);
-        for (YoucaiFarmingRecords record : records) {
-            String stage = matchGrowthStage(record.getRemark(), record.getMaterials(), record.getRecordCode());
-            if (stage != null) {
-                return stage;
+        QueryWrapper<YoucaiGrowthMonitoring> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("base_id", baseId)
+                    .orderByDesc("monitoring_date")
+                    .last("LIMIT 1");
+        YoucaiGrowthMonitoring latest = growthMonitoringService.getOne(queryWrapper);
+
+        // 监测数据在30天内有效，直接用
+        if (latest != null && latest.getMonitoringDate() != null
+                && StringUtils.hasText(latest.getGrowthStage())) {
+            long daysAgo = (System.currentTimeMillis() - latest.getMonitoringDate().getTime())
+                    / (1000 * 60 * 60 * 24);
+            if (daysAgo <= 30) {
+                return latest.getGrowthStage();
             }
         }
 
-        QueryWrapper<YoucaiFertilization> fertilizationQuery = new QueryWrapper<>();
-        fertilizationQuery.eq("base_id", baseId).orderByDesc("fertilization_date");
-        List<YoucaiFertilization> fertilizations = fertilizationMapper.selectList(fertilizationQuery);
-        for (YoucaiFertilization item : fertilizations) {
-            String stage = matchGrowthStage(item.getRemark(), item.getReason(), item.getRecommendedTime());
-            if (stage != null) {
-                return stage;
-            }
-        }
-
-        Date latestOperationTime = getLatestOperationTime(records, fertilizations);
-        return fallbackGrowthStage(latestOperationTime);
+        // 数据过期或不存在，按当前日期推算
+        return inferGrowthStageByDate();
     }
 
-    private String matchGrowthStage(String... texts) {
-        for (String text : texts) {
-            if (!StringUtils.hasText(text)) {
-                continue;
-            }
-            if (containsAny(text, "成熟", "黄熟", "角果")) {
-                return "5";
-            }
-            if (containsAny(text, "开花", "花期")) {
-                return "4";
-            }
-            if (containsAny(text, "抽薹", "蕾薹", "现蕾")) {
-                return "3";
-            }
-            if (containsAny(text, "苗期", "移栽", "返青")) {
-                return "2";
-            }
-            if (containsAny(text, "播种", "出苗", "发芽")) {
-                return "1";
-            }
+    /**
+     * 根据当前日期推断油菜生长阶段（荆门地区种植日历）
+     * 9月中-10月: 1-发芽出苗期
+     * 11月-2月: 2-苗期（含越冬）
+     * 2月底-3月: 3-蕾薹期
+     * 3月-4月: 4-开花期
+     * 4月-5月: 5-角果发育成熟期
+     * 6月-9月初: 非种植期
+     */
+    private String inferGrowthStageByDate() {
+        Calendar cal = Calendar.getInstance();
+        int month = cal.get(Calendar.MONTH) + 1; // 1-12
+        int day = cal.get(Calendar.DAY_OF_MONTH);
+
+        if (month == 9 && day >= 15 || month == 10) {
+            return "发芽出苗期";
         }
-        return null;
+        if (month == 11 || month == 12 || month == 1 || month == 2) {
+            return "苗期";
+        }
+        if (month == 3 && day <= 15) {
+            return "蕾薹期";
+        }
+        if (month == 3 && day > 15 || month == 4) {
+            return "开花期";
+        }
+        if (month == 5 && day <= 15) {
+            return "角果发育成熟期";
+        }
+        // 5月16日-9月14日: 已收获/非种植期
+        return "";
+    }
+
+    private String stageToNumber(String stage) {
+        if ("发芽出苗期".equals(stage)) return "1";
+        if ("苗期".equals(stage)) return "2";
+        if ("蕾薹期".equals(stage)) return "3";
+        if ("开花期".equals(stage)) return "4";
+        if ("角果发育成熟期".equals(stage)) return "5";
+        return "";
     }
 
     private boolean containsAny(String text, String... keywords) {
+        if (!StringUtils.hasText(text)) {
+            return false;
+        }
         for (String keyword : keywords) {
             if (text.contains(keyword)) {
                 return true;
             }
         }
         return false;
-    }
-
-    private Date getLatestOperationTime(List<YoucaiFarmingRecords> records, List<YoucaiFertilization> fertilizations) {
-        Date latest = null;
-        for (YoucaiFarmingRecords record : records) {
-            if (record.getFarmingDate() != null && (latest == null || record.getFarmingDate().after(latest))) {
-                latest = record.getFarmingDate();
-            }
-        }
-        for (YoucaiFertilization item : fertilizations) {
-            if (item.getFertilizationDate() != null && (latest == null || item.getFertilizationDate().after(latest))) {
-                latest = item.getFertilizationDate();
-            }
-        }
-        return latest;
-    }
-
-    private String fallbackGrowthStage(Date latestOperationTime) {
-        if (latestOperationTime == null) {
-            return "3";
-        }
-        @SuppressWarnings("deprecation")
-        int month = latestOperationTime.getMonth() + 1;
-        if (month >= 9 && month <= 10) {
-            return "1";
-        }
-        if (month == 11 || month == 12) {
-            return "2";
-        }
-        if (month == 1 || month == 2) {
-            return "3";
-        }
-        if (month == 3) {
-            return "4";
-        }
-        return "5";
     }
 
     private String normalizeHistoricalBaseName(String baseName) {
