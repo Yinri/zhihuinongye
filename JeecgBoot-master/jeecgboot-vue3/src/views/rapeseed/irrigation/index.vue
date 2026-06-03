@@ -5,15 +5,11 @@
       <a-col :xs="24" :md="14">
         <a-card :bordered="false" class="rich-card">
           <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:dashboard-outlined" /> 环境监测概览
-            </div>
+            <div class="table-title"> <Icon icon="ant-design:dashboard-outlined" /> 环境监测概览 </div>
           </template>
           <div v-if="hasData" class="environment-overview">
             <div class="environment-main">
-              <div class="section-title">
-                <Icon icon="ant-design:dot-chart-outlined" /> 土壤水分概览
-              </div>
+              <div class="section-title"> <Icon icon="ant-design:dot-chart-outlined" /> 土壤水分概览 </div>
               <div class="moisture-card">
                 <a-progress
                   type="dashboard"
@@ -42,9 +38,7 @@
             </div>
 
             <div class="environment-weather">
-              <div class="section-title">
-                <Icon icon="ant-design:cloud-outlined" /> 空气环境
-              </div>
+              <div class="section-title"> <Icon icon="ant-design:cloud-outlined" /> 空气环境 </div>
               <div class="weather-summary-grid">
                 <div class="env-weather-item temperature">
                   <div class="env-weather-icon">
@@ -52,8 +46,13 @@
                   </div>
                   <div class="env-weather-info">
                     <span class="env-weather-label">空气温度</span>
-                    <span class="env-weather-value">{{ formatNumber(penmanInputs.temp?.[penmanInputs.temp?.length - 1]) || formatNumber(penmanInputs.temp?.[0]) || '-' }}<small>℃</small></span>
-                    <span class="env-weather-status" :class="getTemperatureStatus(penmanInputs.temp?.[0])">{{ getTemperatureStatusText(penmanInputs.temp?.[0]) }}</span>
+                    <span class="env-weather-value"
+                      >{{ formatNumber(penmanInputs.temp?.[penmanInputs.temp?.length - 1]) || formatNumber(penmanInputs.temp?.[0]) || '-'
+                      }}<small>℃</small></span
+                    >
+                    <span class="env-weather-status" :class="getTemperatureStatus(penmanInputs.temp?.[0])">{{
+                      getTemperatureStatusText(penmanInputs.temp?.[0])
+                    }}</span>
                   </div>
                 </div>
                 <div class="env-weather-item humidity">
@@ -62,17 +61,20 @@
                   </div>
                   <div class="env-weather-info">
                     <span class="env-weather-label">空气湿度</span>
-                    <span class="env-weather-value">{{ formatNumber(penmanInputs.humidity?.[penmanInputs.humidity?.length - 1]) || formatNumber(penmanInputs.humidity?.[0]) || '-' }}<small>%</small></span>
-                    <span class="env-weather-status" :class="getHumidityStatus(penmanInputs.humidity?.[0])">{{ getHumidityStatusText(penmanInputs.humidity?.[0]) }}</span>
+                    <span class="env-weather-value"
+                      >{{ formatNumber(penmanInputs.humidity?.[penmanInputs.humidity?.length - 1]) || formatNumber(penmanInputs.humidity?.[0]) || '-'
+                      }}<small>%</small></span
+                    >
+                    <span class="env-weather-status" :class="getHumidityStatus(penmanInputs.humidity?.[0])">{{
+                      getHumidityStatusText(penmanInputs.humidity?.[0])
+                    }}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="environment-layers">
-              <div class="section-title">
-                <Icon icon="ant-design:database-outlined" /> 土壤分层数据
-              </div>
+              <div class="section-title"> <Icon icon="ant-design:database-outlined" /> 土壤分层数据 </div>
               <div class="soil-layers">
                 <div class="soil-layer layer-top">
                   <div class="layer-label">上层 (浅层)</div>
@@ -122,9 +124,7 @@
       <a-col :xs="24" :md="10">
         <a-card :bordered="false" class="rich-card">
           <template #title>
-            <div class="table-title">
-              <Icon icon="ant-design:solution-outlined" /> 智能灌溉建议
-            </div>
+            <div class="table-title"> <Icon icon="ant-design:solution-outlined" /> 智能灌溉建议 </div>
           </template>
           <div class="suggestion-card" v-if="hasData">
             <a-descriptions bordered size="small" :column="1">
@@ -143,38 +143,21 @@
               <a-button size="small" @click="refresh" :disabled="!selectedPlotId">刷新数据</a-button>
               <a-button size="small" @click="openReportModal('irrigation')" :disabled="!selectedPlotId || !hasData">生成报告</a-button>
             </div>
-            <a-divider class="water-gate-divider" />
-            <div class="water-gate-section">
+            <a-divider v-if="canFetchWaterGate" class="water-gate-divider" />
+            <div v-if="canFetchWaterGate" class="water-gate-section">
               <div class="water-gate-header">
-                <div class="water-gate-title">
-                  <Icon icon="ant-design:gateway-outlined" /> 水阀控制
-                </div>
-                <template v-if="canFetchWaterGate">
-                  <a-button size="small" @click="fetchWaterGateList(true)" :loading="waterGateLoading">刷新列表</a-button>
-                </template>
-                <template v-else>
-                  <Tag>当前基地无水阀设备</Tag>
-                </template>
+                <div class="water-gate-title"> <Icon icon="ant-design:gateway-outlined" /> 水阀控制地图 </div>
+                <a-button size="small" @click="fetchWaterGateList(true)" :loading="waterGateLoading">刷新设备</a-button>
               </div>
-              <template v-if="canFetchWaterGate">
-                <div v-if="waterGateList.length" class="water-gate-scroll-list">
-                  <div v-for="gate in waterGateList" :key="gate.id" class="water-gate-card">
-                    <div class="water-gate-card-head">
-                      <span class="water-gate-card-name">{{ gate.name }}</span>
-                      <Tag :color="getWaterGateStatusColor(gate)">{{ getWaterGateStatusText(gate) }}</Tag>
-                    </div>
-                    <div class="water-gate-card-body">
-                      <div class="field"><span class="label">设备编号</span><span class="value">{{ formatWaterGateField(gate.code) }}</span></div>
-                      <div class="field"><span class="label">站点编号</span><span class="value">{{ formatWaterGateField(gate.siteNo) }}</span></div>
-                      <div class="field"><span class="label">经度</span><span class="value">{{ formatWaterGateField(gate.longitude) }}</span></div>
-                      <div class="field"><span class="label">纬度</span><span class="value">{{ formatWaterGateField(gate.latitude) }}</span></div>
-                      <div class="field"><span class="label">管理单位</span><span class="value">{{ formatWaterGateField(gate.manageUnit) }}</span></div>
-                      <div class="field"><span class="label">管控中心</span><span class="value">{{ formatWaterGateField(gate.controlCenter) }}</span></div>
-                    </div>
-                  </div>
-                </div>
-                <a-empty v-else :image="false" description="暂无水阀数据" />
-              </template>
+              <TiandituWaterGateMap
+                v-if="waterGateList.length"
+                :devices="waterGateList"
+                :base-name="currentBaseName"
+                :center-longitude="selectedBase?.longitude || selectStore.selectedBase.longitude"
+                :center-latitude="selectedBase?.latitude || selectStore.selectedBase.latitude"
+                map-height="300px"
+              />
+              <a-empty v-else :image="false" description="暂无灌溉设备数据" />
             </div>
           </div>
           <a-empty v-else description="暂无建议，等待后端数据" />
@@ -183,7 +166,7 @@
     </a-row>
 
     <a-modal v-model:open="reportModalVisible" title="智慧灌溉报告" :width="900" class="irrigation-report-modal">
-      <div class="report-container" v-if="reportType==='irrigation' && hasData" id="irrigationReport">
+      <div class="report-container" v-if="reportType === 'irrigation' && hasData" id="irrigationReport">
         <div class="report-header">
           <div class="report-icon"><Icon icon="ant-design:property-safety-outlined" /></div>
           <h2 class="report-title">智慧灌溉分析报告</h2>
@@ -230,7 +213,7 @@
               </a-col>
             </a-row>
 
-            <a-row :gutter="16" style="margin-top: 16px;">
+            <a-row :gutter="16" style="margin-top: 16px">
               <a-col :span="24">
                 <div class="percent-card">
                   <div class="percent-card-title">土壤分层监测数据</div>
@@ -433,12 +416,12 @@
           </div>
         </div>
       </div>
-      <div style="padding:16px" v-if="reportType==='risk' && hasData" id="riskReport">
-        <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #ff4d4f;padding-bottom:16px">
-          <h2 style="color:#ff4d4f;margin:0">灌溉风险与提示报告</h2>
-          <p style="color:#666;margin:8px 0 0">生成时间：{{ new Date().toLocaleString() }}</p>
+      <div style="padding: 16px" v-if="reportType === 'risk' && hasData" id="riskReport">
+        <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #ff4d4f; padding-bottom: 16px">
+          <h2 style="color: #ff4d4f; margin: 0">灌溉风险与提示报告</h2>
+          <p style="color: #666; margin: 8px 0 0">生成时间：{{ new Date().toLocaleString() }}</p>
         </div>
-        
+
         <a-divider orientation="left">基本信息</a-divider>
         <a-descriptions :column="2" bordered size="small">
           <a-descriptions-item label="基地名称">{{ selectStore.selectedBase.baseName || '-' }}</a-descriptions-item>
@@ -448,26 +431,28 @@
             <a-tag :color="riskLevel === '较高' ? 'red' : riskLevel === '中等' ? 'orange' : 'green'">{{ riskLevel }}</a-tag>
           </a-descriptions-item>
         </a-descriptions>
-        
+
         <a-divider orientation="left">风险提示与建议</a-divider>
         <a-alert
-          :message="riskLevel === '较高' ? '土壤含水率偏低，需关注灌溉' : riskLevel === '中等' ? '土壤含水率适中，建议关注' : '土壤含水率充足，状况良好'"
+          :message="
+            riskLevel === '较高' ? '土壤含水率偏低，需关注灌溉' : riskLevel === '中等' ? '土壤含水率适中，建议关注' : '土壤含水率充足，状况良好'
+          "
           :type="riskLevel === '较高' ? 'warning' : riskLevel === '中等' ? 'info' : 'success'"
           show-icon
-          style="margin-bottom:16px"
+          style="margin-bottom: 16px"
         />
-        <ul class="tips" style="padding-left:20px">
-          <li v-for="(tip, idx) in riskTips" :key="idx" style="margin-bottom:8px">{{ tip }}</li>
+        <ul class="tips" style="padding-left: 20px">
+          <li v-for="(tip, idx) in riskTips" :key="idx" style="margin-bottom: 8px">{{ tip }}</li>
         </ul>
-        
-        <div style="margin-top:24px;padding:12px;background:#fff7e6;border-radius:4px;font-size:12px;color:#d46b08">
-          <p style="margin:0">※ 本报告仅供决策参考，请结合实际天气和作物生长情况综合判断。</p>
+
+        <div style="margin-top: 24px; padding: 12px; background: #fff7e6; border-radius: 4px; font-size: 12px; color: #d46b08">
+          <p style="margin: 0">※ 本报告仅供决策参考，请结合实际天气和作物生长情况综合判断。</p>
         </div>
       </div>
       <template #footer>
         <a-space>
           <a-button type="primary" @click="downloadReportAsWord" :disabled="!hasData">下载 Word 文档</a-button>
-          <a-button @click="reportModalVisible=false">关闭</a-button>
+          <a-button @click="reportModalVisible = false">关闭</a-button>
         </a-space>
       </template>
     </a-modal>
@@ -475,252 +460,138 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, watch, Ref, computed, onMounted, nextTick } from 'vue';
-import { printJS } from '/@/hooks/web/usePrintJS';
-import { useMessage } from '/@/hooks/web/useMessage';
-import { Icon } from '/@/components/Icon';
-import { getPlotStatus, getPenmanPredict, getInterventionComparison, getWaterGateList } from './irrigation.api';
-import { useECharts } from '/@/hooks/web/useECharts';
-import { Tag } from 'ant-design-vue';
-import { defHttp } from '/@/utils/http/axios';
+  import { ref, reactive, watch, Ref, computed, onMounted, nextTick } from 'vue';
+  import { printJS } from '/@/hooks/web/usePrintJS';
+  import { useMessage } from '/@/hooks/web/useMessage';
+  import { Icon } from '/@/components/Icon';
+  import TiandituWaterGateMap from '/@/components/TiandituWaterGateMap';
+  import { getPlotStatus, getPenmanPredict, getInterventionComparison, getIrrigationDeviceMapList } from './irrigation.api';
+  import { useECharts } from '/@/hooks/web/useECharts';
+  import { Tag } from 'ant-design-vue';
+  import { defHttp } from '/@/utils/http/axios';
 
-// ---------------- 核心修改：替换为真实数据库接口 ----------------
-// 导入真实的基地/地块接口（与下方验证过的接口一致）
-import { useSelectStore } from '/@/store/selectStore';
-import { getBaseList, getPlotsByBaseId, getPlotById } from '/@/views/rapeseed/production-plan/center/base.api';
+  // ---------------- 核心修改：替换为真实数据库接口 ----------------
+  // 导入真实的基地/地块接口（与下方验证过的接口一致）
+  import { useSelectStore } from '/@/store/selectStore';
+  import { getBaseList, getPlotsByBaseId, getPlotById } from '/@/views/rapeseed/production-plan/center/base.api';
 
-// 定义与数据库表结构一致的类型
-interface BaseItem {
-  baseId: string | number;
-  baseName: string;
-  fullName?: string;
-  longitude?: string;
-  latitude?: string;
-}
+  // 定义与数据库表结构一致的类型
+  interface BaseItem {
+    baseId: string | number;
+    baseName: string;
+    fullName?: string;
+    longitude?: string;
+    latitude?: string;
+  }
 
-interface PlotItem {
-  plotId: string | number;
-  plotName: string;
-}
+  interface PlotItem {
+    plotId: string | number;
+    plotName: string;
+  }
 
-interface WaterGateItem {
-  id: string;
-  name: string;
-  status: string;
-  code?: string;
-  siteNo?: string;
-  longitude?: string | number;
-  latitude?: string | number;
-  onlineText?: string;
-  stateText?: string;
-  manageUnit?: string;
-  controlCenter?: string;
-  online?: unknown;
-  raw?: Record<string, any>;
-}
+  interface WaterGateItem {
+    id: string;
+    name: string;
+    status: string;
+    deviceType?: string;
+    category?: string;
+    code?: string;
+    siteNo?: string;
+    longitude?: string | number;
+    latitude?: string | number;
+    onlineText?: string;
+    stateText?: string;
+    manageUnit?: string;
+    controlCenter?: string;
+    linkedGateId?: string;
+    linkedGateName?: string;
+    online?: unknown;
+    raw?: Record<string, any>;
+  }
 
-const { createMessage } = useMessage();
-const searchInfo = reactive<Recordable>({});
+  const { createMessage } = useMessage();
+  const searchInfo = reactive<Recordable>({});
 
-// ---------------- 核心：统一的基地/地块数据源（数据库bases/plots表） ----------------
-const baseList = ref<BaseItem[]>([]); // 基地列表（来自bases表）
-const plotList = ref<PlotItem[]>([]); // 地块列表（来自plots表）
-const selectedBase = ref<BaseItem | null>(null); // 选中基地
-const selectedPlot = ref<PlotItem | null>(null); // 选中地块
-const waterGateList = ref<WaterGateItem[]>([]);
-const waterGateLoading = ref<boolean>(false);
-const isDropdownOpen = reactive({ base: false, plot: false }); // 下拉框展开状态
-const WATER_GATE_BASE_NAME = '胡集镇尚湾村';
+  // ---------------- 核心：统一的基地/地块数据源（数据库bases/plots表） ----------------
+  const baseList = ref<BaseItem[]>([]); // 基地列表（来自bases表）
+  const plotList = ref<PlotItem[]>([]); // 地块列表（来自plots表）
+  const selectedBase = ref<BaseItem | null>(null); // 选中基地
+  const selectedPlot = ref<PlotItem | null>(null); // 选中地块
+  const waterGateList = ref<WaterGateItem[]>([]);
+  const waterGateLoading = ref<boolean>(false);
+  const isDropdownOpen = reactive({ base: false, plot: false }); // 下拉框展开状态
+  const WATER_GATE_BASE_NAME = '胡集镇尚湾村';
 
-// 全局状态仓库（同步选择状态）
-const selectStore = useSelectStore();
+  // 全局状态仓库（同步选择状态）
+  const selectStore = useSelectStore();
 
-// 原有选择相关变量（保持兼容）
-const selectedBaseId = ref<string | number | undefined>(undefined);
-const selectedPlotId = ref<string | number | undefined>(undefined);
-const selectedPlotName = ref<string>('');
-const lockedPlotId = ref<string | number | undefined>(undefined);
-const lockedPlotName = ref<string>('');
-const plotSelectRef = ref<any>(null);
-const selectedVarietyId = ref<string | number | undefined>(undefined);
-const currentStageId = ref<string | number | undefined>(undefined);
+  // 原有选择相关变量（保持兼容）
+  const selectedBaseId = ref<string | number | undefined>(undefined);
+  const selectedPlotId = ref<string | number | undefined>(undefined);
+  const selectedPlotName = ref<string>('');
+  const lockedPlotId = ref<string | number | undefined>(undefined);
+  const lockedPlotName = ref<string>('');
+  const plotSelectRef = ref<any>(null);
+  const selectedVarietyId = ref<string | number | undefined>(undefined);
+  const currentStageId = ref<string | number | undefined>(undefined);
 
-// 土壤水分与建议
-const hasData = ref<boolean>(false);
-const comparisonReady = ref<boolean>(false);
-const soilMoisturePercent = ref<number>(0);
-const soilMoistureTrendText = ref<string>('');
-const penmanSuggestion = reactive({ needIrrigation: false, recommendedTime: '', method: '', reason: '' });
-const recommendedVolumeMm = ref<number>(0);
-const lastRequestPlotId = ref<string | number | undefined>(undefined);
+  // 土壤水分与建议
+  const hasData = ref<boolean>(false);
+  const comparisonReady = ref<boolean>(false);
+  const soilMoisturePercent = ref<number>(0);
+  const soilMoistureTrendText = ref<string>('');
+  const penmanSuggestion = reactive({ needIrrigation: false, recommendedTime: '', method: '', reason: '' });
+  const recommendedVolumeMm = ref<number>(0);
+  const lastRequestPlotId = ref<string | number | undefined>(undefined);
 
-// 图表
-const comparisonChartRef = ref<HTMLDivElement | null>(null);
-const { setOptions: setComparisonOptions } = useECharts(comparisonChartRef as Ref<HTMLDivElement>);
-const moistureTrendRef = ref<HTMLDivElement | null>(null);
-const { setOptions: setMoistureTrendOptions } = useECharts(moistureTrendRef as Ref<HTMLDivElement>);
-const et0ChartRef = ref<HTMLDivElement | null>(null);
-const { setOptions: setEt0Options } = useECharts(et0ChartRef as Ref<HTMLDivElement>);
-const penmanInputsChartRef = ref<HTMLDivElement | null>(null);
-const { setOptions: setPenmanInputsOptions } = useECharts(penmanInputsChartRef as Ref<HTMLDivElement>);
-const rainChartRef = ref<HTMLDivElement | null>(null);
-const { setOptions: setRainOptions } = useECharts(rainChartRef as Ref<HTMLDivElement>);
-const tempChartRef = ref<HTMLDivElement | null>(null);
-const { setOptions: setTempOptions } = useECharts(tempChartRef as Ref<HTMLDivElement>);
+  // 图表
+  const comparisonChartRef = ref<HTMLDivElement | null>(null);
+  const { setOptions: setComparisonOptions } = useECharts(comparisonChartRef as Ref<HTMLDivElement>);
+  const moistureTrendRef = ref<HTMLDivElement | null>(null);
+  const { setOptions: setMoistureTrendOptions } = useECharts(moistureTrendRef as Ref<HTMLDivElement>);
+  const et0ChartRef = ref<HTMLDivElement | null>(null);
+  const { setOptions: setEt0Options } = useECharts(et0ChartRef as Ref<HTMLDivElement>);
+  const penmanInputsChartRef = ref<HTMLDivElement | null>(null);
+  const { setOptions: setPenmanInputsOptions } = useECharts(penmanInputsChartRef as Ref<HTMLDivElement>);
+  const rainChartRef = ref<HTMLDivElement | null>(null);
+  const { setOptions: setRainOptions } = useECharts(rainChartRef as Ref<HTMLDivElement>);
+  const tempChartRef = ref<HTMLDivElement | null>(null);
+  const { setOptions: setTempOptions } = useECharts(tempChartRef as Ref<HTMLDivElement>);
 
-// ---------------- 核心：统一的下拉框交互方法（与数据库交互） ----------------
-/** 切换下拉框展开/收起 */
-const toggleDropdown = (type: 'base' | 'plot') => {
-  // 关闭其他下拉框，只展开当前
-  Object.keys(isDropdownOpen).forEach(key => {
-    if (key !== type) isDropdownOpen[key as 'base' | 'plot'] = false;
-  });
-  isDropdownOpen[type] = !isDropdownOpen[type];
-};
-
-/** 选择基地/地块选项（同步数据库数据） */
-const selectItem = async (type: 'base' | 'plot', item: BaseItem | PlotItem) => {
-  if (type === 'base') {
-    const baseItem = item as BaseItem;
-    // 选中基地（同步数据库数据）
-    selectedBase.value = baseItem;
-    selectedBaseId.value = baseItem.baseId;
-    selectedPlot.value = null;
-    selectedPlotId.value = undefined;
-    selectedPlotName.value = '';
-    
-    // 更新全局状态
-    selectStore.updateSelectedBase({
-      baseId: baseItem.baseId,
-      baseName: baseItem.baseName,
-      longitude: baseItem.longitude,
-      latitude: baseItem.latitude
+  // ---------------- 核心：统一的下拉框交互方法（与数据库交互） ----------------
+  /** 切换下拉框展开/收起 */
+  const toggleDropdown = (type: 'base' | 'plot') => {
+    // 关闭其他下拉框，只展开当前
+    Object.keys(isDropdownOpen).forEach((key) => {
+      if (key !== type) isDropdownOpen[key as 'base' | 'plot'] = false;
     });
+    isDropdownOpen[type] = !isDropdownOpen[type];
+  };
 
-    // 加载当前基地下的地块（从plots表获取）
-    plotList.value = await fetchPlotListByBaseId(baseItem.baseId);
+  /** 选择基地/地块选项（同步数据库数据） */
+  const selectItem = async (type: 'base' | 'plot', item: BaseItem | PlotItem) => {
+    if (type === 'base') {
+      const baseItem = item as BaseItem;
+      // 选中基地（同步数据库数据）
+      selectedBase.value = baseItem;
+      selectedBaseId.value = baseItem.baseId;
+      selectedPlot.value = null;
+      selectedPlotId.value = undefined;
+      selectedPlotName.value = '';
 
-    // 触发基地变更逻辑并清空当前展示数据
-    onBaseChange(baseItem.baseId);
-
-    if (plotList.value.length > 0) {
-      const target = plotList.value[0] as any;
-      lockedPlotId.value = target.plotId;
-      lockedPlotName.value = target.plotName;
-      selectedPlot.value = target;
-      selectedPlotId.value = target.plotId;
-      selectedPlotName.value = target.plotName;
-      selectStore.updateSelectedPlot(target);
-      await onPlotChange(target.plotId);
-    }
-  } else if (type === 'plot') {
-    const plotItem = item as PlotItem;
-    if (!lockedPlotId.value) return;
-    const target: any = { plotId: lockedPlotId.value, plotName: lockedPlotName.value };
-    selectedPlot.value = target;
-    selectedPlotId.value = lockedPlotId.value;
-    selectedPlotName.value = lockedPlotName.value;
-    selectStore.updateSelectedPlot(target);
-    await onPlotChange(lockedPlotId.value as any);
-  }
-  // 关闭下拉框
-  isDropdownOpen[type] = false;
-};
-
-/**
- * 根据基地ID获取地块列表
- * @param baseId 基地ID
- */
-const fetchPlotListByBaseId = async (baseId: string | number) => {
-  try {
-    // 优先使用导入的接口，如果接口不存在则使用通用请求
-    if (typeof getPlotsByBaseId === 'function') {
-      const res = await getPlotsByBaseId(baseId);
-      const data = res.result || res;
-      return data.map((item: any) => ({
-        plotId: item.id || item.plotId,
-        plotName: item.plotName || item.name
-      })) as PlotItem[];
-    } else {
-      // 备用通用接口
-      const res = await defHttp.get({
-        url: '/youcai/plot/listByBaseId',
-        params: { baseId: baseId }
-      });
-      const data = res.result || res;
-      return data.map((item: any) => ({
-        plotId: item.id || item.plotId,
-        plotName: item.plotName || item.name
-      })) as PlotItem[];
-    }
-  } catch (error) {
-    console.error('获取地块列表失败：', error);
-    createMessage.error('获取地块列表失败，请重试');
-    return [];
-  }
-};
-
-/**
- * 获取基地列表（整合版，避免重复定义）
- */
-const fetchBaseListData = async () => {
-  try {
-    // 优先使用导入的接口
-    if (typeof getBaseList === 'function') {
-      const res = await getBaseList();
-      // 从Result对象中获取数据列表，兼容后端返回格式
-      const baseDataList = res.result || res || [];
-      baseList.value = baseDataList.map((item: any) => ({
-        baseId: item.id || item.baseId,
-        baseName: item.baseName || item.fullName,
-        fullName: item.fullName,
-        longitude: item.longitude || '',
-        latitude: item.latitude || ''
-      })) as BaseItem[];
-    } else {
-      // 备用通用接口
-      const res = await defHttp.get({
-        url: '/youcai/base/list',
-        params: { delFlag: 0 }
-      });
-      const baseDataList = res.result || res || [];
-      baseList.value = baseDataList.map((item: any) => ({
-        baseId: item.id || item.baseId,
-        baseName: item.baseName || item.fullName,
-        fullName: item.fullName,
-        longitude: item.longitude || '',
-        latitude: item.latitude || ''
-      })) as BaseItem[];
-    }
-    
-    console.log('获取基地列表成功，共', baseList.value.length, '条');
-
-    if (baseList.value.length > 0) {
-      let targetBase;
-      
-      // 检查全局状态中是否已有选中的基地
-      if (selectStore.selectedBase.baseId) {
-        // 尝试在本地基地列表中找到全局选中的基地
-        targetBase = baseList.value.find(base => base.baseId === selectStore.selectedBase.baseId);
-      }
-      
-      // 如果没有找到全局选中的基地，或者全局状态中没有选中的基地，则默认选择第一个基地
-      targetBase = targetBase || baseList.value[0];
-      
-      // 选中基地
-      selectedBase.value = targetBase;
-      selectedBaseId.value = targetBase.baseId;
-      
       // 更新全局状态
       selectStore.updateSelectedBase({
-        baseId: targetBase.baseId,
-        baseName: targetBase.baseName,
-        longitude: targetBase.longitude,
-        latitude: targetBase.latitude
+        baseId: baseItem.baseId,
+        baseName: baseItem.baseName,
+        longitude: baseItem.longitude,
+        latitude: baseItem.latitude,
       });
 
-      // 加载该基地的地块列表
-      plotList.value = await fetchPlotListByBaseId(targetBase.baseId);
+      // 加载当前基地下的地块（从plots表获取）
+      plotList.value = await fetchPlotListByBaseId(baseItem.baseId);
+
+      // 触发基地变更逻辑并清空当前展示数据
+      onBaseChange(baseItem.baseId);
 
       if (plotList.value.length > 0) {
         const target = plotList.value[0] as any;
@@ -732,41 +603,191 @@ const fetchBaseListData = async () => {
         selectStore.updateSelectedPlot(target);
         await onPlotChange(target.plotId);
       }
+    } else if (type === 'plot') {
+      const plotItem = item as PlotItem;
+      if (!lockedPlotId.value) return;
+      const target: any = { plotId: lockedPlotId.value, plotName: lockedPlotName.value };
+      selectedPlot.value = target;
+      selectedPlotId.value = lockedPlotId.value;
+      selectedPlotName.value = lockedPlotName.value;
+      selectStore.updateSelectedPlot(target);
+      await onPlotChange(lockedPlotId.value as any);
     }
-  } catch (error) {
-    console.error('获取基地列表失败：', error);
-    baseList.value = [];
-    createMessage.error('获取基地列表失败，请检查网络');
-  }
-};
+    // 关闭下拉框
+    isDropdownOpen[type] = false;
+  };
 
-onMounted(async () => {
-  await fetchBaseListData(); // 加载bases表数据
-  
-  // 检查全局状态中是否已有选中的基地，如果有则同步到本地并触发数据刷新
-  if (selectStore.selectedBase.baseId) {
-    const globalBaseId = selectStore.selectedBase.baseId;
-    // 如果全局选中的基地与当前本地选中的基地不同，则更新本地状态
-    if (globalBaseId !== selectedBaseId.value) {
-      selectedBaseId.value = globalBaseId;
+  /**
+   * 根据基地ID获取地块列表
+   * @param baseId 基地ID
+   */
+  const fetchPlotListByBaseId = async (baseId: string | number) => {
+    try {
+      // 优先使用导入的接口，如果接口不存在则使用通用请求
+      if (typeof getPlotsByBaseId === 'function') {
+        const res = await getPlotsByBaseId(baseId);
+        const data = res.result || res;
+        return data.map((item: any) => ({
+          plotId: item.id || item.plotId,
+          plotName: item.plotName || item.name,
+        })) as PlotItem[];
+      } else {
+        // 备用通用接口
+        const res = await defHttp.get({
+          url: '/youcai/plot/listByBaseId',
+          params: { baseId: baseId },
+        });
+        const data = res.result || res;
+        return data.map((item: any) => ({
+          plotId: item.id || item.plotId,
+          plotName: item.plotName || item.name,
+        })) as PlotItem[];
+      }
+    } catch (error) {
+      console.error('获取地块列表失败：', error);
+      createMessage.error('获取地块列表失败，请重试');
+      return [];
     }
-  }
-});
- 
-watch(() => selectStore.selectedBase.baseId, async (baseId, prev) => {
-  if (!baseId || baseId === prev) return;
-  selectedBaseId.value = baseId;
-  
-  // 找到对应的基地对象
-  const targetBase = baseList.value.find(base => base.baseId === baseId);
-  if (targetBase) {
-    selectedBase.value = targetBase;
-    
-    // 触发数据刷新逻辑
+  };
+
+  /**
+   * 获取基地列表（整合版，避免重复定义）
+   */
+  const fetchBaseListData = async () => {
+    try {
+      // 优先使用导入的接口
+      if (typeof getBaseList === 'function') {
+        const res = await getBaseList();
+        // 从Result对象中获取数据列表，兼容后端返回格式
+        const baseDataList = res.result || res || [];
+        baseList.value = baseDataList.map((item: any) => ({
+          baseId: item.id || item.baseId,
+          baseName: item.baseName || item.fullName,
+          fullName: item.fullName,
+          longitude: item.longitude || '',
+          latitude: item.latitude || '',
+        })) as BaseItem[];
+      } else {
+        // 备用通用接口
+        const res = await defHttp.get({
+          url: '/youcai/base/list',
+          params: { delFlag: 0 },
+        });
+        const baseDataList = res.result || res || [];
+        baseList.value = baseDataList.map((item: any) => ({
+          baseId: item.id || item.baseId,
+          baseName: item.baseName || item.fullName,
+          fullName: item.fullName,
+          longitude: item.longitude || '',
+          latitude: item.latitude || '',
+        })) as BaseItem[];
+      }
+
+      console.log('获取基地列表成功，共', baseList.value.length, '条');
+
+      if (baseList.value.length > 0) {
+        let targetBase;
+
+        // 检查全局状态中是否已有选中的基地
+        if (selectStore.selectedBase.baseId) {
+          // 尝试在本地基地列表中找到全局选中的基地
+          targetBase = baseList.value.find((base) => base.baseId === selectStore.selectedBase.baseId);
+        }
+
+        // 如果没有找到全局选中的基地，或者全局状态中没有选中的基地，则默认选择第一个基地
+        targetBase = targetBase || baseList.value[0];
+
+        // 选中基地
+        selectedBase.value = targetBase;
+        selectedBaseId.value = targetBase.baseId;
+
+        // 更新全局状态
+        selectStore.updateSelectedBase({
+          baseId: targetBase.baseId,
+          baseName: targetBase.baseName,
+          longitude: targetBase.longitude,
+          latitude: targetBase.latitude,
+        });
+
+        // 加载该基地的地块列表
+        plotList.value = await fetchPlotListByBaseId(targetBase.baseId);
+
+        if (plotList.value.length > 0) {
+          const target = plotList.value[0] as any;
+          lockedPlotId.value = target.plotId;
+          lockedPlotName.value = target.plotName;
+          selectedPlot.value = target;
+          selectedPlotId.value = target.plotId;
+          selectedPlotName.value = target.plotName;
+          selectStore.updateSelectedPlot(target);
+          await onPlotChange(target.plotId);
+        }
+      }
+    } catch (error) {
+      console.error('获取基地列表失败：', error);
+      baseList.value = [];
+      createMessage.error('获取基地列表失败，请检查网络');
+    }
+  };
+
+  onMounted(async () => {
+    await fetchBaseListData(); // 加载bases表数据
+
+    // 检查全局状态中是否已有选中的基地，如果有则同步到本地并触发数据刷新
+    if (selectStore.selectedBase.baseId) {
+      const globalBaseId = selectStore.selectedBase.baseId;
+      // 如果全局选中的基地与当前本地选中的基地不同，则更新本地状态
+      if (globalBaseId !== selectedBaseId.value) {
+        selectedBaseId.value = globalBaseId;
+      }
+    }
+  });
+
+  watch(
+    () => selectStore.selectedBase.baseId,
+    async (baseId, prev) => {
+      if (!baseId || baseId === prev) return;
+      selectedBaseId.value = baseId;
+
+      // 找到对应的基地对象
+      const targetBase = baseList.value.find((base) => base.baseId === baseId);
+      if (targetBase) {
+        selectedBase.value = targetBase;
+
+        // 触发数据刷新逻辑
+        resetIrrigationState();
+        plotList.value = await fetchPlotListByBaseId(baseId as any);
+        await fetchWaterGateList();
+
+        if (plotList.value.length > 0) {
+          const target = plotList.value[0] as any;
+          lockedPlotId.value = target.plotId;
+          lockedPlotName.value = target.plotName;
+          selectedPlot.value = target;
+          selectedPlotId.value = target.plotId;
+          selectedPlotName.value = target.plotName;
+          selectStore.updateSelectedPlot(target);
+          await onPlotChange(target.plotId);
+        }
+      }
+    }
+  );
+
+  watch(
+    () => selectStore.selectedPlot.plotId,
+    async (pid, prev) => {
+      if (!pid || pid === prev) return;
+      selectedPlotId.value = pid;
+      selectedPlotName.value = selectStore.selectedPlot.plotName || '';
+      await onPlotChange(pid as any);
+    }
+  );
+
+  watch(selectedBaseId, async (val, oldVal) => {
+    if (val === undefined || val === null || val === oldVal) return;
     resetIrrigationState();
-    plotList.value = await fetchPlotListByBaseId(baseId as any);
+    plotList.value = await fetchPlotListByBaseId(val as any);
     await fetchWaterGateList();
-    
     if (plotList.value.length > 0) {
       const target = plotList.value[0] as any;
       lockedPlotId.value = target.plotId;
@@ -776,2090 +797,1965 @@ watch(() => selectStore.selectedBase.baseId, async (baseId, prev) => {
       selectedPlotName.value = target.plotName;
       selectStore.updateSelectedPlot(target);
       await onPlotChange(target.plotId);
+    } else {
+      selectedPlot.value = null;
+      selectedPlotId.value = undefined;
+      selectedPlotName.value = '';
+      resetIrrigationState();
+      await fetchBaseStatusAndSuggest(val as any);
+      await fetchInterventionComparisonBase(val as any);
     }
+  });
+
+  watch(selectedPlotId, async (val, oldVal) => {
+    if (val === undefined || val === null || val === oldVal) return;
+    await onPlotChange(val as any);
+  });
+
+  // 原有业务逻辑方法
+
+  function resetIrrigationState() {
+    comparisonReady.value = false;
+    soilMoisturePercent.value = 0;
+    soilMoistureTrendText.value = '';
+    currentStageId.value = '';
+    penmanSuggestion.needIrrigation = false;
+    penmanSuggestion.recommendedTime = '';
+    penmanSuggestion.method = '';
+    penmanSuggestion.reason = '';
+    recommendedVolumeMm.value = 0;
+    flowRateM3PerHour.value = 0;
+    chartDates.value = [];
+    et0Forecast.value = [];
+    moistureTrendData.value = [];
+    penmanInputs.value = { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
+    lastUpdatedText.value = '-';
+    // 重置土壤分层数据
+    soilTemp1.value = '-';
+    soilTemp2.value = '-';
+    soilTemp3.value = '-';
+    soilMoisture1.value = '-';
+    soilMoisture2.value = '-';
+    soilMoisture3.value = '-';
   }
-});
 
-watch(() => selectStore.selectedPlot.plotId, async (pid, prev) => {
-  if (!pid || pid === prev) return;
-  selectedPlotId.value = pid;
-  selectedPlotName.value = selectStore.selectedPlot.plotName || '';
-  await onPlotChange(pid as any);
-});
-
-watch(selectedBaseId, async (val, oldVal) => {
-  if (val === undefined || val === null || val === oldVal) return;
-  resetIrrigationState();
-  plotList.value = await fetchPlotListByBaseId(val as any);
-  await fetchWaterGateList();
-  if (plotList.value.length > 0) {
-    const target = plotList.value[0] as any;
-    lockedPlotId.value = target.plotId;
-    lockedPlotName.value = target.plotName;
-    selectedPlot.value = target;
-    selectedPlotId.value = target.plotId;
-    selectedPlotName.value = target.plotName;
-    selectStore.updateSelectedPlot(target);
-    await onPlotChange(target.plotId);
-  } else {
-    selectedPlot.value = null;
+  function onBaseChange(value: string | number | undefined) {
     selectedPlotId.value = undefined;
     selectedPlotName.value = '';
+    deviceWarningShown.value = false; // 重置警告标志
     resetIrrigationState();
-    await fetchBaseStatusAndSuggest(val as any);
-    await fetchInterventionComparisonBase(val as any);
-  }
-});
-
-watch(selectedPlotId, async (val, oldVal) => {
-  if (val === undefined || val === null || val === oldVal) return;
-  await onPlotChange(val as any);
-});
-
-// 原有业务逻辑方法
- 
-
-function resetIrrigationState() {
-  comparisonReady.value = false;
-  soilMoisturePercent.value = 0;
-  soilMoistureTrendText.value = '';
-  currentStageId.value = '';
-  penmanSuggestion.needIrrigation = false;
-  penmanSuggestion.recommendedTime = '';
-  penmanSuggestion.method = '';
-  penmanSuggestion.reason = '';
-  recommendedVolumeMm.value = 0;
-  flowRateM3PerHour.value = 0;
-  chartDates.value = [];
-  et0Forecast.value = [];
-  moistureTrendData.value = [];
-  penmanInputs.value = { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
-  lastUpdatedText.value = '-';
-  // 重置土壤分层数据
-  soilTemp1.value = '-';
-  soilTemp2.value = '-';
-  soilTemp3.value = '-';
-  soilMoisture1.value = '-';
-  soilMoisture2.value = '-';
-  soilMoisture3.value = '-';
-}
-
-function onBaseChange(value: string | number | undefined) {
-  selectedPlotId.value = undefined;
-  selectedPlotName.value = '';
-  deviceWarningShown.value = false; // 重置警告标志
-  resetIrrigationState();
-  if (value) {
-    fetchBaseStatusAndSuggest(value);
-    fetchInterventionComparisonBase(value);
-    fetchWaterGateList();
-  }
-}
-
-function onPlotLoaded(options: any[]) {
-  if (selectedPlotId.value) {
-    const found = options.find((o: any) => o.id === selectedPlotId.value);
-    selectedPlotName.value = found ? found.plotName : '';
-  }
-}
-
-async function onPlotChange(value: string | number | undefined) {
-  if (value) {
-    resetIrrigationState();
-    const effectiveId = resolveEffectivePlotId(value);
-    lastRequestPlotId.value = effectiveId;
-    await fetchPlotStatusAndSuggest(effectiveId);
-    await fetchInterventionComparison(effectiveId);
-  } else {
-    selectedPlotName.value = '';
-    resetIrrigationState();
-    if (selectedBaseId.value) {
-      await fetchBaseStatusAndSuggest(selectedBaseId.value as any);
-      await fetchInterventionComparisonBase(selectedBaseId.value as any);
+    if (value) {
+      fetchBaseStatusAndSuggest(value);
+      fetchInterventionComparisonBase(value);
+      fetchWaterGateList();
     }
   }
-}
 
-async function fetchPlotStatusAndSuggest(pid?: string | number) {
-  const originId = pid ?? selectedPlotId.value;
-  const currentId = resolveEffectivePlotId(originId as any);
-  if (!currentId) return;
-  try {
-    const status = await getPlotStatus(currentId);
-    if (lastRequestPlotId.value !== currentId) return;
-    console.log('地块状态原始数据：', status);
-    
-    // 修正：处理BigDecimal转Number，兼容null/字符串
-    soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0) || 0;
-    soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
-    currentStageId.value = status?.currentStageId ?? '';
-    lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
-    
-    // 检查是否配置了物联网设备
-    const deviceNotConfigured = status?.deviceNotConfigured || false;
-    if (deviceNotConfigured) {
-      if (!deviceWarningShown.value) {
-        deviceWarningShown.value = true;
-        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加设备');
-      }
+  function onPlotLoaded(options: any[]) {
+    if (selectedPlotId.value) {
+      const found = options.find((o: any) => o.id === selectedPlotId.value);
+      selectedPlotName.value = found ? found.plotName : '';
+    }
+  }
+
+  async function onPlotChange(value: string | number | undefined) {
+    if (value) {
       resetIrrigationState();
-      hasData.value = false;
-      return;
-    }
-
-    const suggest = await getPenmanPredict(currentId);
-    console.log('Penman建议原始数据：', suggest);
-    
-    // 检查设备是否未配置
-    if (suggest?.deviceNotConfigured) {
-      if (!deviceWarningShown.value) {
-        deviceWarningShown.value = true;
-        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备');
-      }
+      const effectiveId = resolveEffectivePlotId(value);
+      lastRequestPlotId.value = effectiveId;
+      await fetchPlotStatusAndSuggest(effectiveId);
+      await fetchInterventionComparison(effectiveId);
+    } else {
+      selectedPlotName.value = '';
       resetIrrigationState();
-      hasData.value = false;
-      return;
-    }
-    
-    // 重置警告标志
-    deviceWarningShown.value = false;
-    
-    // 如果期间地块已切换，丢弃本次结果
-    if (lastRequestPlotId.value !== currentId) return;
-
-    penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? false);
-    penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '';
-    penmanSuggestion.method = suggest?.method ?? '';
-    penmanSuggestion.reason = suggest?.reason ?? '';
-    
-    // 修正：灌水量数值转换
-    recommendedVolumeMm.value = Number(suggest?.recommendedVolumeMm ?? 0) || 0;
-    flowRateM3PerHour.value = Number(suggest?.flowRateM3PerHour ?? 0) || 0;
-
-    // 修正：图表数据转换（兼容BigDecimal）
-    chartDates.value = suggest?.chartDates ?? [];
-    if ((!chartDates.value || chartDates.value.length === 0) && Array.isArray(suggest?.penmanInputs?.dates)) {
-      chartDates.value = suggest.penmanInputs.dates;
-    }
-    et0Forecast.value = (suggest?.et0Forecast ?? []).map(v => Number(v) || 0);
-    penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
-    moistureTrendData.value = (suggest?.soilMoistureSeriesPct ?? []).map(v => Number(v) || 0);
-    
-    // 解析土壤详细数据
-    const soilDetail = suggest?.soilDetail ?? {};
-    soilTemp1.value = String(soilDetail.soilTemp1 ?? '-');
-    soilTemp2.value = String(soilDetail.soilTemp2 ?? '-');
-    soilTemp3.value = String(soilDetail.soilTemp3 ?? '-');
-    soilMoisture1.value = String(soilDetail.soilMoisture1 ?? '-');
-    soilMoisture2.value = String(soilDetail.soilMoisture2 ?? '-');
-    soilMoisture3.value = String(soilDetail.soilMoisture3 ?? '-');
-    console.log('土壤详细数据:', soilDetail);
-    
-    if (chartDates.value.length) {
-      await nextTick();
-      renderMoistureTrendChart(chartDates.value, moistureTrendData.value as number[]);
-      renderEt0Chart(chartDates.value, et0Forecast.value);
-      renderPenmanInputsChart(penmanInputs.value);
-      // 修正：降雨量/温度数值转换
-      renderRainChart(chartDates.value, penmanInputs.value.precip.map(v => Number(v) || 0));
-      renderTempChart(chartDates.value, penmanInputs.value.temp.map(v => Number(v) || 0));
-    }
-    const statusHasData = Boolean(status);
-    const chartHasData = (chartDates.value?.length ?? 0) > 0 || (moistureTrendData.value?.length ?? 0) > 0 || (penmanInputs.value?.dates?.length ?? 0) > 0;
-    const valueHasData = (soilMoisturePercent.value ?? 0) > 0 || (recommendedVolumeMm.value ?? 0) > 0;
-    hasData.value = statusHasData || chartHasData || valueHasData;
-    if (!hasData.value || !(chartDates.value?.length ?? 0)) {
       if (selectedBaseId.value) {
         await fetchBaseStatusAndSuggest(selectedBaseId.value as any);
         await fetchInterventionComparisonBase(selectedBaseId.value as any);
-      } else {
+      }
+    }
+  }
+
+  async function fetchPlotStatusAndSuggest(pid?: string | number) {
+    const originId = pid ?? selectedPlotId.value;
+    const currentId = resolveEffectivePlotId(originId as any);
+    if (!currentId) return;
+    try {
+      const status = await getPlotStatus(currentId);
+      if (lastRequestPlotId.value !== currentId) return;
+      console.log('地块状态原始数据：', status);
+
+      // 修正：处理BigDecimal转Number，兼容null/字符串
+      soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0) || 0;
+      soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
+      currentStageId.value = status?.currentStageId ?? '';
+      lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
+
+      // 检查是否配置了物联网设备
+      const deviceNotConfigured = status?.deviceNotConfigured || false;
+      if (deviceNotConfigured) {
+        if (!deviceWarningShown.value) {
+          deviceWarningShown.value = true;
+          createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加设备');
+        }
         resetIrrigationState();
+        hasData.value = false;
+        return;
       }
-    }
-  } catch (e) {
-    console.error('请求地块数据失败：', e);
-    createMessage.error('获取地块数据失败，请重试');
-    if (selectedBaseId.value) {
-      await fetchBaseStatusAndSuggest(selectedBaseId.value as any);
-      await fetchInterventionComparisonBase(selectedBaseId.value as any);
+
+      const suggest = await getPenmanPredict(currentId);
+      console.log('Penman建议原始数据：', suggest);
+
+      // 检查设备是否未配置
+      if (suggest?.deviceNotConfigured) {
+        if (!deviceWarningShown.value) {
+          deviceWarningShown.value = true;
+          createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备');
+        }
+        resetIrrigationState();
+        hasData.value = false;
+        return;
+      }
+
+      // 重置警告标志
+      deviceWarningShown.value = false;
+
+      // 如果期间地块已切换，丢弃本次结果
+      if (lastRequestPlotId.value !== currentId) return;
+
+      penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? false);
+      penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '';
+      penmanSuggestion.method = suggest?.method ?? '';
+      penmanSuggestion.reason = suggest?.reason ?? '';
+
+      // 修正：灌水量数值转换
+      recommendedVolumeMm.value = Number(suggest?.recommendedVolumeMm ?? 0) || 0;
+      flowRateM3PerHour.value = Number(suggest?.flowRateM3PerHour ?? 0) || 0;
+
+      // 修正：图表数据转换（兼容BigDecimal）
+      chartDates.value = suggest?.chartDates ?? [];
+      if ((!chartDates.value || chartDates.value.length === 0) && Array.isArray(suggest?.penmanInputs?.dates)) {
+        chartDates.value = suggest.penmanInputs.dates;
+      }
+      et0Forecast.value = (suggest?.et0Forecast ?? []).map((v) => Number(v) || 0);
+      penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
+      moistureTrendData.value = (suggest?.soilMoistureSeriesPct ?? []).map((v) => Number(v) || 0);
+
+      // 解析土壤详细数据
+      const soilDetail = suggest?.soilDetail ?? {};
+      soilTemp1.value = String(soilDetail.soilTemp1 ?? '-');
+      soilTemp2.value = String(soilDetail.soilTemp2 ?? '-');
+      soilTemp3.value = String(soilDetail.soilTemp3 ?? '-');
+      soilMoisture1.value = String(soilDetail.soilMoisture1 ?? '-');
+      soilMoisture2.value = String(soilDetail.soilMoisture2 ?? '-');
+      soilMoisture3.value = String(soilDetail.soilMoisture3 ?? '-');
+      console.log('土壤详细数据:', soilDetail);
+
+      if (chartDates.value.length) {
+        await nextTick();
+        renderMoistureTrendChart(chartDates.value, moistureTrendData.value as number[]);
+        renderEt0Chart(chartDates.value, et0Forecast.value);
+        renderPenmanInputsChart(penmanInputs.value);
+        // 修正：降雨量/温度数值转换
+        renderRainChart(
+          chartDates.value,
+          penmanInputs.value.precip.map((v) => Number(v) || 0)
+        );
+        renderTempChart(
+          chartDates.value,
+          penmanInputs.value.temp.map((v) => Number(v) || 0)
+        );
+      }
+      const statusHasData = Boolean(status);
+      const chartHasData =
+        (chartDates.value?.length ?? 0) > 0 || (moistureTrendData.value?.length ?? 0) > 0 || (penmanInputs.value?.dates?.length ?? 0) > 0;
+      const valueHasData = (soilMoisturePercent.value ?? 0) > 0 || (recommendedVolumeMm.value ?? 0) > 0;
+      hasData.value = statusHasData || chartHasData || valueHasData;
+      if (!hasData.value || !(chartDates.value?.length ?? 0)) {
+        if (selectedBaseId.value) {
+          await fetchBaseStatusAndSuggest(selectedBaseId.value as any);
+          await fetchInterventionComparisonBase(selectedBaseId.value as any);
+        } else {
+          resetIrrigationState();
+        }
+      }
+    } catch (e) {
+      console.error('请求地块数据失败：', e);
+      createMessage.error('获取地块数据失败，请重试');
+      if (selectedBaseId.value) {
+        await fetchBaseStatusAndSuggest(selectedBaseId.value as any);
+        await fetchInterventionComparisonBase(selectedBaseId.value as any);
+      }
     }
   }
-}
 
-async function fetchBaseStatusAndSuggest(baseId: string | number) {
-  try {
-    if (!baseId) return;
-    const status = await defHttp.get({ url: `/rapeseed/irrigation/plotStatusByBase/${baseId}` });
-    soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0) || 0;
-    soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
-    lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
-    
-    // 检查是否配置了物联网设备
-    if (status?.deviceNotConfigured) {
-      if (!deviceWarningShown.value) {
-        deviceWarningShown.value = true;
-        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加设备');
+  async function fetchBaseStatusAndSuggest(baseId: string | number) {
+    try {
+      if (!baseId) return;
+      const status = await defHttp.get({ url: `/rapeseed/irrigation/plotStatusByBase/${baseId}` });
+      soilMoisturePercent.value = Number(status?.soilMoisturePercent ?? 0) || 0;
+      soilMoistureTrendText.value = status?.soilMoistureTrend ?? '';
+      lastUpdatedText.value = status?.lastUpdated ? new Date(status.lastUpdated).toLocaleString() : '-';
+
+      // 检查是否配置了物联网设备
+      if (status?.deviceNotConfigured) {
+        if (!deviceWarningShown.value) {
+          deviceWarningShown.value = true;
+          createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加设备');
+        }
+        resetIrrigationState();
+        hasData.value = false;
+        return;
       }
-      resetIrrigationState();
-      hasData.value = false;
-      return;
-    }
-    
-    const suggest = await defHttp.get({ url: `/rapeseed/irrigation/penmanPredict`, params: { baseId } });
-    if (!suggest) return;
-    
-    // 检查设备是否未配置
-    if (suggest?.deviceNotConfigured) {
-      if (!deviceWarningShown.value) {
-        deviceWarningShown.value = true;
-        createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备');
+
+      const suggest = await defHttp.get({ url: `/rapeseed/irrigation/penmanPredict`, params: { baseId } });
+      if (!suggest) return;
+
+      // 检查设备是否未配置
+      if (suggest?.deviceNotConfigured) {
+        if (!deviceWarningShown.value) {
+          deviceWarningShown.value = true;
+          createMessage.warning('该基地未配置物联网设备，请先在传感器管理中添加气象站和土壤传感器设备');
+        }
+        resetIrrigationState();
+        hasData.value = false;
+        return;
       }
-      resetIrrigationState();
-      hasData.value = false;
-      return;
+
+      // 重置警告标志
+      deviceWarningShown.value = false;
+
+      penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? false);
+      penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '';
+      penmanSuggestion.method = suggest?.method ?? '';
+      penmanSuggestion.reason = suggest?.reason ?? '';
+      recommendedVolumeMm.value = Number(suggest?.recommendedVolumeMm ?? 0) || 0;
+      flowRateM3PerHour.value = Number(suggest?.flowRateM3PerHour ?? 0) || 0;
+      chartDates.value = suggest?.chartDates ?? [];
+      if ((!chartDates.value || chartDates.value.length === 0) && Array.isArray(suggest?.penmanInputs?.dates)) {
+        chartDates.value = suggest.penmanInputs.dates;
+      }
+      et0Forecast.value = (suggest?.et0Forecast ?? []).map((v: any) => Number(v) || 0);
+      penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
+      moistureTrendData.value = (suggest?.soilMoistureSeriesPct ?? []).map((v: any) => Number(v) || 0);
+
+      // 解析土壤详细数据
+      const baseSoilDetail = suggest?.soilDetail ?? {};
+      soilTemp1.value = String(baseSoilDetail.soilTemp1 ?? '-');
+      soilTemp2.value = String(baseSoilDetail.soilTemp2 ?? '-');
+      soilTemp3.value = String(baseSoilDetail.soilTemp3 ?? '-');
+      soilMoisture1.value = String(baseSoilDetail.soilMoisture1 ?? '-');
+      soilMoisture2.value = String(baseSoilDetail.soilMoisture2 ?? '-');
+      soilMoisture3.value = String(baseSoilDetail.soilMoisture3 ?? '-');
+      console.log('基地土壤详细数据:', baseSoilDetail);
+
+      if (chartDates.value.length) {
+        await nextTick();
+        renderMoistureTrendChart(chartDates.value, moistureTrendData.value as number[]);
+        renderEt0Chart(chartDates.value, et0Forecast.value);
+        renderPenmanInputsChart(penmanInputs.value);
+        renderRainChart(
+          chartDates.value,
+          penmanInputs.value.precip.map((v: any) => Number(v) || 0)
+        );
+        renderTempChart(
+          chartDates.value,
+          penmanInputs.value.temp.map((v: any) => Number(v) || 0)
+        );
+      }
+      const statusHasData = Boolean(status);
+      const chartHasData =
+        (chartDates.value?.length ?? 0) > 0 || (moistureTrendData.value?.length ?? 0) > 0 || (penmanInputs.value?.dates?.length ?? 0) > 0;
+      const valueHasData = (soilMoisturePercent.value ?? 0) > 0 || (recommendedVolumeMm.value ?? 0) > 0;
+      hasData.value = statusHasData || chartHasData || valueHasData;
+    } catch (e) {
+      console.error('获取基地数据失败：', e);
+      createMessage.error('获取基地数据失败，请重试');
     }
-    
-    // 重置警告标志
-    deviceWarningShown.value = false;
-    
-    penmanSuggestion.needIrrigation = Boolean(suggest?.needIrrigation ?? false);
-    penmanSuggestion.recommendedTime = suggest?.recommendedTime ?? '';
-    penmanSuggestion.method = suggest?.method ?? '';
-    penmanSuggestion.reason = suggest?.reason ?? '';
-    recommendedVolumeMm.value = Number(suggest?.recommendedVolumeMm ?? 0) || 0;
-    flowRateM3PerHour.value = Number(suggest?.flowRateM3PerHour ?? 0) || 0;
-    chartDates.value = suggest?.chartDates ?? [];
-    if ((!chartDates.value || chartDates.value.length === 0) && Array.isArray(suggest?.penmanInputs?.dates)) {
-      chartDates.value = suggest.penmanInputs.dates;
-    }
-    et0Forecast.value = (suggest?.et0Forecast ?? []).map((v: any) => Number(v) || 0);
-    penmanInputs.value = suggest?.penmanInputs ?? { dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] };
-    moistureTrendData.value = (suggest?.soilMoistureSeriesPct ?? []).map((v: any) => Number(v) || 0);
-    
-    // 解析土壤详细数据
-    const baseSoilDetail = suggest?.soilDetail ?? {};
-    soilTemp1.value = String(baseSoilDetail.soilTemp1 ?? '-');
-    soilTemp2.value = String(baseSoilDetail.soilTemp2 ?? '-');
-    soilTemp3.value = String(baseSoilDetail.soilTemp3 ?? '-');
-    soilMoisture1.value = String(baseSoilDetail.soilMoisture1 ?? '-');
-    soilMoisture2.value = String(baseSoilDetail.soilMoisture2 ?? '-');
-    soilMoisture3.value = String(baseSoilDetail.soilMoisture3 ?? '-');
-    console.log('基地土壤详细数据:', baseSoilDetail);
-    
-    if (chartDates.value.length) {
-      await nextTick();
-      renderMoistureTrendChart(chartDates.value, moistureTrendData.value as number[]);
-      renderEt0Chart(chartDates.value, et0Forecast.value);
-      renderPenmanInputsChart(penmanInputs.value);
-      renderRainChart(chartDates.value, penmanInputs.value.precip.map((v: any) => Number(v) || 0));
-      renderTempChart(chartDates.value, penmanInputs.value.temp.map((v: any) => Number(v) || 0));
-    }
-    const statusHasData = Boolean(status);
-    const chartHasData = (chartDates.value?.length ?? 0) > 0 || (moistureTrendData.value?.length ?? 0) > 0 || (penmanInputs.value?.dates?.length ?? 0) > 0;
-    const valueHasData = (soilMoisturePercent.value ?? 0) > 0 || (recommendedVolumeMm.value ?? 0) > 0;
-    hasData.value = statusHasData || chartHasData || valueHasData;
-  } catch (e) {
-    console.error('获取基地数据失败：', e);
-    createMessage.error('获取基地数据失败，请重试');
   }
-}
 
-async function fetchInterventionComparisonBase(baseId: string | number) {
-  try {
-    if (!baseId) return;
-    const data = await defHttp.get({ url: `/rapeseed/irrigation/interventionComparison`, params: { baseId } });
-    const dates = data?.dates ?? [];
-    const withIrr = (data?.withIrrigation ?? []).map((v: any) => Number(v) || 0);
-    const withoutIrr = (data?.withoutIrrigation ?? []).map((v: any) => Number(v) || 0);
-    if (dates.length && withIrr.length === dates.length && withoutIrr.length === dates.length) {
+  async function fetchInterventionComparisonBase(baseId: string | number) {
+    try {
+      if (!baseId) return;
+      const data = await defHttp.get({ url: `/rapeseed/irrigation/interventionComparison`, params: { baseId } });
+      const dates = data?.dates ?? [];
+      const withIrr = (data?.withIrrigation ?? []).map((v: any) => Number(v) || 0);
+      const withoutIrr = (data?.withoutIrrigation ?? []).map((v: any) => Number(v) || 0);
+      if (dates.length && withIrr.length === dates.length && withoutIrr.length === dates.length) {
+        await nextTick();
+        renderComparisonChart(dates, withIrr, withoutIrr);
+        hasData.value = true;
+        comparisonReady.value = true;
+      }
+    } catch (e) {
+      console.error('获取基地干预对比失败：', e);
+      createMessage.error('获取基地干预对比失败');
+    }
+  }
+
+  async function fetchInterventionComparison(pid?: string | number) {
+    const originId = pid ?? selectedPlotId.value;
+    const currentId = resolveEffectivePlotId(originId as any);
+    if (!currentId) {
+      console.warn('没有选中地块，跳过干预对比数据获取');
+      return;
+    }
+    try {
+      console.log('开始获取干预对比数据，地块ID：', currentId);
+      const data = await getInterventionComparison(currentId);
+      console.log('干预对比原始数据：', data);
+
+      if (lastRequestPlotId.value !== currentId) return;
+
+      // 检查返回数据是否有效
+      if (!data) {
+        console.warn('干预对比数据为空');
+        if (selectedBaseId.value) await fetchInterventionComparisonBase(selectedBaseId.value as any);
+        return;
+      }
+
+      const dates = data?.dates ?? [];
+      const withIrr = (data?.withIrrigation ?? []).map((v) => Number(v) || 0);
+      const withoutIrr = (data?.withoutIrrigation ?? []).map((v) => Number(v) || 0);
+
+      console.log('处理后的对比数据：', { dates, withIrr, withoutIrr });
+
+      // 验证数据完整性，仅需长度一致即可渲染
+      if (!dates.length) {
+        console.warn('时间序列数据为空，无法渲染对比图表');
+        if (selectedBaseId.value) await fetchInterventionComparisonBase(selectedBaseId.value as any);
+        return;
+      }
+      if (withIrr.length !== dates.length || withoutIrr.length !== dates.length) {
+        console.error('数据长度不匹配，日期长度：', dates.length, '干预数据长度：', withIrr.length, '非干预数据长度：', withoutIrr.length);
+        if (selectedBaseId.value) await fetchInterventionComparisonBase(selectedBaseId.value as any);
+        return;
+      }
+
       await nextTick();
       renderComparisonChart(dates, withIrr, withoutIrr);
       hasData.value = true;
       comparisonReady.value = true;
+      console.log('干预对比图表渲染完成');
+    } catch (e) {
+      console.error('获取对比数据失败：', e);
+      // 显示具体的错误信息给用户
+      createMessage.error(`获取干预对比数据失败：${(e as Error).message || '未知错误'}`);
     }
-  } catch (e) {
-    console.error('获取基地干预对比失败：', e);
-    createMessage.error('获取基地干预对比失败');
   }
-}
 
-async function fetchInterventionComparison(pid?: string | number) {
-  const originId = pid ?? selectedPlotId.value;
-  const currentId = resolveEffectivePlotId(originId as any);
-  if (!currentId) {
-    console.warn('没有选中地块，跳过干预对比数据获取');
-    return;
+  function resolveEffectivePlotId(pid: string | number | undefined): string | number | undefined {
+    return lockedPlotId.value ?? pid;
   }
-  try {
-    console.log('开始获取干预对比数据，地块ID：', currentId);
-    const data = await getInterventionComparison(currentId);
-    console.log('干预对比原始数据：', data);
-    
-    if (lastRequestPlotId.value !== currentId) return;
-    
-    // 检查返回数据是否有效
-    if (!data) {
-      console.warn('干预对比数据为空');
-      if (selectedBaseId.value) await fetchInterventionComparisonBase(selectedBaseId.value as any);
-      return;
+
+  function toHourLabels(dates: string[]): string[] {
+    return (dates || []).map((s) => {
+      const str = String(s || '');
+      const parts = str.split(' ');
+      const time = parts.length > 1 ? parts[1] : parts[0];
+      const hm = time.split(':');
+      const hh = hm[0] || time;
+      const mm = hm[1] || '00';
+      return `${hh}:${mm}`;
+    });
+  }
+
+  function renderComparisonChart(dates: string[], withIrr: number[], withoutIrr: number[]) {
+    const hours = toHourLabels(dates);
+    setComparisonOptions({
+      color: ['#37A2DA', '#ffd85c'],
+      grid: { left: 40, right: 20, top: 40, bottom: 40 },
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: any) => {
+          const lines = params.map((p: any) => `${p.seriesName}: ${p.value}%`).join('<br/>');
+          return `${params[0].axisValueLabel}<br/>${lines}`;
+        },
+      },
+      legend: { data: ['干预灌溉', '不干预灌溉'] },
+      xAxis: { type: 'category', data: hours },
+      yAxis: { type: 'value', name: '土壤含水率(%)' },
+      series: [
+        { name: '干预灌溉', type: 'line', smooth: true, data: withIrr, areaStyle: { opacity: 0.15 } },
+        { name: '不干预灌溉', type: 'line', smooth: true, data: withoutIrr, areaStyle: { opacity: 0.15 } },
+      ],
+    });
+  }
+
+  function renderMoistureTrendChart(dates: string[], data: number[]) {
+    const hours = toHourLabels(dates);
+    setMoistureTrendOptions({
+      color: ['#5B8FF9'],
+      grid: { left: 38, right: 12, top: 24, bottom: 24 },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: hours },
+      yAxis: { type: 'value', name: '%', min: 0, max: 100 },
+      series: [{ name: '含水率', type: 'line', smooth: true, data, areaStyle: { opacity: 0.2 } }],
+    });
+  }
+
+  function renderEt0Chart(dates: string[], data: number[]) {
+    const hours = toHourLabels(dates);
+    setEt0Options({
+      color: ['#73C0DE'],
+      grid: { left: 40, right: 20, top: 24, bottom: 24 },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: hours },
+      yAxis: { type: 'value', name: 'mm/h' },
+      series: [{ name: 'ET0', type: 'line', smooth: true, data, areaStyle: { opacity: 0.15 } }],
+    });
+  }
+
+  function renderPenmanInputsChart(inputs: any) {
+    const hours = toHourLabels(inputs.dates || []);
+    setPenmanInputsOptions({
+      grid: { left: 50, right: 30, top: 40, bottom: 40 },
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['温度(°C)', '湿度(%)', '风速(m/s)', '太阳辐射(MJ/m²)', '降水(mm)'] },
+      xAxis: { type: 'category', data: hours },
+      yAxis: { type: 'value' },
+      series: [
+        { name: '温度(°C)', type: 'line', smooth: true, data: inputs.temp.map((v) => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+        { name: '湿度(%)', type: 'line', smooth: true, data: inputs.humidity.map((v) => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+        { name: '风速(m/s)', type: 'line', smooth: true, data: inputs.wind.map((v) => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+        { name: '太阳辐射(MJ/m²)', type: 'line', smooth: true, data: inputs.solar.map((v) => Number(v) || 0), areaStyle: { opacity: 0.08 } },
+        { name: '降水(mm)', type: 'bar', data: inputs.precip.map((v) => Number(v) || 0), yAxisIndex: 0, itemStyle: { opacity: 0.6 } },
+      ],
+    });
+  }
+
+  function renderRainChart(dates: string[], precip: number[]) {
+    const hours = toHourLabels(dates);
+    setRainOptions({
+      color: ['#54D8C7'],
+      grid: { left: 40, right: 20, top: 24, bottom: 24 },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: hours },
+      yAxis: { type: 'value', name: 'mm' },
+      series: [{ name: '降雨量', type: 'bar', data: precip, itemStyle: { opacity: 0.7 } }],
+    });
+  }
+
+  function renderTempChart(dates: string[], temp: number[]) {
+    const hours = toHourLabels(dates);
+    setTempOptions({
+      color: ['#F6BD16'],
+      grid: { left: 40, right: 20, top: 24, bottom: 24 },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: hours },
+      yAxis: { type: 'value', name: '°C' },
+      series: [{ name: '平均温度', type: 'line', smooth: true, data: temp, areaStyle: { opacity: 0.2 } }],
+    });
+  }
+
+  // 水分状态颜色
+  const moistureStatus = computed(() => {
+    if (soilMoisturePercent.value < 40) return 'exception';
+    if (soilMoisturePercent.value < 60) return 'normal';
+    return 'success';
+  });
+
+  // 额外状态与计算
+  const lastUpdatedText = ref<string>('-');
+  const moistureStateLabel = computed(() => {
+    if (soilMoisturePercent.value < 40) return '偏低';
+    if (soilMoisturePercent.value < 60) return '适中';
+    return '偏高';
+  });
+  const moistureStateColor = computed(() => {
+    if (soilMoisturePercent.value < 40) return 'red';
+    if (soilMoisturePercent.value < 60) return 'blue';
+    return 'green';
+  });
+
+  const progressText = (p: number) => `${Math.round((p || 0) * 10) / 10}%`;
+
+  function mmToM3PerMu(mm: number): number {
+    return Math.round(mm * 0.6667 * 10) / 10;
+  }
+
+  const et0Forecast = ref<number[]>([]);
+  const chartDates = ref<string[]>([]);
+  const moistureTrendData = ref<number[]>([]);
+  const penmanInputs = ref<any>({ dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] });
+
+  // 土壤传感器详细数据
+  const soilTemp1 = ref<string>('-');
+  const soilTemp2 = ref<string>('-');
+  const soilTemp3 = ref<string>('-');
+  const soilMoisture1 = ref<string>('-');
+  const soilMoisture2 = ref<string>('-');
+  const soilMoisture3 = ref<string>('-');
+
+  const riskLevel = computed(() => {
+    if (soilMoisturePercent.value < 35) return '较高';
+    if (soilMoisturePercent.value < 45) return '中等';
+    return '较低';
+  });
+  const riskTips = computed<string[]>(() => {
+    if (soilMoisturePercent.value < 40) {
+      return ['建议在清晨低蒸发时段进行滴灌，避免地表径流', '分次灌溉更利于均匀入渗，减少浪费'];
     }
-    
-    const dates = data?.dates ?? [];
-    const withIrr = (data?.withIrrigation ?? []).map(v => Number(v) || 0);
-    const withoutIrr = (data?.withoutIrrigation ?? []).map(v => Number(v) || 0);
-    
-    console.log('处理后的对比数据：', { dates, withIrr, withoutIrr });
-    
-    // 验证数据完整性，仅需长度一致即可渲染
-    if (!dates.length) {
-      console.warn('时间序列数据为空，无法渲染对比图表');
-      if (selectedBaseId.value) await fetchInterventionComparisonBase(selectedBaseId.value as any);
-      return;
+    if (soilMoisturePercent.value < 60) {
+      return ['关注未来两日蒸散量变化，必要时小水勤灌', '保持田间通风，避免积水抑制根系生长'];
     }
-    if (withIrr.length !== dates.length || withoutIrr.length !== dates.length) {
-      console.error('数据长度不匹配，日期长度：', dates.length, '干预数据长度：', withIrr.length, '非干预数据长度：', withoutIrr.length);
-      if (selectedBaseId.value) await fetchInterventionComparisonBase(selectedBaseId.value as any);
-      return;
+    return ['土壤含水率较高，暂不推荐灌溉', '注意病害风险，保持叶面干燥并加强田间巡查'];
+  });
+
+  const currentBaseName = computed(() => {
+    const currentBase = selectedBase.value || baseList.value.find((item) => String(item.baseId) === String(selectedBaseId.value ?? '')) || null;
+    return String(currentBase?.fullName || currentBase?.baseName || selectStore.selectedBase.baseName || '').trim();
+  });
+
+  const canFetchWaterGate = computed(() => {
+    const names = [currentBaseName.value, selectedBase.value?.baseName, selectedBase.value?.fullName, selectStore.selectedBase.baseName]
+      .map((name) => String(name || '').trim())
+      .filter(Boolean);
+    return names.some((name) => name === WATER_GATE_BASE_NAME || name.includes(WATER_GATE_BASE_NAME));
+  });
+
+  function pickWaterGateValue(source: Record<string, any>, keys: string[]) {
+    for (const key of keys) {
+      const value = source?.[key];
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+      return value;
     }
-    
-  await nextTick();
-  renderComparisonChart(dates, withIrr, withoutIrr);
-  hasData.value = true;
-  comparisonReady.value = true;
-  console.log('干预对比图表渲染完成');
-  } catch (e) {
-    console.error('获取对比数据失败：', e);
-    // 显示具体的错误信息给用户
-    createMessage.error(`获取干预对比数据失败：${(e as Error).message || '未知错误'}`);
+    return '';
   }
-}
 
-function resolveEffectivePlotId(pid: string | number | undefined): string | number | undefined {
-  return lockedPlotId.value ?? pid;
-}
+  function normalizeWaterGateItem(item: any, index: number): WaterGateItem {
+    const raw = item?.raw && typeof item.raw === 'object' ? item.raw : item || {};
+    const id =
+      pickWaterGateValue(item || {}, ['id']) || pickWaterGateValue(raw, ['id', 'gateId', 'deviceId', 'equipmentCode', 'serialNo', 'sn', 'code']);
+    const name =
+      pickWaterGateValue(item || {}, ['name']) ||
+      pickWaterGateValue(raw, ['name', 'gateName', 'deviceName', 'equipmentName', 'title', 'gateNo', 'alias']) ||
+      `灌溉设备${index + 1}`;
+    const status =
+      pickWaterGateValue(item || {}, ['status']) || pickWaterGateValue(raw, ['status', 'workState', 'state', 'runState', 'gateStatus']) || '-';
+    const online = pickWaterGateValue(item || {}, ['online']) || pickWaterGateValue(raw, ['online', 'isOnline', 'onLine', 'deviceOnline']);
+    const onlineText = pickWaterGateValue(item || {}, ['onlineText']) || pickWaterGateValue(raw, ['onlineExp', 'onlineText']) || '';
+    const stateText = pickWaterGateValue(item || {}, ['stateText']) || pickWaterGateValue(raw, ['stateExp', 'stateText']) || '';
 
-function toHourLabels(dates: string[]): string[] {
-  return (dates || []).map((s) => {
-    const str = String(s || '');
-    const parts = str.split(' ');
-    const time = parts.length > 1 ? parts[1] : parts[0];
-    const hm = time.split(':');
-    const hh = hm[0] || time;
-    const mm = hm[1] || '00';
-    return `${hh}:${mm}`;
-  });
-}
-
-function renderComparisonChart(dates: string[], withIrr: number[], withoutIrr: number[]) {
-  const hours = toHourLabels(dates);
-  setComparisonOptions({
-    color: ['#37A2DA', '#ffd85c'],
-    grid: { left: 40, right: 20, top: 40, bottom: 40 },
-    tooltip: { trigger: 'axis', formatter: (params: any) => {
-      const lines = params.map((p: any) => `${p.seriesName}: ${p.value}%`).join('<br/>');
-      return `${params[0].axisValueLabel}<br/>${lines}`;
-    } },
-    legend: { data: ['干预灌溉','不干预灌溉'] },
-    xAxis: { type: 'category', data: hours },
-    yAxis: { type: 'value', name: '土壤含水率(%)' },
-    series: [
-      { name: '干预灌溉', type: 'line', smooth: true, data: withIrr, areaStyle: { opacity: 0.15 } },
-      { name: '不干预灌溉', type: 'line', smooth: true, data: withoutIrr, areaStyle: { opacity: 0.15 } }
-    ]
-  });
-}
-
-function renderMoistureTrendChart(dates: string[], data: number[]) {
-  const hours = toHourLabels(dates);
-  setMoistureTrendOptions({
-    color: ['#5B8FF9'],
-    grid: { left: 38, right: 12, top: 24, bottom: 24 },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: hours },
-    yAxis: { type: 'value', name: '%', min: 0, max: 100 },
-    series: [{ name: '含水率', type: 'line', smooth: true, data, areaStyle: { opacity: 0.2 } }]
-  });
-}
-
-function renderEt0Chart(dates: string[], data: number[]) {
-  const hours = toHourLabels(dates);
-  setEt0Options({
-    color: ['#73C0DE'],
-    grid: { left: 40, right: 20, top: 24, bottom: 24 },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: hours },
-    yAxis: { type: 'value', name: 'mm/h' },
-    series: [{ name: 'ET0', type: 'line', smooth: true, data, areaStyle: { opacity: 0.15 } }]
-  });
-}
-
-function renderPenmanInputsChart(inputs: any) {
-  const hours = toHourLabels(inputs.dates || []);
-  setPenmanInputsOptions({
-    grid: { left: 50, right: 30, top: 40, bottom: 40 },
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['温度(°C)','湿度(%)','风速(m/s)','太阳辐射(MJ/m²)','降水(mm)'] },
-    xAxis: { type: 'category', data: hours },
-    yAxis: { type: 'value' },
-    series: [
-      { name: '温度(°C)', type: 'line', smooth: true, data: inputs.temp.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
-      { name: '湿度(%)', type: 'line', smooth: true, data: inputs.humidity.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
-      { name: '风速(m/s)', type: 'line', smooth: true, data: inputs.wind.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
-      { name: '太阳辐射(MJ/m²)', type: 'line', smooth: true, data: inputs.solar.map(v => Number(v) || 0), areaStyle: { opacity: 0.08 } },
-      { name: '降水(mm)', type: 'bar', data: inputs.precip.map(v => Number(v) || 0), yAxisIndex: 0, itemStyle: { opacity: 0.6 } }
-    ]
-  });
-}
-
-function renderRainChart(dates: string[], precip: number[]) {
-  const hours = toHourLabels(dates);
-  setRainOptions({
-    color: ['#54D8C7'],
-    grid: { left: 40, right: 20, top: 24, bottom: 24 },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: hours },
-    yAxis: { type: 'value', name: 'mm' },
-    series: [{ name: '降雨量', type: 'bar', data: precip, itemStyle: { opacity: 0.7 } }]
-  });
-}
-
-function renderTempChart(dates: string[], temp: number[]) {
-  const hours = toHourLabels(dates);
-  setTempOptions({
-    color: ['#F6BD16'],
-    grid: { left: 40, right: 20, top: 24, bottom: 24 },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: hours },
-    yAxis: { type: 'value', name: '°C' },
-    series: [{ name: '平均温度', type: 'line', smooth: true, data: temp, areaStyle: { opacity: 0.2 } }]
-  });
-}
-
-// 水分状态颜色
-const moistureStatus = computed(() => {
-  if (soilMoisturePercent.value < 40) return 'exception';
-  if (soilMoisturePercent.value < 60) return 'normal';
-  return 'success';
-});
-
-// 额外状态与计算
-const lastUpdatedText = ref<string>('-');
-const moistureStateLabel = computed(() => {
-  if (soilMoisturePercent.value < 40) return '偏低';
-  if (soilMoisturePercent.value < 60) return '适中';
-  return '偏高';
-});
-const moistureStateColor = computed(() => {
-  if (soilMoisturePercent.value < 40) return 'red';
-  if (soilMoisturePercent.value < 60) return 'blue';
-  return 'green';
-});
-
-const progressText = (p: number) => `${Math.round((p || 0) * 10) / 10}%`;
-
-function mmToM3PerMu(mm: number): number {
-  return Math.round(mm * 0.6667 * 10) / 10;
-}
-
-const et0Forecast = ref<number[]>([]);
-const chartDates = ref<string[]>([]);
-const moistureTrendData = ref<number[]>([]);
-const penmanInputs = ref<any>({ dates: [], temp: [], humidity: [], wind: [], solar: [], precip: [] });
-
-// 土壤传感器详细数据
-const soilTemp1 = ref<string>('-');
-const soilTemp2 = ref<string>('-');
-const soilTemp3 = ref<string>('-');
-const soilMoisture1 = ref<string>('-');
-const soilMoisture2 = ref<string>('-');
-const soilMoisture3 = ref<string>('-');
-
-
-const riskLevel = computed(() => {
-  if (soilMoisturePercent.value < 35) return '较高';
-  if (soilMoisturePercent.value < 45) return '中等';
-  return '较低';
-});
-const riskTips = computed<string[]>(() => {
-  if (soilMoisturePercent.value < 40) {
-    return [
-      '建议在清晨低蒸发时段进行滴灌，避免地表径流',
-      '分次灌溉更利于均匀入渗，减少浪费',
-    ];
-  }
-  if (soilMoisturePercent.value < 60) {
-    return [
-      '关注未来两日蒸散量变化，必要时小水勤灌',
-      '保持田间通风，避免积水抑制根系生长',
-    ];
-  }
-  return [
-    '土壤含水率较高，暂不推荐灌溉',
-    '注意病害风险，保持叶面干燥并加强田间巡查',
-  ];
-});
-
-const currentBaseName = computed(() => {
-  const currentBase =
-    selectedBase.value ||
-    baseList.value.find((item) => String(item.baseId) === String(selectedBaseId.value ?? '')) ||
-    null;
-  return String(currentBase?.fullName || currentBase?.baseName || selectStore.selectedBase.baseName || '').trim();
-});
-
-const canFetchWaterGate = computed(() => currentBaseName.value === WATER_GATE_BASE_NAME);
-
-function pickWaterGateValue(source: Record<string, any>, keys: string[]) {
-  for (const key of keys) {
-    const value = source?.[key];
-    if (value === undefined || value === null || value === '') {
-      continue;
-    }
-    return value;
-  }
-  return '';
-}
-
-function normalizeWaterGateItem(item: any, index: number): WaterGateItem {
-  const raw = item?.raw && typeof item.raw === 'object' ? item.raw : item || {};
-  const id = pickWaterGateValue(item || {}, ['id']) || pickWaterGateValue(raw, ['id', 'gateId', 'deviceId', 'equipmentCode', 'serialNo', 'sn', 'code']);
-  const name =
-    pickWaterGateValue(item || {}, ['name']) ||
-    pickWaterGateValue(raw, ['name', 'gateName', 'deviceName', 'equipmentName', 'title', 'gateNo', 'alias']) ||
-    `水阀${index + 1}`;
-  const status =
-    pickWaterGateValue(item || {}, ['status']) ||
-    pickWaterGateValue(raw, ['status', 'workState', 'state', 'runState', 'gateStatus']) ||
-    '-';
-  const online =
-    pickWaterGateValue(item || {}, ['online']) || pickWaterGateValue(raw, ['online', 'isOnline', 'onLine', 'deviceOnline']);
-  const onlineText =
-    pickWaterGateValue(item || {}, ['onlineText']) ||
-    pickWaterGateValue(raw, ['onlineExp', 'onlineText']) ||
-    '';
-  const stateText =
-    pickWaterGateValue(item || {}, ['stateText']) ||
-    pickWaterGateValue(raw, ['stateExp', 'stateText']) ||
-    '';
-
-  return {
-    id: String(id || `gate-${index}`),
-    name: String(name),
-    status: String(status),
-    code: String(pickWaterGateValue(item || {}, ['code']) || pickWaterGateValue(raw, ['code']) || ''),
-    siteNo: String(pickWaterGateValue(item || {}, ['siteNo']) || pickWaterGateValue(raw, ['siteNo']) || ''),
-    longitude: pickWaterGateValue(item || {}, ['longitude']) || pickWaterGateValue(raw, ['longitude']),
-    latitude: pickWaterGateValue(item || {}, ['latitude']) || pickWaterGateValue(raw, ['latitude']),
-    onlineText: String(onlineText || ''),
-    stateText: String(stateText || ''),
+    return {
+      id: String(id || `gate-${index}`),
+      name: String(name),
+      status: String(status),
+      deviceType: String(pickWaterGateValue(item || {}, ['deviceType']) || pickWaterGateValue(raw, ['deviceType']) || 'gate'),
+      category: String(pickWaterGateValue(item || {}, ['category']) || pickWaterGateValue(raw, ['category']) || '闸门/控制柜'),
+      code: String(pickWaterGateValue(item || {}, ['code']) || pickWaterGateValue(raw, ['code']) || ''),
+      siteNo: String(pickWaterGateValue(item || {}, ['siteNo']) || pickWaterGateValue(raw, ['siteNo']) || ''),
+      longitude: pickWaterGateValue(item || {}, ['longitude']) || pickWaterGateValue(raw, ['longitude']),
+      latitude: pickWaterGateValue(item || {}, ['latitude']) || pickWaterGateValue(raw, ['latitude']),
+      onlineText: String(onlineText || ''),
+      stateText: String(stateText || ''),
     manageUnit: String(pickWaterGateValue(item || {}, ['manageUnit']) || pickWaterGateValue(raw, ['gldw', 'manageUnit']) || ''),
     controlCenter: String(pickWaterGateValue(item || {}, ['controlCenter']) || pickWaterGateValue(raw, ['gkzx', 'controlCenter']) || ''),
+    linkedGateId: String(pickWaterGateValue(item || {}, ['linkedGateId']) || pickWaterGateValue(raw, ['linkedGateId']) || ''),
+    linkedGateName: String(pickWaterGateValue(item || {}, ['linkedGateName']) || pickWaterGateValue(raw, ['linkedGateName']) || ''),
     online,
     raw,
   };
 }
 
-async function fetchWaterGateList(showError = false) {
-  if (!canFetchWaterGate.value) {
-    waterGateList.value = [];
-    waterGateLoading.value = false;
-    return;
-  }
-  waterGateLoading.value = true;
-  try {
-    const res: any = await getWaterGateList();
-    const list = Array.isArray(res) ? res : res?.items || res?.list || res?.data || [];
-    waterGateList.value = Array.isArray(list) ? list.map((item, index) => normalizeWaterGateItem(item, index)) : [];
-  } catch (error) {
-    console.error('获取水阀列表失败：', error);
-    waterGateList.value = [];
-    if (showError) {
-      createMessage.error('获取水阀列表失败，请稍后重试');
+  async function fetchWaterGateList(showError = false) {
+    if (!canFetchWaterGate.value) {
+      waterGateList.value = [];
+      waterGateLoading.value = false;
+      return;
     }
-  } finally {
-    waterGateLoading.value = false;
+    waterGateLoading.value = true;
+    try {
+      const res: any = await getIrrigationDeviceMapList(selectedBaseId.value);
+      const list = Array.isArray(res) ? res : res?.items || res?.list || res?.data || [];
+      waterGateList.value = Array.isArray(list) ? list.map((item, index) => normalizeWaterGateItem(item, index)) : [];
+    } catch (error) {
+      console.error('获取灌溉设备列表失败：', error);
+      waterGateList.value = [];
+      if (showError) {
+        createMessage.error('获取灌溉设备列表失败，请稍后重试');
+      }
+    } finally {
+      waterGateLoading.value = false;
+    }
   }
-}
 
-function getWaterGateStatusText(gate: WaterGateItem) {
-  if (gate.onlineText) {
-    return gate.onlineText;
+  function getWaterGateStatusText(gate: WaterGateItem) {
+    if (gate.onlineText) {
+      return gate.onlineText;
+    }
+    const onlineText = String(gate.online ?? '').toLowerCase();
+    if (onlineText === '0' || onlineText === 'false' || onlineText === 'offline') {
+      return '离线';
+    }
+    const statusText = String(gate.stateText || gate.status || '-');
+    return statusText === '-' ? '未知' : statusText;
   }
-  const onlineText = String(gate.online ?? '').toLowerCase();
-  if (onlineText === '0' || onlineText === 'false' || onlineText === 'offline') {
-    return '离线';
+
+  function getWaterGateStatusColor(gate: WaterGateItem) {
+    const statusText = getWaterGateStatusText(gate);
+    if (statusText === '离线') {
+      return 'default';
+    }
+    if (/(开|运行|启)/.test(statusText)) {
+      return 'green';
+    }
+    if (/(停)/.test(statusText)) {
+      return 'orange';
+    }
+    if (/(关|关闭)/.test(statusText)) {
+      return 'red';
+    }
+    return 'blue';
   }
-  const statusText = String(gate.stateText || gate.status || '-');
-  return statusText === '-' ? '未知' : statusText;
-}
 
-function getWaterGateStatusColor(gate: WaterGateItem) {
-  const statusText = getWaterGateStatusText(gate);
-  if (statusText === '离线') {
-    return 'default';
+  function formatWaterGateField(value: string | number | undefined) {
+    if (value === undefined || value === null || value === '' || value === '-') {
+      return '-';
+    }
+    return String(value);
   }
-  if (/(开|运行|启)/.test(statusText)) {
-    return 'green';
+
+  async function copySuggestion() {
+    const text = `地块：${selectedPlotName.value}\n需要灌溉：${penmanSuggestion.needIrrigation ? '是' : '否'}\n时间：${penmanSuggestion.recommendedTime || '-'}\n方式：${penmanSuggestion.method || '-'}\n推荐灌水量：${recommendedVolumeMm.value} mm（约 ${mmToM3PerMu(recommendedVolumeMm.value)} m³/亩）\n原因：${penmanSuggestion.reason || '-'}`;
+    try {
+      await navigator.clipboard?.writeText(text);
+      createMessage.success('已复制建议到剪贴板');
+    } catch (e) {
+      createMessage.warning('复制失败，请手动选择文本进行复制');
+    }
   }
-  if (/(停)/.test(statusText)) {
-    return 'orange';
+
+  async function refresh() {
+    await fetchPlotStatusAndSuggest();
+    await fetchInterventionComparison();
+    await fetchWaterGateList();
+    createMessage.success('数据已刷新');
   }
-  if (/(关|关闭)/.test(statusText)) {
-    return 'red';
+
+  // 快速灌溉管理（状态与计算）
+  const quickArea = ref<number>(0);
+  const quickMethod = ref<string>('滴灌');
+  const quickUseAlgorithm = ref<boolean>(true);
+  const manualWaterPerMu = ref<number>(0);
+  const quickDate = ref<any>();
+  const quickRemark = ref<string>('');
+  const quickTimes = ref<number>(1);
+
+  const irrigationMethodOptions = [
+    { label: '滴灌', value: '滴灌' },
+    { label: '喷灌', value: '喷灌' },
+    { label: '漫灌', value: '漫灌' },
+    { label: '微灌', value: '微灌' },
+  ];
+
+  const algoWaterPerMuM3 = computed<number>(() => mmToM3PerMu(recommendedVolumeMm.value));
+  const waterPerMuM3 = computed<number>(() => (quickUseAlgorithm.value ? algoWaterPerMuM3.value : manualWaterPerMu.value));
+  const totalWaterUsageM3 = computed<number>(() => Math.round(waterPerMuM3.value * quickArea.value * 10) / 10);
+  const flowRateM3PerHour = ref<number>(0);
+  const durationHours = computed<number>(() => {
+    const rate = flowRateM3PerHour.value;
+    if (!rate || !totalWaterUsageM3.value) return 0;
+    return Math.round((totalWaterUsageM3.value / rate) * 10) / 10;
+  });
+  const perTimeWaterM3 = computed<number>(() => {
+    const times = Math.max(1, quickTimes.value || 1);
+    if (!totalWaterUsageM3.value) return 0;
+    return Math.round((totalWaterUsageM3.value / times) * 10) / 10;
+  });
+
+  const reportModalVisible = ref<boolean>(false);
+  const reportType = ref<string>('irrigation');
+  const deviceWarningShown = ref<boolean>(false); // 防止重复弹出设备未配置提示
+
+  function openReportModal(type?: string) {
+    reportType.value = type || 'irrigation';
+    reportModalVisible.value = true;
   }
-  return 'blue';
-}
 
-function formatWaterGateField(value: string | number | undefined) {
-  if (value === undefined || value === null || value === '' || value === '-') {
-    return '-';
+  // 温度状态计算
+  function getTemperatureStatus(temp: any): string {
+    const t = Number(temp);
+    if (t < 10) return 'cold';
+    if (t < 25) return 'comfortable';
+    if (t < 35) return 'hot';
+    return 'very-hot';
   }
-  return String(value);
-}
 
-async function copySuggestion() {
-  const text = `地块：${selectedPlotName.value}\n需要灌溉：${penmanSuggestion.needIrrigation ? '是' : '否'}\n时间：${penmanSuggestion.recommendedTime || '-'}\n方式：${penmanSuggestion.method || '-'}\n推荐灌水量：${recommendedVolumeMm.value} mm（约 ${mmToM3PerMu(recommendedVolumeMm.value)} m³/亩）\n原因：${penmanSuggestion.reason || '-'}`;
-  try {
-    await navigator.clipboard?.writeText(text);
-    createMessage.success('已复制建议到剪贴板');
-  } catch (e) {
-    createMessage.warning('复制失败，请手动选择文本进行复制');
+  function getTemperatureStatusText(temp: any): string {
+    const t = Number(temp);
+    if (t < 10) return '较冷';
+    if (t < 25) return '舒适';
+    if (t < 35) return '较热';
+    return '炎热';
   }
-}
 
-async function refresh() {
-  await fetchPlotStatusAndSuggest();
-  await fetchInterventionComparison();
-  await fetchWaterGateList();
-  createMessage.success('数据已刷新');
-}
-
-// 快速灌溉管理（状态与计算）
-const quickArea = ref<number>(0);
-const quickMethod = ref<string>('滴灌');
-const quickUseAlgorithm = ref<boolean>(true);
-const manualWaterPerMu = ref<number>(0);
-const quickDate = ref<any>();
-const quickRemark = ref<string>('');
-const quickTimes = ref<number>(1);
-
-const irrigationMethodOptions = [
-  { label: '滴灌', value: '滴灌' },
-  { label: '喷灌', value: '喷灌' },
-  { label: '漫灌', value: '漫灌' },
-  { label: '微灌', value: '微灌' },
-];
-
-const algoWaterPerMuM3 = computed<number>(() => mmToM3PerMu(recommendedVolumeMm.value));
-const waterPerMuM3 = computed<number>(() => (quickUseAlgorithm.value ? algoWaterPerMuM3.value : manualWaterPerMu.value));
-const totalWaterUsageM3 = computed<number>(() => Math.round(waterPerMuM3.value * quickArea.value * 10) / 10);
-const flowRateM3PerHour = ref<number>(0);
-const durationHours = computed<number>(() => {
-  const rate = flowRateM3PerHour.value;
-  if (!rate || !totalWaterUsageM3.value) return 0;
-  return Math.round((totalWaterUsageM3.value / rate) * 10) / 10;
-});
-const perTimeWaterM3 = computed<number>(() => {
-  const times = Math.max(1, quickTimes.value || 1);
-  if (!totalWaterUsageM3.value) return 0;
-  return Math.round((totalWaterUsageM3.value / times) * 10) / 10;
-});
-
-const reportModalVisible = ref<boolean>(false);
-const reportType = ref<string>('irrigation');
-const deviceWarningShown = ref<boolean>(false); // 防止重复弹出设备未配置提示
-
-function openReportModal(type?: string) {
-  reportType.value = type || 'irrigation';
-  reportModalVisible.value = true;
-}
-
-// 温度状态计算
-function getTemperatureStatus(temp: any): string {
-  const t = Number(temp);
-  if (t < 10) return 'cold';
-  if (t < 25) return 'comfortable';
-  if (t < 35) return 'hot';
-  return 'very-hot';
-}
-
-function getTemperatureStatusText(temp: any): string {
-  const t = Number(temp);
-  if (t < 10) return '较冷';
-  if (t < 25) return '舒适';
-  if (t < 35) return '较热';
-  return '炎热';
-}
-
-// 湿度状态计算
-function getHumidityStatus(humidity: any): string {
-  const h = Number(humidity);
-  if (h < 30) return 'dry';
-  if (h < 70) return 'comfortable';
-  if (h < 90) return 'humid';
-  return 'very-humid';
-}
-
-function getHumidityStatusText(humidity: any): string {
-  const h = Number(humidity);
-  if (h < 30) return '干燥';
-  if (h < 70) return '适宜';
-  if (h < 90) return '潮湿';
-  return '非常潮湿';
-}
-
-function formatNumber(val: any): string {
-  if (val === null || val === undefined || val === '') return '';
-  const n = Number(val);
-  if (isNaN(n)) return String(val);
-  return n.toFixed(1);
-}
-
-function downloadReportAsWord() {
-  const elId = reportType.value === 'risk' ? 'riskReport' : 'irrigationReport';
-  const el = document.getElementById(elId);
-  if (!el) {
-    createMessage.warning('报告内容为空，无法下载');
-    return;
+  // 湿度状态计算
+  function getHumidityStatus(humidity: any): string {
+    const h = Number(humidity);
+    if (h < 30) return 'dry';
+    if (h < 70) return 'comfortable';
+    if (h < 90) return 'humid';
+    return 'very-humid';
   }
-  const html = el.outerHTML;
-  const doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>智慧灌溉报告</title></head><body>' + html + '</body></html>';
-  const blob = new Blob(['\ufeff', doc], { type: 'application/msword;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '智慧灌溉报告.doc';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  createMessage.success('报告已下载');
-}
 
-function calcQuickIrrigation() {
-  if (!selectedBaseId.value || !selectedPlotId.value) {
-    createMessage.warning('请先选择基地和地块');
-    return;
+  function getHumidityStatusText(humidity: any): string {
+    const h = Number(humidity);
+    if (h < 30) return '干燥';
+    if (h < 70) return '适宜';
+    if (h < 90) return '潮湿';
+    return '非常潮湿';
   }
-  if (!quickArea.value || quickArea.value <= 0) {
-    createMessage.warning('请输入有效的灌溉面积');
-    return;
+
+  function formatNumber(val: any): string {
+    if (val === null || val === undefined || val === '') return '';
+    const n = Number(val);
+    if (isNaN(n)) return String(val);
+    return n.toFixed(1);
   }
-  createMessage.success('已计算用水量');
-}
 
- 
-
-function executeAutomationQuick() {
-  if (!selectedPlotId.value) {
-    createMessage.warning('请先选择地块');
-    return;
+  function downloadReportAsWord() {
+    const elId = reportType.value === 'risk' ? 'riskReport' : 'irrigationReport';
+    const el = document.getElementById(elId);
+    if (!el) {
+      createMessage.warning('报告内容为空，无法下载');
+      return;
+    }
+    const html = el.outerHTML;
+    const doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>智慧灌溉报告</title></head><body>' + html + '</body></html>';
+    const blob = new Blob(['\ufeff', doc], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '智慧灌溉报告.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    createMessage.success('报告已下载');
   }
-  createMessage.info('已触发自动化（占位）');
-}
 
-function exportReport() {
-  printJS({ type: 'html', printable: 'irrigationReport' });
-}
+  function calcQuickIrrigation() {
+    if (!selectedBaseId.value || !selectedPlotId.value) {
+      createMessage.warning('请先选择基地和地块');
+      return;
+    }
+    if (!quickArea.value || quickArea.value <= 0) {
+      createMessage.warning('请输入有效的灌溉面积');
+      return;
+    }
+    createMessage.success('已计算用水量');
+  }
+
+  function executeAutomationQuick() {
+    if (!selectedPlotId.value) {
+      createMessage.warning('请先选择地块');
+      return;
+    }
+    createMessage.info('已触发自动化（占位）');
+  }
+
+  function exportReport() {
+    printJS({ type: 'html', printable: 'irrigationReport' });
+  }
 </script>
 
 <style lang="less" scoped>
-.irrigation-page {
-  padding: 24px;
-  background-color: #f0f2f5;
-  min-height: calc(100vh - 64px);
-}
+  .irrigation-page {
+    padding: 24px;
+    background-color: #f0f2f5;
+    min-height: calc(100vh - 64px);
+  }
 
-.table-card {
-  margin-top: 16px;
-  
-  .table-title {
+  .table-card {
+    margin-top: 16px;
+
+    .table-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+
+  .moisture-card {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 500;
-  }
-}
-
-.moisture-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.environment-overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 14px;
-}
-
-.environment-main,
-.environment-weather,
-.environment-layers {
-  padding: 14px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fafcff 0%, #f6f9ff 100%);
-  border: 1px solid #edf2ff;
-}
-
-.environment-layers {
-  grid-column: 1 / -1;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.weather-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.env-weather-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid #eef2f7;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
-  transition: all 0.25s ease;
-
-  &:hover {
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-    transform: translateY(-1px);
+    gap: 14px;
   }
 
-  &.temperature {
-    .env-weather-icon {
-      background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
-    }
-  }
-
-  &.humidity {
-    .env-weather-icon {
-      background: linear-gradient(135deg, #4ECDC4 0%, #45B7D1 100%);
-    }
-  }
-}
-
-.env-weather-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  color: #fff;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
-}
-
-.env-weather-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.env-weather-label {
-  font-size: 13px;
-  color: #888;
-  font-weight: 500;
-}
-
-.env-weather-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a1a1a;
-  line-height: 1.2;
-
-  small {
-    font-size: 14px;
-    font-weight: 500;
-    color: #999;
-    margin-left: 2px;
-  }
-}
-
-.env-weather-status {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 1px 8px;
-  border-radius: 10px;
-  display: inline-block;
-  width: fit-content;
-  margin-top: 1px;
-
-  &.cold {
-    background: #E3F2FD;
-    color: #1976D2;
-  }
-
-  &.comfortable {
-    background: #E8F5E9;
-    color: #388E3C;
-  }
-
-  &.hot {
-    background: #FFF3E0;
-    color: #F57C00;
-  }
-
-  &.dry {
-    background: #FFF3E0;
-    color: #E65100;
-  }
-
-  &.humid {
-    background: #E3F2FD;
-    color: #0277BD;
-  }
-
-  &.very-humid {
-    background: #E8EAF6;
-    color: #283593;
-  }
-}
-
-.compact-card {
-  box-shadow: none;
-  border: 1px solid #eef2f7;
-}
-
-.compact-card :deep(.ant-card-body) {
-  padding: 14px;
-}
-
-.suggestion-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rich-card {
-  :deep(.ant-card-body) {
-    padding-top: 16px;
-  }
-}
-
-.mini-title {
-  margin: 8px 0 4px;
-  font-size: 13px;
-  color: #555;
-}
-
-.statistic-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-top: 8px;
-}
-.metric-title {
-  font-size: 12px;
-  color: #888;
-}
-.metric-value {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.water-gate-divider {
-  margin: 14px 0 12px;
-}
-
-.water-gate-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.water-gate-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.water-gate-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #262626;
-}
-
-.water-gate-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.water-gate-scroll-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 420px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.water-gate-card {
-  width: 100%;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 10px;
-  padding: 12px;
-  box-sizing: border-box;
-}
-
-.water-gate-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.water-gate-card-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #262626;
-  max-width: 70%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.water-gate-card-body .field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #595959;
-  padding: 2px 0;
-}
-
-.water-gate-card-body .label {
-  color: #8c8c8c;
-}
-
-.water-gate-card-body .value {
-  color: #262626;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.water-gate-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 10px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-}
-
-.water-gate-meta {
-  flex: 1;
-  min-width: 0;
-}
-
-.water-gate-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.water-gate-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #262626;
-}
-
-.water-gate-info {
-  margin-top: 6px;
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: #8c8c8c;
-}
-
-.water-gate-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.tips {
-  margin: 0;
-  padding-left: 18px;
-  color: #666;
-}
-
-.mt-4 {
-  margin-top: 16px;
-}
-
-.top-row {
-  align-items: stretch;
-  :deep(.ant-col) {
-    display: flex;
-  }
-  :deep(.ant-card) {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    flex: 1 1 auto;
-  }
-}
-
-.row-stretch {
-  align-items: stretch;
-  :deep(.ant-col) {
-    display: flex;
-  }
-  :deep(.ant-card) {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    flex: 1 1 auto;
-  }
-}
-
-/* 快速灌溉管理样式 */
-.quick-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.form-item {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-}
-.form-inline {
-  flex-direction: row;
-  align-items: center;
-}
-.form-item .label {
-  width: auto;
-  font-size: 13px;
-  color: #555;
-  font-weight: 500;
-}
-
-.calc-result {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: #555;
-  background: #fcfcfc;
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
-}
-
-.quick-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 8px;
-}
-
-.chart-ref { width: 100%; }
-.chart-220 { height: 220px; }
-.chart-320 { height: 320px; }
-
-/* 自定义下拉框样式（与目标下拉框一致） */
-.custom-select {
-  position: relative;
-  height: 36px;
-  line-height: 36px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 0 12px;
-  box-sizing: border-box;
-  background: #fff;
-  z-index: 10;
-}
-.custom-select.disabled {
-  cursor: not-allowed;
-  background-color: #f5f7fa;
-  color: #c0c4cc;
-}
-.select-value {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.select-icon {
-  position: absolute;
-  right: 12px;
-  top: 0;
-  width: 16px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s;
-}
-.select-icon.open {
-  transform: rotate(180deg);
-}
-.select-options {
-  position: absolute;
-  top: 40px;
-  left: 0;
-  right: 0;
-  max-height: 200px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #e6e6e6;
-  border-radius: 4px;
-  z-index: 999;
-}
-.options-scroll {
-  padding: 4px 0;
-}
-.option-item {
-  padding: 0 12px;
-  height: 32px;
-  line-height: 32px;
-  cursor: pointer;
-}
-.option-item:hover {
-  background-color: #f5f7fa;
-}
-
-@media (max-width: 768px) {
-  .irrigation-page {
-    padding: 16px;
-  }
   .environment-overview {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 14px;
   }
+
   .environment-main,
   .environment-weather,
   .environment-layers {
-    padding: 12px;
+    padding: 14px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #fafcff 0%, #f6f9ff 100%);
+    border: 1px solid #edf2ff;
   }
+
+  .environment-layers {
+    grid-column: 1 / -1;
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
   .weather-summary-grid {
-    grid-template-columns: 1fr;
-  }
-  .soil-layers {
-    grid-template-columns: 1fr;
-  }
-  .statistic-grid {
-    grid-template-columns: 1fr;
-  }
-  .chart-220 { height: 180px; }
-  .chart-320 { height: 260px; }
-}
-
-@media (min-width: 1600px) {
-  .irrigation-page { padding: 32px; }
-  .chart-220 { height: 260px; }
-  .chart-320 { height: 360px; }
-  .quick-card { gap: 16px; }
-}
-
-/* 气象数据卡片样式 */
-.weather-card {
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-  transition: all 0.2s ease;
-  background: #fff;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
-  }
-  
-  :deep(.ant-card-body) {
-    padding: 16px;
-  }
-}
-
-.data-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.data-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 19px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: scale(1.1);
-  }
-}
-
-.weather-icon {
-  &.temperature {
-    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
-    color: #fff;
-  }
-  
-  &.humidity {
-    background: linear-gradient(135deg, #4ECDC4 0%, #45B7D1 100%);
-    color: #fff;
-  }
-}
-
-.data-content {
-  flex: 1;
-}
-
-.data-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 3px;
-  font-weight: 500;
-}
-
-.data-value {
-  font-size: 26px;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 3px;
-  
-  .unit {
-    font-size: 14px;
-    font-weight: 500;
-    color: #999;
-    margin-left: 4px;
-  }
-}
-
-.data-status {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-  display: inline-block;
-  
-  &.cold {
-    background: #E3F2FD;
-    color: #1976D2;
-  }
-  
-  &.comfortable {
-    background: #E8F5E9;
-    color: #388E3C;
-  }
-  
-  &.hot {
-    background: #FFF3E0;
-    color: #F57C00;
-  }
-  
-  &.very-hot {
-    background: #FFEBEE;
-    color: #D32F2F;
-  }
-  
-  &.dry {
-    background: #FFF3E0;
-    color: #F57C00;
-  }
-  
-  &.humid {
-    background: #E3F2FD;
-    color: #1976D2;
-  }
-  
-  &.very-humid {
-    background: #E0F7FA;
-    color: #00838F;
-  }
-}
-
-/* 土壤分层展示样式 */
-.soil-layers {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.soil-layer {
-  display: flex;
-  align-items: center;
-  padding: 13px 16px;
-  border-radius: 8px;
-  color: #fff;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-}
-
-.layer-top {
-  background: linear-gradient(135deg, #8B5A2B 0%, #A0522D 100%);
-}
-
-.layer-middle {
-  background: linear-gradient(135deg, #6B4423 0%, #8B4513 100%);
-}
-
-.layer-bottom {
-  background: linear-gradient(135deg, #4A3520 0%, #5D4037 100%);
-}
-
-.layer-label {
-  width: 100px;
-  font-weight: 600;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.layer-data {
-  display: flex;
-  gap: 28px;
-  flex: 1;
-  justify-content: center;
-}
-
-.layer-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.layer-item-label {
-  font-size: 12px;
-  opacity: 0.85;
-}
-
-.layer-item-value {
-  font-size: 18px;
-  font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  .layer-data {
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .layer-label {
-    width: 80px;
-    font-size: 14px;
-  }
-  .layer-item-value {
-    font-size: 16px;
-  }
-  
-  .data-item {
-    gap: 16px;
-  }
-  
-  .data-icon {
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
-  }
-  
-  .data-value {
-    font-size: 24px;
-  }
-  
-  .weather-card :deep(.ant-card-body) {
-    padding: 16px;
-  }
-}
-
-@media (min-width: 1600px) {
-  .data-item {
-    gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
-  .data-icon {
-    width: 70px;
-    height: 70px;
-    font-size: 28px;
-  }
-
-  .data-value {
-    font-size: 36px;
-  }
-
-  .weather-card :deep(.ant-card-body) {
-    padding: 24px;
-  }
-}
-
-.irrigation-report-modal {
-  :deep(.ant-modal-content) {
-    border-radius: 16px;
-    overflow: hidden;
-  }
-
-  :deep(.ant-modal-header) {
-    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-    padding: 16px 24px;
-
-    .ant-modal-title {
-      color: #fff;
-      font-size: 18px;
-      font-weight: 600;
-    }
-  }
-
-  :deep(.ant-modal-close) {
-    color: #fff;
+  .env-weather-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #eef2f7;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    transition: all 0.25s ease;
 
     &:hover {
-      color: #f0f0f0;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+      transform: translateY(-1px);
+    }
+
+    &.temperature {
+      .env-weather-icon {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+      }
+    }
+
+    &.humidity {
+      .env-weather-icon {
+        background: linear-gradient(135deg, #4ecdc4 0%, #45b7d1 100%);
+      }
     }
   }
-}
 
-.report-container {
-  padding: 8px 4px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
+  .env-weather-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  }
 
-.report-header {
-  text-align: center;
-  padding: 16px 0;
-}
+  .env-weather-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
 
-.report-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-  font-size: 28px;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
-}
+  .env-weather-label {
+    font-size: 13px;
+    color: #888;
+    font-weight: 500;
+  }
 
-.report-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #262626;
-  margin: 0 0 16px;
-}
+  .env-weather-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.2;
 
-.report-meta {
-  display: flex;
-  justify-content: center;
-  gap: 32px;
-  flex-wrap: wrap;
-}
+    small {
+      font-size: 14px;
+      font-weight: 500;
+      color: #999;
+      margin-left: 2px;
+    }
+  }
 
-.meta-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+  .env-weather-status {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 1px 8px;
+    border-radius: 10px;
+    display: inline-block;
+    width: fit-content;
+    margin-top: 1px;
 
-.meta-label {
-  font-size: 12px;
-  color: #8c8c8c;
-  margin-bottom: 4px;
-}
+    &.cold {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
 
-.meta-value {
-  font-size: 14px;
-  color: #262626;
-  font-weight: 600;
-}
+    &.comfortable {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
 
-.report-divider {
-  margin: 20px 0;
-  border-color: #e8e8e8;
-}
+    &.hot {
+      background: #fff3e0;
+      color: #f57c00;
+    }
 
-.report-section {
-  margin-bottom: 8px;
-}
+    &.dry {
+      background: #fff3e0;
+      color: #e65100;
+    }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+    &.humid {
+      background: #e3f2fd;
+      color: #0277bd;
+    }
 
-  h4 {
-    margin: 0;
-    font-size: 16px;
+    &.very-humid {
+      background: #e8eaf6;
+      color: #283593;
+    }
+  }
+
+  .compact-card {
+    box-shadow: none;
+    border: 1px solid #eef2f7;
+  }
+
+  .compact-card :deep(.ant-card-body) {
+    padding: 14px;
+  }
+
+  .suggestion-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rich-card {
+    :deep(.ant-card-body) {
+      padding-top: 16px;
+    }
+  }
+
+  .mini-title {
+    margin: 8px 0 4px;
+    font-size: 13px;
+    color: #555;
+  }
+
+  .statistic-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .metric-title {
+    font-size: 12px;
+    color: #888;
+  }
+  .metric-value {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .water-gate-divider {
+    margin: 14px 0 12px;
+  }
+
+  .water-gate-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .water-gate-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .water-gate-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
     font-weight: 600;
     color: #262626;
   }
 
-  .anticon {
+  .tips {
+    margin: 0;
+    padding-left: 18px;
+    color: #666;
+  }
+
+  .mt-4 {
+    margin-top: 16px;
+  }
+
+  .top-row {
+    align-items: stretch;
+    :deep(.ant-col) {
+      display: flex;
+    }
+    :deep(.ant-card) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      flex: 1 1 auto;
+    }
+  }
+
+  .row-stretch {
+    align-items: stretch;
+    :deep(.ant-col) {
+      display: flex;
+    }
+    :deep(.ant-card) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      flex: 1 1 auto;
+    }
+  }
+
+  /* 快速灌溉管理样式 */
+  .quick-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .form-inline {
+    flex-direction: row;
+    align-items: center;
+  }
+  .form-item .label {
+    width: auto;
+    font-size: 13px;
+    color: #555;
+    font-weight: 500;
+  }
+
+  .calc-result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #555;
+    background: #fcfcfc;
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+  }
+
+  .quick-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .chart-ref {
+    width: 100%;
+  }
+  .chart-220 {
+    height: 220px;
+  }
+  .chart-320 {
+    height: 320px;
+  }
+
+  /* 自定义下拉框样式（与目标下拉框一致） */
+  .custom-select {
+    position: relative;
+    height: 36px;
+    line-height: 36px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    background: #fff;
+    z-index: 10;
+  }
+  .custom-select.disabled {
+    cursor: not-allowed;
+    background-color: #f5f7fa;
+    color: #c0c4cc;
+  }
+  .select-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .select-icon {
+    position: absolute;
+    right: 12px;
+    top: 0;
+    width: 16px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+  .select-icon.open {
+    transform: rotate(180deg);
+  }
+  .select-options {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 4px;
+    z-index: 999;
+  }
+  .options-scroll {
+    padding: 4px 0;
+  }
+  .option-item {
+    padding: 0 12px;
+    height: 32px;
+    line-height: 32px;
+    cursor: pointer;
+  }
+  .option-item:hover {
+    background-color: #f5f7fa;
+  }
+
+  @media (max-width: 768px) {
+    .irrigation-page {
+      padding: 16px;
+    }
+    .environment-overview {
+      grid-template-columns: 1fr;
+    }
+    .environment-main,
+    .environment-weather,
+    .environment-layers {
+      padding: 12px;
+    }
+    .weather-summary-grid {
+      grid-template-columns: 1fr;
+    }
+    .soil-layers {
+      grid-template-columns: 1fr;
+    }
+    .statistic-grid {
+      grid-template-columns: 1fr;
+    }
+    .chart-220 {
+      height: 180px;
+    }
+    .chart-320 {
+      height: 260px;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .irrigation-page {
+      padding: 32px;
+    }
+    .chart-220 {
+      height: 260px;
+    }
+    .chart-320 {
+      height: 360px;
+    }
+    .quick-card {
+      gap: 16px;
+    }
+  }
+
+  /* 气象数据卡片样式 */
+  .weather-card {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    transition: all 0.2s ease;
+    background: #fff;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+    }
+
+    :deep(.ant-card-body) {
+      padding: 16px;
+    }
+  }
+
+  .data-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .data-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  .weather-icon {
+    &.temperature {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+      color: #fff;
+    }
+
+    &.humidity {
+      background: linear-gradient(135deg, #4ecdc4 0%, #45b7d1 100%);
+      color: #fff;
+    }
+  }
+
+  .data-content {
+    flex: 1;
+  }
+
+  .data-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 3px;
+    font-weight: 500;
+  }
+
+  .data-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 3px;
+
+    .unit {
+      font-size: 14px;
+      font-weight: 500;
+      color: #999;
+      margin-left: 4px;
+    }
+  }
+
+  .data-status {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-block;
+
+    &.cold {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    &.comfortable {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+
+    &.hot {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    &.very-hot {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+
+    &.dry {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    &.humid {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    &.very-humid {
+      background: #e0f7fa;
+      color: #00838f;
+    }
+  }
+
+  /* 土壤分层展示样式 */
+  .soil-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .soil-layer {
+    display: flex;
+    align-items: center;
+    padding: 13px 16px;
+    border-radius: 8px;
+    color: #fff;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  .layer-top {
+    background: linear-gradient(135deg, #8b5a2b 0%, #a0522d 100%);
+  }
+
+  .layer-middle {
+    background: linear-gradient(135deg, #6b4423 0%, #8b4513 100%);
+  }
+
+  .layer-bottom {
+    background: linear-gradient(135deg, #4a3520 0%, #5d4037 100%);
+  }
+
+  .layer-label {
+    width: 100px;
+    font-weight: 600;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .layer-data {
+    display: flex;
+    gap: 28px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .layer-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .layer-item-label {
+    font-size: 12px;
+    opacity: 0.85;
+  }
+
+  .layer-item-value {
     font-size: 18px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 768px) {
+    .layer-data {
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .layer-label {
+      width: 80px;
+      font-size: 14px;
+    }
+    .layer-item-value {
+      font-size: 16px;
+    }
+
+    .data-item {
+      gap: 16px;
+    }
+
+    .data-icon {
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+    }
+
+    .data-value {
+      font-size: 24px;
+    }
+
+    .weather-card :deep(.ant-card-body) {
+      padding: 16px;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .data-item {
+      gap: 24px;
+    }
+
+    .data-icon {
+      width: 70px;
+      height: 70px;
+      font-size: 28px;
+    }
+
+    .data-value {
+      font-size: 36px;
+    }
+
+    .weather-card :deep(.ant-card-body) {
+      padding: 24px;
+    }
+  }
+
+  .irrigation-report-modal {
+    :deep(.ant-modal-content) {
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    :deep(.ant-modal-header) {
+      background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+      padding: 16px 24px;
+
+      .ant-modal-title {
+        color: #fff;
+        font-size: 18px;
+        font-weight: 600;
+      }
+    }
+
+    :deep(.ant-modal-close) {
+      color: #fff;
+
+      &:hover {
+        color: #f0f0f0;
+      }
+    }
+  }
+
+  .report-container {
+    padding: 8px 4px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .report-header {
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  .report-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 28px;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+  }
+
+  .report-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #262626;
+    margin: 0 0 16px;
+  }
+
+  .report-meta {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .meta-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-bottom: 4px;
+  }
+
+  .meta-value {
+    font-size: 14px;
+    color: #262626;
+    font-weight: 600;
+  }
+
+  .report-divider {
+    margin: 20px 0;
+    border-color: #e8e8e8;
+  }
+
+  .report-section {
+    margin-bottom: 8px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+
+    h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #262626;
+    }
+
+    .anticon {
+      font-size: 18px;
+      color: #1890ff;
+    }
+  }
+
+  .section-content {
+    padding-left: 4px;
+  }
+
+  .overview-summary {
+    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+    border: 1px solid #91d5ff;
+    border-radius: 12px;
+    padding: 16px 20px;
+
+    &.water {
+      background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+      border-color: #91d5ff;
+    }
+  }
+
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .summary-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .summary-info {
+    flex: 1;
+  }
+
+  .summary-label {
+    font-size: 14px;
+    color: #595959;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .summary-value {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .value-big {
+    font-size: 32px;
+    font-weight: 700;
     color: #1890ff;
   }
-}
 
-.section-content {
-  padding-left: 4px;
-}
-
-.overview-summary {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  border-radius: 12px;
-  padding: 16px 20px;
-
-  &.water {
-    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-    border-color: #91d5ff;
-  }
-}
-
-.summary-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.summary-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 22px;
-  flex-shrink: 0;
-}
-
-.summary-info {
-  flex: 1;
-}
-
-.summary-label {
-  font-size: 14px;
-  color: #595959;
-  font-weight: 500;
-  margin-bottom: 6px;
-}
-
-.summary-value {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.value-big {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1890ff;
-}
-
-.value-unit {
-  font-size: 16px;
-  color: #8c8c8c;
-}
-
-.percent-card {
-  background: #fafafa;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.percent-card-title {
-  font-size: 14px;
-  color: #595959;
-  font-weight: 600;
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-.layer-grid {
-  margin-top: 8px;
-}
-
-.layer-card {
-  border-radius: 10px;
-  padding: 16px 12px;
-  text-align: center;
-  transition: all 0.3s;
-
-  &:hover {
-    transform: translateY(-2px);
+  .value-unit {
+    font-size: 16px;
+    color: #8c8c8c;
   }
 
-  &.upper {
-    background: linear-gradient(135deg, #8B5A2B 0%, #A0522D 100%);
-    color: #fff;
+  .percent-card {
+    background: #fafafa;
+    border-radius: 12px;
+    padding: 16px;
   }
 
-  &.middle {
-    background: linear-gradient(135deg, #6B4423 0%, #8B4513 100%);
-    color: #fff;
+  .percent-card-title {
+    font-size: 14px;
+    color: #595959;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 12px;
   }
 
-  &.deep {
-    background: linear-gradient(135deg, #4A3520 0%, #5D4037 100%);
-    color: #fff;
+  .layer-grid {
+    margin-top: 8px;
   }
-}
 
-.layer-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 8px;
-  font-size: 16px;
-}
+  .layer-card {
+    border-radius: 10px;
+    padding: 16px 12px;
+    text-align: center;
+    transition: all 0.3s;
 
-.layer-name {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
+    &:hover {
+      transform: translateY(-2px);
+    }
 
-.layer-data-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+    &.upper {
+      background: linear-gradient(135deg, #8b5a2b 0%, #a0522d 100%);
+      color: #fff;
+    }
 
-.layer-data-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-}
+    &.middle {
+      background: linear-gradient(135deg, #6b4423 0%, #8b4513 100%);
+      color: #fff;
+    }
 
-.layer-data-label {
-  opacity: 0.8;
-}
+    &.deep {
+      background: linear-gradient(135deg, #4a3520 0%, #5d4037 100%);
+      color: #fff;
+    }
+  }
 
-.layer-data-value {
-  font-weight: 600;
+  .layer-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+    font-size: 16px;
+  }
 
-  .unit {
-    font-size: 11px;
+  .layer-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .layer-data-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .layer-data-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .layer-data-label {
     opacity: 0.8;
   }
-}
 
-.weather-card {
-  background: #fafafa;
-  border-radius: 10px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
+  .layer-data-value {
+    font-weight: 600;
 
-.weather-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #ff6b6b 0%, #ffa502 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 20px;
-
-  &.humidity {
-    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    .unit {
+      font-size: 11px;
+      opacity: 0.8;
+    }
   }
-}
 
-.weather-info {
-  flex: 1;
-}
+  .weather-card {
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
 
-.weather-label {
-  font-size: 13px;
-  color: #8c8c8c;
-  margin-bottom: 4px;
-}
+  .weather-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ffa502 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
 
-.weather-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #262626;
+    &.humidity {
+      background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    }
+  }
 
-  .unit {
+  .weather-info {
+    flex: 1;
+  }
+
+  .weather-label {
+    font-size: 13px;
+    color: #8c8c8c;
+    margin-bottom: 4px;
+  }
+
+  .weather-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #262626;
+
+    .unit {
+      font-size: 14px;
+      color: #8c8c8c;
+      font-weight: normal;
+    }
+  }
+
+  .recommend-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .need-fertilizer-tag.large {
+    font-size: 15px;
+    padding: 6px 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .recommend-subtitle {
+    font-size: 13px;
+    color: #8c8c8c;
+
+    &.success {
+      color: #52c41a;
+    }
+  }
+
+  .recommend-info-row {
+    margin-bottom: 16px;
+  }
+
+  .info-card {
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.3s;
+
+    &:hover {
+      background: #f0f0f0;
+    }
+  }
+
+  .info-card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+    flex-shrink: 0;
+
+    &.water {
+      background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    }
+  }
+
+  .info-card-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .info-card-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-bottom: 4px;
+  }
+
+  .info-card-value {
+    font-size: 13px;
+    color: #262626;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .volume-card {
+    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+    border: 1px solid #91d5ff;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .volume-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+  }
+
+  .volume-info {
+    flex: 1;
+  }
+
+  .volume-label {
+    font-size: 13px;
+    color: #595959;
+    margin-bottom: 4px;
+  }
+
+  .volume-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1890ff;
+  }
+
+  .volume-unit {
     font-size: 14px;
     color: #8c8c8c;
     font-weight: normal;
   }
-}
 
-.recommend-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.need-fertilizer-tag.large {
-  font-size: 15px;
-  padding: 6px 18px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.recommend-subtitle {
-  font-size: 13px;
-  color: #8c8c8c;
-
-  &.success {
-    color: #52c41a;
+  .reason-box {
+    background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+    border: 1px solid #ffe58f;
+    border-radius: 10px;
+    padding: 16px;
   }
-}
 
-.recommend-info-row {
-  margin-bottom: 16px;
-}
+  .reason-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #d48806;
 
-.info-card {
-  background: #fafafa;
-  border-radius: 10px;
-  padding: 14px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  transition: all 0.3s;
-
-  &:hover {
-    background: #f0f0f0;
+    .anticon {
+      font-size: 16px;
+    }
   }
-}
 
-.info-card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 16px;
-  flex-shrink: 0;
-
-  &.water {
-    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  .reason-content {
+    color: #595959;
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 0;
+    white-space: pre-wrap;
   }
-}
 
-.info-card-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.info-card-label {
-  font-size: 12px;
-  color: #8c8c8c;
-  margin-bottom: 4px;
-}
-
-.info-card-value {
-  font-size: 13px;
-  color: #262626;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.volume-card {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  border-radius: 10px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.volume-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 20px;
-}
-
-.volume-info {
-  flex: 1;
-}
-
-.volume-label {
-  font-size: 13px;
-  color: #595959;
-  margin-bottom: 4px;
-}
-
-.volume-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1890ff;
-}
-
-.volume-unit {
-  font-size: 14px;
-  color: #8c8c8c;
-  font-weight: normal;
-}
-
-.reason-box {
-  background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
-  border: 1px solid #ffe58f;
-  border-radius: 10px;
-  padding: 16px;
-}
-
-.reason-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #d48806;
-
-  .anticon {
-    font-size: 16px;
-  }
-}
-
-.reason-content {
-  color: #595959;
-  font-size: 13px;
-  line-height: 1.7;
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.tips-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.tip-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #fafafa;
-  border-radius: 10px;
-  padding: 14px;
-  transition: all 0.3s;
-
-  &:hover {
-    background: #f0f0f0;
-    transform: translateX(4px);
-  }
-}
-
-.tip-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.tip-content {
-  flex: 1;
-}
-
-.tip-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #262626;
-  margin-bottom: 4px;
-}
-
-.tip-text {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.5;
-}
-
-@media (max-width: 768px) {
   .tips-grid {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
-  .recommend-info-row .ant-col {
-    margin-bottom: 12px;
-  }
-
-  .water-gate-item {
-    flex-direction: column;
+  .tip-item {
+    display: flex;
     align-items: flex-start;
+    gap: 12px;
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 14px;
+    transition: all 0.3s;
+
+    &:hover {
+      background: #f0f0f0;
+      transform: translateX(4px);
+    }
   }
 
-  .water-gate-actions {
-    width: 100%;
+  .tip-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    flex-shrink: 0;
   }
 
-  .water-gate-card {
-    width: 100%;
+  .tip-content {
+    flex: 1;
   }
-}
+
+  .tip-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #262626;
+    margin-bottom: 4px;
+  }
+
+  .tip-text {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 768px) {
+    .tips-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .recommend-info-row .ant-col {
+      margin-bottom: 12px;
+    }
+  }
 </style>
