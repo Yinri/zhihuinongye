@@ -13,21 +13,26 @@ import FunctionButton from "@/views/rapeseed/dashboard/components/FunctionButton
 </script>
 
 <style scoped>
-html,
-body {
-  height: 100%;
-  margin: 0; /* 清除浏览器默认边距，避免出现滚动条 */
-  padding: 0;
-}
-/* 2. 让页面根div继承全屏高度 */
 .dashboard_page {
-  height: 100%;
+  height: calc(100vh - 90px);
   display: flex;
-  flex-direction: row; /* 横向排列 */
+  flex-direction: row;
+  gap: 12px;
+  padding: 8px 12px;
 }
-.dashboard_header{
+
+:deep(.warning-container) {
+  height: 100%;
+  flex: 0 0 360px;
+  width: 360px;
   display: flex;
   flex-direction: column;
 }
 
+@media (max-width: 1200px) {
+  :deep(.warning-container) {
+    flex: 0 0 300px;
+    width: 300px;
+  }
+}
 </style>

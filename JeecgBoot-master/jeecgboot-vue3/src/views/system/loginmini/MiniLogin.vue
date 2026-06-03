@@ -12,119 +12,58 @@
     <div v-else class="aui-phone-logo">
       <img :src="logoImg" alt="jeecg" />
     </div>
-    <div v-show="type === 'login'">
-      <div class="aui-content">
-        <div class="aui-container">
-          <div class="aui-form">
-            <div class="aui-image">
-              <div class="aui-image-text">
-                <img :src="adTextImg" />
-              </div>
+    <div class="aui-content">
+      <div class="aui-container">
+        <div class="aui-form">
+          <div class="aui-image">
+            <div class="aui-image-text">
+              <img :src="adTextImg" />
             </div>
-            <div class="aui-formBox">
-              <div class="aui-formWell">
-                <div class="aui-flex aui-form-nav investment_title">
-                  <div class="aui-flex-box" :class="activeIndex === 'accountLogin' ? 'activeNav on' : ''" @click="loginClick('accountLogin')"
-                    >{{ t('sys.login.signInFormTitle') }}
-                  </div>
-                  <div class="aui-flex-box" :class="activeIndex === 'phoneLogin' ? 'activeNav on' : ''" @click="loginClick('phoneLogin')"
-                    >{{ t('sys.login.mobileSignInFormTitle') }}
-                  </div>
-                </div>
-                <div class="aui-form-box" style="height: 180px">
-                  <a-form ref="loginRef" :model="formData" v-if="activeIndex === 'accountLogin'" @keyup.enter.native="loginHandleClick">
-                    <div class="aui-account">
-                      <div class="aui-inputClear">
-                        <i class="icon icon-code"></i>
-                        <a-form-item>
-                          <a-input class="fix-auto-fill" :placeholder="t('sys.login.userName')" v-model:value="formData.username" />
-                        </a-form-item>
-                      </div>
-                      <div class="aui-inputClear">
-                        <i class="icon icon-password"></i>
-                        <a-form-item>
-                          <a-input class="fix-auto-fill" type="password" :placeholder="t('sys.login.password')" v-model:value="formData.password" />
-                        </a-form-item>
-                      </div>
-                      
-                      <div class="aui-flex">
-                        <div class="aui-flex-box">
-                          <div class="aui-choice">
-                            <a-input class="fix-auto-fill" type="checkbox" v-model:value="rememberMe" />
-                            <span style="margin-left: 5px">{{ t('sys.login.rememberMe') }}</span>
-                          </div>
-                        </div>
-                        <div class="aui-forget">
-                          <a @click="forgetHandelClick"> {{ t('sys.login.forgetPassword') }}</a>
-                        </div>
-                      </div>
+          </div>
+          <div class="aui-formBox">
+            <div class="aui-formWell">
+              <div class="aui-flex aui-form-nav investment_title">
+                <div class="aui-flex-box activeNav on">{{ t('sys.login.signInFormTitle') }}</div>
+              </div>
+              <div class="aui-form-box" style="height: 180px">
+                <a-form ref="loginRef" :model="formData" @keyup.enter.native="handleLogin">
+                  <div class="aui-account">
+                    <div class="aui-inputClear">
+                      <i class="icon icon-code"></i>
+                      <a-form-item>
+                        <a-input class="fix-auto-fill" :placeholder="t('sys.login.userName')" v-model:value="formData.username" />
+                      </a-form-item>
                     </div>
-                  </a-form>
-                  <a-form v-else ref="phoneFormRef" :model="phoneFormData" @keyup.enter.native="loginHandleClick">
-                    <div class="aui-account phone">
-                      <div class="aui-inputClear phoneClear">
-                        <a-input class="fix-auto-fill" :placeholder="t('sys.login.mobile')" v-model:value="phoneFormData.mobile" />
-                      </div>
-                      <div class="aui-inputClear">
-                        <a-input class="fix-auto-fill" :maxlength="6" :placeholder="t('sys.login.smsCode')" v-model:value="phoneFormData.smscode" />
-                        <div v-if="showInterval" class="aui-code" @click="getLoginCode">
-                          <a>{{ t('component.countdown.normalText') }}</a>
-                        </div>
-                        <div v-else class="aui-code">
-                          <span class="aui-get-code code-shape">{{ t('component.countdown.sendText', [unref(timeRuning)]) }}</span>
-                        </div>
-                      </div>
+                    <div class="aui-inputClear">
+                      <i class="icon icon-password"></i>
+                      <a-form-item>
+                        <a-input class="fix-auto-fill" type="password" :placeholder="t('sys.login.password')" v-model:value="formData.password" />
+                      </a-form-item>
                     </div>
-                  </a-form>
-                </div>
-                <div class="aui-formButton">
-                  <div class="aui-flex">
-                    <a-button :loading="loginLoading" class="aui-link-login" type="primary" @click="loginHandleClick">
-                      {{ t('sys.login.loginButton') }}</a-button>
                   </div>
-                  <div class="aui-flex">
-                    <a class="aui-linek-code aui-flex-box" @click="codeHandleClick">{{ t('sys.login.qrSignInFormTitle') }}</a>
-                  </div>
-                  <div class="aui-flex">
-                    <a class="aui-linek-code aui-flex-box" @click="registerHandleClick">{{ t('sys.login.registerButton') }}</a>
-                  </div>
+                </a-form>
+              </div>
+              <div class="aui-formButton">
+                <div class="aui-flex">
+                  <a-button :loading="loginLoading" class="aui-link-login" type="primary" @click="handleLogin">
+                    {{ t('sys.login.loginButton') }}</a-button>
                 </div>
               </div>
-              <a-form @keyup.enter.native="loginHandleClick">
-                
-              </a-form>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div v-show="type === 'forgot'" :class="`${prefixCls}-form`">
-      <MiniForgotpad ref="forgotRef" @go-back="goBack" @success="handleSuccess" />
-    </div>
-    <div v-show="type === 'register'" :class="`${prefixCls}-form`">
-      <MiniRegister ref="registerRef" @go-back="goBack" @success="handleSuccess" />
-    </div>
-    <div v-show="type === 'codeLogin'" :class="`${prefixCls}-form`">
-      <MiniCodelogin ref="codeRef" @go-back="goBack" @success="handleSuccess" />
-    </div>
-    
   </div>
 </template>
 <script lang="ts" setup name="login-mini">
-  import { getCaptcha } from '/@/api/sys/user';
-  import { computed, onMounted, reactive, ref, toRaw, unref } from 'vue';
-  import { Rule } from '/@/components/Form';
+  import { reactive, ref, toRaw } from 'vue';
   import { useUserStore } from '/@/store/modules/user';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { SmsEnum } from '/@/views/sys/login/useLogin';
-  import MiniForgotpad from './MiniForgotpad.vue';
-  import MiniRegister from './MiniRegister.vue';
-  import MiniCodelogin from './MiniCodelogin.vue';
   import logoImg from '/@/assets/loginmini/icon/jeecg_logo.png';
   import adTextImg from '/@/assets/loginmini/icon/jeecg_ad_text.png';
   import { AppLocalePicker, AppDarkModeToggle } from '/@/components/Application';
-  import { useLocaleStore } from '/@/store/modules/locale';
   import { useDesign } from "/@/hooks/web/useDesign";
   import { useAppInject } from "/@/hooks/web/useAppInject";
 
@@ -132,69 +71,15 @@
   const { notification, createMessage } = useMessage();
   const userStore = useUserStore();
   const { t } = useI18n();
-  const localeStore = useLocaleStore();
-  const showLocale = localeStore.getShowPicker;
-  const randCodeData = reactive<any>({
-    checkKey: null,
-  });
-  const rememberMe = ref<string>('0');
-  //手机号登录还是账号登录
-  const activeIndex = ref<string>('accountLogin');
-  const type = ref<string>('login');
-  //账号登录表单字段
+
   const formData = reactive<any>({
-    inputCode: '',
     username: 'youcai',
     password: 'YouCai1.',
   });
-  //手机登录表单字段
-  const phoneFormData = reactive<any>({
-    mobile: '',
-    smscode: '',
-  });
-  const loginRef = ref();
-  //扫码登录
-  const codeRef = ref();
-  //是否显示获取验证码
-  const showInterval = ref<boolean>(true);
-  //60s
-  const timeRuning = ref<number>(60);
-  //定时器
-  const timer = ref<any>(null);
-  //忘记密码
-  const forgotRef = ref();
-  //注册
-  const registerRef = ref();
   const loginLoading = ref<boolean>(false);
   const { getIsMobile } = useAppInject();
-  defineProps({
-    sessionTimeout: {
-      type: Boolean,
-    },
-  });
 
-  
-
-  /**
-   * 切换登录方式
-   */
-  function loginClick(type) {
-    activeIndex.value = type;
-  }
-
-  /**
-   * 账号或者手机登录
-   */
-  async function loginHandleClick() {
-    if (unref(activeIndex) === 'accountLogin') {
-      accountLogin();
-    } else {
-      //手机号登录
-      phoneLogin();
-    }
-  }
-
-  async function accountLogin() {
+  async function handleLogin() {
     if (!formData.username) {
       createMessage.warn(t('sys.login.accountPlaceholder'));
       return;
@@ -209,7 +94,7 @@
         toRaw({
           password: formData.password,
           username: formData.username,
-          mode: 'none', //不要默认的错误提示
+          mode: 'none',
         })
       );
       if (userInfo) {
@@ -225,136 +110,10 @@
         description: error.message || t('sys.login.networkExceptionMsg'),
         duration: 3,
       });
-      
     } finally {
       loginLoading.value = false;
     }
   }
-
-  /**
-   * 手机号登录
-   */
-  async function phoneLogin() {
-    if (!phoneFormData.mobile) {
-      createMessage.warn(t('sys.login.mobilePlaceholder'));
-      return;
-    }
-    if (!phoneFormData.smscode) {
-      createMessage.warn(t('sys.login.smsPlaceholder'));
-      return;
-    }
-    try {
-      loginLoading.value = true;
-      const { userInfo }: any = await userStore.phoneLogin({
-        mobile: phoneFormData.mobile,
-        captcha: phoneFormData.smscode,
-        mode: 'none', //不要默认的错误提示
-      });
-      if (userInfo) {
-        notification.success({
-          message: t('sys.login.loginSuccessTitle'),
-          description: `${t('sys.login.loginSuccessDesc')}: ${userInfo.realname}`,
-          duration: 3,
-        });
-      }
-    } catch (error) {
-      notification.error({
-        message: t('sys.api.errorTip'),
-        description: error.message || t('sys.login.networkExceptionMsg'),
-        duration: 3,
-      });
-    } finally {
-      loginLoading.value = false;
-    }
-  }
-
-  /**
-   * 获取手机验证码
-   */
-  async function getLoginCode() {
-    if (!phoneFormData.mobile) {
-      createMessage.warn(t('sys.login.mobilePlaceholder'));
-      return;
-    }
-    //update-begin---author:wangshuai---date:2024-04-18---for:【QQYUN-9005】同一个IP，1分钟超过5次短信，则提示需要验证码---
-    //update-begin---author:wangshuai---date:2025-07-15---for:【issues/8567】严重：修改密码存在水平越权问题：登录应该用登录模板不应该用忘记密码的模板---
-    const result = await getCaptcha({ mobile: phoneFormData.mobile, smsmode: SmsEnum.LOGIN }).catch(() =>{});
-    //update-end---author:wangshuai---date:2024-04-18---for:【QQYUN-9005】同一个IP，1分钟超过5次短信，则提示需要验证码---
-    if (result) {
-      const TIME_COUNT = 60;
-      if (!unref(timer)) {
-        timeRuning.value = TIME_COUNT;
-        showInterval.value = false;
-        timer.value = setInterval(() => {
-          if (unref(timeRuning) > 0 && unref(timeRuning) <= TIME_COUNT) {
-            timeRuning.value = timeRuning.value - 1;
-          } else {
-            showInterval.value = true;
-            clearInterval(unref(timer));
-            timer.value = null;
-          }
-        }, 1000);
-      }
-    }
-  }
-
-  /**
-   * 第三方登录
-   * @param type
-   */
-  
-
-  /**
-   * 忘记密码
-   */
-  function forgetHandelClick() {
-    type.value = 'forgot';
-    setTimeout(() => {
-      forgotRef.value.initForm();
-    }, 300);
-  }
-
-  /**
-   * 返回登录页面
-   */
-  function goBack() {
-    activeIndex.value = 'accountLogin';
-    type.value = 'login';
-  }
-
-  /**
-   * 忘记密码/注册账号回调事件
-   * @param value
-   */
-  function handleSuccess(value) {
-    Object.assign(formData, value);
-    Object.assign(phoneFormData, { mobile: "", smscode: "" });
-    type.value = 'login';
-    activeIndex.value = 'accountLogin';
-    
-  }
-
-  /**
-   * 注册
-   */
-  function registerHandleClick() {
-    type.value = 'register';
-    setTimeout(() => {
-      registerRef.value.initForm();
-    }, 300);
-  }
-
-  /**
-   * 注册
-   */
-  function codeHandleClick() {
-    type.value = 'codeLogin';
-    setTimeout(() => {
-      codeRef.value.initFrom();
-    }, 300);
-  }
-
-  onMounted(() => {});
 </script>
 
 <style lang="less" scoped>
@@ -364,28 +123,6 @@
   :deep(.ant-input:focus) {
     box-shadow: none;
   }
-  .aui-get-code {
-    float: right;
-    position: relative;
-    z-index: 3;
-    background: #ffffff;
-    color: #1573e9;
-    border-radius: 100px;
-    padding: 5px 16px;
-    margin: 7px;
-    border: 1px solid #1573e9;
-    top: 12px;
-  }
-
-  .aui-get-code:hover {
-    color: #1573e9;
-  }
-
-  .code-shape {
-    border-color: #dadada !important;
-    color: #aaa !important;
-  }
-
   :deep(.jeecg-dark-switch){
     position:absolute;
     margin-right: 10px;
@@ -467,7 +204,6 @@ html[data-theme='dark'] {
     .ant-checkbox-inner,.aui-success h3{
       border-color: #c9d1d9;
     }
-    //update-begin---author:wangshuai ---date:20230828  for：【QQYUN-6363】这个样式代码有问题，不在里面，导致表达式有问题------------
     &-sign-in-way {
       .anticon {
         font-size: 22px !important;
@@ -479,7 +215,6 @@ html[data-theme='dark'] {
         }
       }
     }
-    //update-end---author:wangshuai ---date:20230828  for：【QQYUN-6363】这个样式代码有问题，不在里面，导致表达式有问题------------
   }
 
   input.fix-auto-fill,
@@ -487,7 +222,7 @@ html[data-theme='dark'] {
     -webkit-text-fill-color: #c9d1d9 !important;
     box-shadow: inherit !important;
   }
-  
+
   .ant-divider-inner-text {
     font-size: 12px !important;
     color: @text-color-secondary !important;

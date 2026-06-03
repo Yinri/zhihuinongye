@@ -201,14 +201,14 @@ onMounted(() => {
 
 <style scoped>
 .warning-container {
-  width: 30%;
   border-radius: 8px;
   border: 1px solid #e8e8e8;
   background-color: #ffffff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  margin-top: 5px;
   transition: box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .warning-container:hover {
@@ -296,12 +296,11 @@ onMounted(() => {
   }
 }
 
-/* 内容区样式（带滚动条） */
+/* 内容区样式（带滚动条，撑满剩余空间） */
 .warning-content {
-  max-height: 500px; /* 增加最大高度 */
+  flex: 1;
   overflow-y: auto;
-  padding: 12px 0;
-  min-height: 200px;
+  padding: 4px 0;
   background: linear-gradient(to bottom, #ffffff, #fafafa);
 }
 
@@ -311,7 +310,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  height: 100%;
   color: #c9a56a;
 }
 
@@ -378,7 +377,7 @@ onMounted(() => {
 .warning-item {
   display: flex;
   align-items: flex-start;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid #f0f0f0;
   transition: all 0.2s;
   background-color: #ffffff;
@@ -437,7 +436,7 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .info-title {
@@ -487,8 +486,8 @@ onMounted(() => {
 .info-desc {
   font-size: 12px;
   color: #9c6b1c;
-  line-height: 1.4;
-  margin-bottom: 8px;
+  line-height: 1.35;
+  margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

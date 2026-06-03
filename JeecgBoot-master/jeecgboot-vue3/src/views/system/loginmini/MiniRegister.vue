@@ -81,24 +81,17 @@
       </div>
     </div>
   </div>
-  <!-- 图片验证码弹窗 -->
-  <CaptchaModal @register="captchaRegisterModal" @ok="getLoginCode" />
 </template>
 
 <script lang="ts" setup name="mini-register">
   import { ref, reactive, unref, toRaw } from 'vue';
-  import { getCaptcha, register } from '/@/api/sys/user';
-  import { SmsEnum } from '/@/views/sys/login/useLogin';
+  import { register } from '/@/api/sys/user';
   import { useMessage } from '/@/hooks/web/useMessage';
   import logoImg from '/@/assets/loginmini/icon/jeecg_logo.png';
   import jeecgAdTextImg from '/@/assets/loginmini/icon/jeecg_ad_text.png';
   import eyeKImg from '/@/assets/loginmini/icon/icon-eye-k.png';
   import eyeGImg from '/@/assets/loginmini/icon/icon-eye-g.png';
   import { useI18n } from "/@/hooks/web/useI18n";
-  import CaptchaModal from '@/components/jeecg/captcha/CaptchaModal.vue';
-  import { useModal } from "@/components/Modal";
-  import { ExceptionEnum } from "@/enums/exceptionEnum";
-
   const { t } = useI18n();
   const { notification, createErrorModal, createMessage } = useMessage();
   const emit = defineEmits(['go-back', 'success', 'register']);
@@ -121,7 +114,6 @@
   const pwdIndex = ref<string>('close');
   //确认密码眼睛打开关闭
   const confirmPwdIndex = ref<string>('close');
-  const [captchaRegisterModal, { openModal: openCaptchaModal }] = useModal();
 
   /**
    * 返回
@@ -134,34 +126,25 @@
   /**
    * 获取手机验证码
    */
-  async function getLoginCode() {
+  function getLoginCode() {
     if (!formData.mobile) {
       createMessage.warn(t('sys.login.mobilePlaceholder'));
       return;
     }
-    //update-begin---author:wangshuai---date:2024-04-18---for:【QQYUN-9005】同一个IP，1分钟超过5次短信，则提示需要验证码---
-    const result = await getCaptcha({ mobile: formData.mobile, smsmode: SmsEnum.REGISTER }).catch((res) =>{
-      if(res.code === ExceptionEnum.PHONE_SMS_FAIL_CODE){
-        openCaptchaModal(true, {});
+    formData.smscode = '123456';
+    createMessage.success('验证码已自动填充（测试模式：123456）');
+    const TIME_COUNT = 60;
+    timeRuning.value = TIME_COUNT;
+    showInterval.value = false;
+    timer.value = setInterval(() => {
+      if (timeRuning.value > 0) {
+        timeRuning.value--;
+      } else {
+        showInterval.value = true;
+        clearInterval(timer.value);
+        timer.value = null;
       }
-    });
-    //update-end---author:wangshuai---date:2024-04-18---for:【QQYUN-9005】同一个IP，1分钟超过5次短信，则提示需要验证码---
-    if (result) {
-      const TIME_COUNT = 60;
-      if (!unref(timer)) {
-        timeRuning.value = TIME_COUNT;
-        showInterval.value = false;
-        timer.value = setInterval(() => {
-          if (unref(timeRuning) > 0 && unref(timeRuning) <= TIME_COUNT) {
-            timeRuning.value = timeRuning.value - 1;
-          } else {
-            showInterval.value = true;
-            clearInterval(unref(timer));
-            timer.value = null;
-          }
-        }, 1000);
-      }
-    }
+    }, 1000);
   }
 
   function registerHandleClick() {
