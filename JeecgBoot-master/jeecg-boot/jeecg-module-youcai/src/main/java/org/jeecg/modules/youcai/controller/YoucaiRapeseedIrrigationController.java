@@ -78,6 +78,12 @@ public class YoucaiRapeseedIrrigationController {
         return Result.OK(irrigationService.getWaterGateList());
     }
 
+    @Operation(summary="灌溉设备地图列表")
+    @GetMapping("/irrigationDeviceMapList")
+    public Result<List<Map<String, Object>>> irrigationDeviceMapList(@RequestParam(required=false) String baseId) {
+        return Result.OK(irrigationService.getIrrigationDeviceMapList(baseId));
+    }
+
     @Operation(summary="水阀控制")
     @PostMapping("/waterGate/control")
     public Result<Map<String, Object>> controlWaterGate(@RequestBody Map<String, Object> body) {

@@ -1,4 +1,4 @@
-import { defHttp } from '/@/utils/http/axios';  
+import { defHttp } from '/@/utils/http/axios';
 import { useGlobSetting } from '/@/hooks/setting';
 import { AxiosRequestConfig } from 'axios';
 
@@ -17,6 +17,7 @@ enum Api {
   PenmanPredict = '/youcai/irrigation/penmanPredict',
   InterventionComparison = '/youcai/irrigation/interventionComparison',
   WaterGateList = '/youcai/irrigation/waterGateList',
+  IrrigationDeviceMapList = '/youcai/irrigation/irrigationDeviceMapList',
   WaterGateControl = '/youcai/irrigation/waterGate/control',
   FarmingAdd = '/youcai/farmingRecords/add',
 }
@@ -67,7 +68,7 @@ export const exportIrrigation = (params?: any) => {
 
 // 导入智慧灌溉
 export const importIrrigation = (params: any) => {
-  return defHttp.uploadFile({ url: Api.Import }, params );
+  return defHttp.uploadFile({ url: Api.Import }, params);
 };
 
 // 获取选中地块的生长阶段与土壤水分
@@ -84,7 +85,7 @@ export const getPenmanPredict = (plotId?: string | number, baseId?: string | num
   const params: any = {};
   if (plotId != null) params.plotId = plotId;
   if (baseId != null) params.baseId = baseId;
-  return defHttp.get({ url: `${Api.PenmanPredict}` , params });
+  return defHttp.get({ url: `${Api.PenmanPredict}`, params });
 };
 
 // 干预灌溉 vs 不干预灌溉 对比数据（用于图表）
@@ -97,6 +98,12 @@ export const getInterventionComparison = (plotId?: string | number, baseId?: str
 
 export const getWaterGateList = () => {
   return defHttp.get({ url: `${Api.WaterGateList}` });
+};
+
+export const getIrrigationDeviceMapList = (baseId?: string | number) => {
+  const params: any = {};
+  if (baseId != null && baseId !== '') params.baseId = baseId;
+  return defHttp.get({ url: `${Api.IrrigationDeviceMapList}`, params });
 };
 
 export const controlWaterGate = (params: { id: string; action: 'open' | 'stop' | 'close'; setVal?: string }) => {

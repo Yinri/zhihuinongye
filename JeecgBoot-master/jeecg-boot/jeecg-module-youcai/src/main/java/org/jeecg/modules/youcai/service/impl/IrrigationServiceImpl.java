@@ -521,6 +521,24 @@ public class IrrigationServiceImpl implements IIrrigationService {
     }
 
     @Override
+    public List<Map<String, Object>> getIrrigationDeviceMapList(String baseId) {
+        if (!isHujiShangwanBase(baseId)) {
+            return new ArrayList<>();
+        }
+
+        List<Map<String, Object>> devices = new ArrayList<>();
+        List<Map<String, Object>> gates = getWaterGateList();
+        devices.addAll(gates);
+        devices.addAll(buildWaterLevelDevices(gates));
+        devices.addAll(fetchPumpDevices());
+
+        List<Map<String, Object>> videoDevices = fetchVideoDevices();
+        devices.addAll(videoDevices.isEmpty() ? buildCameraDevices(gates) : videoDevices);
+        buildSoilMoistureDevice(baseId, gates).ifPresent(devices::add);
+        return devices;
+    }
+
+    @Override
     public Map<String, Object> controlWaterGate(String id, String action, String setVal) {
         Map<String, Object> result = new HashMap<>();
         result.put("success", false);
@@ -541,7 +559,7 @@ public class IrrigationServiceImpl implements IIrrigationService {
                 return result;
             }
 
-            if (response != null && response.getCode() == 1) {
+            if (isSuccessResponse(response)) {
                 result.put("success", true);
                 result.put("msg", response.getMsg() == null ? "控制指令下发成功" : response.getMsg());
                 result.put("data", response.getData());
@@ -640,10 +658,327 @@ public class IrrigationServiceImpl implements IIrrigationService {
         normalized.put("status", firstExistingValue(raw, "status", "workState", "state", "runState", "gateStatus"));
         normalized.put("openPercent", firstExistingValue(raw, "openPercent", "openPos", "setVal", "position", "opening"));
         normalized.put("online", firstExistingValue(raw, "online", "isOnline", "onLine", "deviceOnline"));
+        normalized.put("onlineText", firstExistingValue(raw, "onlineExp", "onlineText"));
+        normalized.put("stateText", firstExistingValue(raw, "stateExp", "stateText"));
+        normalized.put("code", firstExistingValue(raw, "code", "gateName", "stationRtuno"));
+        normalized.put("siteNo", firstExistingValue(raw, "siteNo", "id", "gateGuid", "stationId"));
+        normalized.put("longitude", firstExistingValue(raw, "longitude", "lng"));
+        normalized.put("latitude", firstExistingValue(raw, "latitude", "lat"));
+        normalized.put("manageUnit", firstExistingValue(raw, "gldw", "manageUnit", "companyAlias"));
+        normalized.put("controlCenter", firstExistingValue(raw, "gkzx", "controlCenter", "projectAlias"));
+        normalized.put("deviceType", "gate");
+        normalized.put("category", "闸门/控制柜");
         normalized.put("raw", raw);
         normalized.putIfAbsent("id", "gate-" + index);
         normalized.putIfAbsent("name", "水阀" + (index + 1));
         return normalized;
+    }
+
+    private List<Map<String, Object>> buildWaterLevelDevices(List<Map<String, Object>> gates) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 0; i < gates.size(); i++) {
+            Map<String, Object> gate = gates.get(i);
+            Map<String, Object> device = new LinkedHashMap<>();
+            String gateId = stringValue(gate.get("id"));
+            String gateName = stringValue(gate.get("name"));
+            device.put("id", "water-level-" + (gateId.isEmpty() ? i : gateId));
+            device.put("name", (gateName.isEmpty() ? "闸门" + (i + 1) : gateName) + "水位计");
+            device.put("deviceType", "water-level");
+            device.put("category", "田间水位计");
+            device.put("status", "已接入");
+            device.put("online", gate.get("online"));
+            device.put("onlineText", gate.get("onlineText"));
+            device.put("stateText", gate.get("stateText"));
+            device.put("code", gate.get("code"));
+            device.put("siteNo", gate.get("siteNo"));
+            device.put("longitude", gate.get("longitude"));
+            device.put("latitude", gate.get("latitude"));
+            device.put("linkedGateId", gateId);
+            device.put("linkedGateName", gateName);
+            result.add(device);
+        }
+        return result;
+    }
+
+    private List<Map<String, Object>> buildCameraDevices(List<Map<String, Object>> gates) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 0; i < gates.size(); i++) {
+            Map<String, Object> gate = gates.get(i);
+            Map<String, Object> device = new LinkedHashMap<>();
+            String gateId = stringValue(gate.get("id"));
+            String gateName = stringValue(gate.get("name"));
+            device.put("id", "camera-" + (gateId.isEmpty() ? i : gateId));
+            device.put("name", (gateName.isEmpty() ? "闸门" + (i + 1) : gateName) + "视频球机");
+            device.put("deviceType", "camera");
+            device.put("category", "视频监控球机");
+            device.put("status", "已接入");
+            device.put("online", gate.get("online"));
+            device.put("onlineText", gate.get("onlineText"));
+            device.put("stateText", gate.get("stateText"));
+            device.put("code", gate.get("code"));
+            device.put("siteNo", gate.get("siteNo"));
+            device.put("longitude", gate.get("longitude"));
+            device.put("latitude", gate.get("latitude"));
+            device.put("linkedGateId", gateId);
+            device.put("linkedGateName", gateName);
+            result.add(device);
+        }
+        return result;
+    }
+
+    private List<Map<String, Object>> fetchPumpDevices() {
+        try {
+            ApiResponse response = ioTApiUtil.getZxRtuInfoList("2").block();
+            if (!isSuccessResponse(response)) {
+                log.warn("获取水泵站列表失败: {}", response != null ? response.getMsg() : "响应为空");
+                return new ArrayList<>();
+            }
+            return extractDeviceItems(response.getData(), "pump", "水泵", this::normalizePumpItem);
+        } catch (Exception e) {
+            log.error("获取水泵站列表异常", e);
+            return new ArrayList<>();
+        }
+    }
+
+    private List<Map<String, Object>> fetchVideoDevices() {
+        try {
+            ApiResponse response = ioTApiUtil.getZxVideoInfoList(1, 50).block();
+            if (!isSuccessResponse(response)) {
+                log.warn("获取摄像头列表失败: {}", response != null ? response.getMsg() : "响应为空");
+                return new ArrayList<>();
+            }
+            return extractDeviceItems(response.getData(), "camera", "视频监控球机", this::normalizeVideoItem);
+        } catch (Exception e) {
+            log.error("获取摄像头列表异常", e);
+            return new ArrayList<>();
+        }
+    }
+
+    private Optional<Map<String, Object>> buildSoilMoistureDevice(String baseId, List<Map<String, Object>> gates) {
+        Map<String, Object> device = findSoilMoistureLedgerDevice(baseId).orElseGet(() -> {
+            Map<String, Object> fallback = new LinkedHashMap<>();
+            fallback.put("id", "soil-moisture-huji-shangwan");
+            fallback.put("name", "土壤墒情设备");
+            fallback.put("code", "");
+            fallback.put("status", "已接入");
+            fallback.put("online", "1");
+            fallback.put("onlineText", "在线");
+            putFallbackCoordinate(fallback, baseId, gates);
+            return fallback;
+        });
+        device.put("deviceType", "soil");
+        device.put("category", "土壤墒情设备");
+        return hasCoordinate(device) ? Optional.of(device) : Optional.empty();
+    }
+
+    private Optional<Map<String, Object>> findSoilMoistureLedgerDevice(String baseId) {
+        if (baseId == null || baseId.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            LambdaQueryWrapper<YoucaiIotDevices> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(YoucaiIotDevices::getBaseId, baseId)
+                    .eq(YoucaiIotDevices::getSensorTypeId, 2)
+                    .orderByDesc(YoucaiIotDevices::getCreateTime)
+                    .last("limit 1");
+            YoucaiIotDevices ledgerDevice = iotDevicesMapper.selectOne(wrapper);
+            if (ledgerDevice == null) {
+                return Optional.empty();
+            }
+            Map<String, Object> device = new LinkedHashMap<>();
+            device.put("id", firstNonBlank(ledgerDevice.getDeviceCode(), ledgerDevice.getId()));
+            device.put("name", firstNonBlank(ledgerDevice.getDeviceName(), "土壤墒情设备"));
+            device.put("code", ledgerDevice.getDeviceCode());
+            device.put("status", ledgerDevice.getStatus());
+            device.put("online", ledgerDevice.getStatus());
+            device.put("longitude", ledgerDevice.getLng());
+            device.put("latitude", ledgerDevice.getLat());
+            return Optional.of(device);
+        } catch (Exception e) {
+            log.warn("查询土壤墒情设备台账失败: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private Map<String, Object> normalizePumpItem(Object item, int index, String deviceType, String category) {
+        Map<String, Object> raw = toPlainMap(item);
+        Map<String, Object> normalized = new LinkedHashMap<>();
+        normalized.put("id", firstExistingValue(raw, "stationId", "id", "gateId"));
+        normalized.put("name", firstExistingValue(raw, "stationAlias", "gateName", "name"));
+        normalized.put("status", firstExistingValue(raw, "stateExp", "onlineExp", "state", "online"));
+        normalized.put("online", firstExistingValue(raw, "online", "state"));
+        normalized.put("onlineText", firstExistingValue(raw, "onlineExp", "stateExp"));
+        normalized.put("stateText", firstExistingValue(raw, "stateExp", "onlineExp"));
+        normalized.put("code", firstExistingValue(raw, "stationRtuno", "stationAddr", "stationId"));
+        normalized.put("siteNo", firstExistingValue(raw, "stationId", "gateId"));
+        normalized.put("longitude", firstExistingValue(raw, "longitude", "lng"));
+        normalized.put("latitude", firstExistingValue(raw, "latitude", "lat"));
+        normalized.put("manageUnit", firstExistingValue(raw, "companyAlias", "projectAlias"));
+        normalized.put("controlCenter", firstExistingValue(raw, "projectAlias", "subsystemName"));
+        normalized.put("deviceType", deviceType);
+        normalized.put("category", category);
+        normalized.put("raw", raw);
+        normalized.putIfAbsent("id", "pump-" + index);
+        normalized.putIfAbsent("name", "水泵" + (index + 1));
+        return normalized;
+    }
+
+    private Map<String, Object> normalizeVideoItem(Object item, int index, String deviceType, String category) {
+        Map<String, Object> raw = toPlainMap(item);
+        Map<String, Object> normalized = new LinkedHashMap<>();
+        normalized.put("id", firstExistingValue(raw, "id", "videoId", "cameraId", "deviceId", "code"));
+        normalized.put("name", firstExistingValue(raw, "name", "videoName", "cameraName", "deviceName", "title"));
+        normalized.put("status", firstExistingValue(raw, "status", "state", "onlineExp"));
+        normalized.put("online", firstExistingValue(raw, "online", "isOnline", "state"));
+        normalized.put("onlineText", firstExistingValue(raw, "onlineExp", "onlineText", "stateExp"));
+        normalized.put("stateText", firstExistingValue(raw, "stateExp", "status"));
+        normalized.put("code", firstExistingValue(raw, "code", "deviceCode", "serialNo", "sn"));
+        normalized.put("siteNo", firstExistingValue(raw, "siteNo", "channelId", "id"));
+        normalized.put("longitude", firstExistingValue(raw, "longitude", "lng"));
+        normalized.put("latitude", firstExistingValue(raw, "latitude", "lat"));
+        normalized.put("deviceType", deviceType);
+        normalized.put("category", category);
+        normalized.put("raw", raw);
+        normalized.putIfAbsent("id", "camera-" + index);
+        normalized.putIfAbsent("name", "视频球机" + (index + 1));
+        return normalized;
+    }
+
+    private List<Map<String, Object>> extractDeviceItems(Object data, String deviceType, String category, DeviceNormalizer normalizer) {
+        Object candidate = data;
+        if (candidate instanceof JSONObject) {
+            JSONObject jsonObject = (JSONObject) candidate;
+            if (jsonObject.containsKey("list")) {
+                candidate = jsonObject.get("list");
+            } else if (jsonObject.containsKey("rows")) {
+                candidate = jsonObject.get("rows");
+            } else if (jsonObject.containsKey("data")) {
+                candidate = jsonObject.get("data");
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (candidate instanceof JSONArray) {
+            JSONArray array = (JSONArray) candidate;
+            for (int i = 0; i < array.size(); i++) {
+                Map<String, Object> item = normalizer.normalize(array.get(i), i, deviceType, category);
+                if (hasCoordinate(item)) {
+                    result.add(item);
+                }
+            }
+            return result;
+        }
+        if (candidate instanceof List<?>) {
+            List<?> list = (List<?>) candidate;
+            for (int i = 0; i < list.size(); i++) {
+                Map<String, Object> item = normalizer.normalize(list.get(i), i, deviceType, category);
+                if (hasCoordinate(item)) {
+                    result.add(item);
+                }
+            }
+            return result;
+        }
+        if (candidate != null) {
+            Map<String, Object> item = normalizer.normalize(candidate, 0, deviceType, category);
+            if (hasCoordinate(item)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    private void putFallbackCoordinate(Map<String, Object> device, String baseId, List<Map<String, Object>> gates) {
+        if (baseId != null && !baseId.trim().isEmpty()) {
+            try {
+                YoucaiBases base = basesMapper.selectById(baseId);
+                if (base != null && base.getLongitude() != null && base.getLatitude() != null) {
+                    device.put("longitude", base.getLongitude());
+                    device.put("latitude", base.getLatitude());
+                    return;
+                }
+            } catch (Exception e) {
+                log.warn("查询基地坐标失败: {}", e.getMessage());
+            }
+        }
+
+        double lngSum = 0D;
+        double latSum = 0D;
+        int count = 0;
+        for (Map<String, Object> gate : gates) {
+            Double lng = toDouble(gate.get("longitude"));
+            Double lat = toDouble(gate.get("latitude"));
+            if (lng != null && lat != null) {
+                lngSum += lng;
+                latSum += lat;
+                count++;
+            }
+        }
+        if (count > 0) {
+            device.put("longitude", lngSum / count);
+            device.put("latitude", latSum / count);
+        }
+    }
+
+    private boolean isHujiShangwanBase(String baseId) {
+        if (baseId == null || baseId.trim().isEmpty()) {
+            return true;
+        }
+        try {
+            YoucaiBases base = basesMapper.selectById(baseId);
+            if (base == null || base.getBaseName() == null) {
+                return false;
+            }
+            String baseName = base.getBaseName().replaceAll("\\s+", "");
+            return baseName.contains("胡集") && baseName.contains("尚湾");
+        } catch (Exception e) {
+            log.warn("判断胡集镇尚湾村基地失败: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isSuccessResponse(ApiResponse response) {
+        if (response == null) {
+            return false;
+        }
+        Integer code = response.getCode();
+        return Objects.equals(code, 1) || Objects.equals(code, 200);
+    }
+
+    private boolean hasCoordinate(Map<String, Object> device) {
+        return toDouble(device.get("longitude")) != null && toDouble(device.get("latitude")) != null;
+    }
+
+    private Double toDouble(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            String text = String.valueOf(value).trim();
+            if (text.isEmpty() || "-".equals(text)) {
+                return null;
+            }
+            return Double.parseDouble(text);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    @FunctionalInterface
+    private interface DeviceNormalizer {
+        Map<String, Object> normalize(Object item, int index, String deviceType, String category);
     }
 
     private Map<String, Object> toPlainMap(Object value) {

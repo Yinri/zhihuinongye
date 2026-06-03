@@ -11,5 +11,6 @@ public interface IIrrigationService {
     Map<String, Object> getPenmanPredictByBase(String baseId);
     Map<String, Object> getInterventionComparisonByBase(String baseId);
     List<Map<String, Object>> getWaterGateList();
+    List<Map<String, Object>> getIrrigationDeviceMapList(String baseId);
     Map<String, Object> controlWaterGate(String id, String action, String setVal);
 }
