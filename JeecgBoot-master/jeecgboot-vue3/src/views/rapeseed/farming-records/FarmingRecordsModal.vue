@@ -36,17 +36,18 @@
   });
 
   const [registerModal, { setModalProps, closeModal }] = useModalInner(async (data) => {
-    // 重置表单
     await resetFields();
     setModalProps({ confirmLoading: false });
     isUpdate.value = !!data?.isUpdate;
 
+    // 新增时预填 baseId
+    const baseId = selectStore.selectedBase.baseId;
+
     if (unref(isUpdate)) {
-      // 赋值
       rowId.value = data.record.id;
-      await setFieldsValue({
-        ...data.record,
-      });
+      await setFieldsValue({ ...data.record });
+    } else if (baseId) {
+      await setFieldsValue({ baseId });
     }
   });
 
@@ -57,10 +58,12 @@
       const values = await validate();
       setModalProps({ confirmLoading: true });
       
-      // 添加基地ID到提交的数据中
-      const baseId = selectStore.selectedBase.baseId;
-      if (baseId) {
-        values.baseId = baseId;
+      // 兜底：确保 baseId 已设置
+      if (!values.baseId) {
+        const baseId = selectStore.selectedBase.baseId;
+        if (baseId) {
+          values.baseId = baseId;
+        }
       }
 
       if (unref(isUpdate)) {

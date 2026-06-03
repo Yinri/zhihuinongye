@@ -11,21 +11,26 @@
 
     <!-- 农事记录列表区域 -->
     <a-card :bordered="false" class="table-card">
-      <template #toolbar>
+      <template #extra>
         <a-space>
-          <a-button type="primary" @click="handleCreate"> 新增 </a-button>
-          <a-button type="primary" @click="handleExport"> 导出 </a-button>
+          <a-button type="primary" @click="handleCreate">
+            <Icon icon="ant-design:plus-outlined" /> 新增
+          </a-button>
+          <a-button @click="handleExport">
+            <Icon icon="ant-design:export-outlined" /> 导出
+          </a-button>
           <a-upload
-            :file-list="fileList"
-            :remove="handleRemove"
-            :before-upload="beforeUpload"
+            :show-upload-list="false"
+            :before-upload="handleImportFile"
             accept=".xlsx,.xls"
           >
-            <a-button type="primary"> 导入 </a-button>
+            <a-button>
+              <Icon icon="ant-design:import-outlined" /> 导入
+            </a-button>
           </a-upload>
         </a-space>
       </template>
-      
+
       <BasicTable @register="registerTable" :searchInfo="searchInfo" :loading="loading">
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'action'">
@@ -81,7 +86,6 @@ import { useSelectStore } from '/@/store/selectStore';
 const { createMessage } = useMessage();
 const [registerModal, { openModal }] = useModal();
 const searchInfo = reactive<Recordable>({});
-const fileList = ref<any[]>([]);
 
 // 获取基地选择的store
 const selectStore = useSelectStore();
@@ -158,48 +162,78 @@ function handleEdit(record: Recordable) {
 
 async function handleDelete(record: Recordable) {
   await deleteFarmingRecords(record.id);
-  createMessage.success('删除成功');
   reload();
 }
 
 function handleSuccess() {
-  createMessage.success('操作成功');
   reload();
 }
 
 async function handleExport() {
-  const data = await getFarmingRecordsList(searchInfo);
-  exportFarmingRecords(data);
-}
-
-function handleRemove() {
-  fileList.value = [];
-}
-
-function beforeUpload(file) {
-  fileList.value = [...fileList.value, file];
-  return false;
-}
-
-async function handleImport() {
-  if (fileList.value.length === 0) {
-    createMessage.warning('请选择要导入的文件');
-    return;
-  }
-  
-  const formData = new FormData();
-  fileList.value.forEach((file) => {
-    formData.append('file', file);
-  });
-  
+  const form = getForm();
+  const formValues = form.getFieldsValue();
+  const params = {
+    ...formValues,
+    baseId: selectStore.selectedBase.baseId,
+  };
   try {
-    await importFarmingRecords(formData);
-    createMessage.success('导入成功');
-    reload();
-    fileList.value = [];
-  } catch (error) {
-    createMessage.error('导入失败');
+    const response = await exportFarmingRecords(params);
+    const blob = response.data;
+    if (!(await isExcelBlob(blob))) {
+      createMessage.error(await readBlobError(blob));
+      return;
+    }
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `农事记录表${await getExcelExtension(blob)}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    createMessage.error('导出失败');
   }
+}
+
+async function isExcelBlob(blob: Blob) {
+  if (!blob) return false;
+  const type = blob.type || '';
+  if (type.includes('application/vnd.ms-excel') || type.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+    return true;
+  }
+  const bytes = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const isXlsx = bytes[0] === 0x50 && bytes[1] === 0x4b;
+  const isXls = bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
+  return isXlsx || isXls;
+}
+
+async function getExcelExtension(blob: Blob) {
+  const bytes = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const isXls = bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
+  return isXls ? '.xls' : '.xlsx';
+}
+
+async function readBlobError(blob: Blob) {
+  if (!blob) return '导出失败';
+  try {
+    const text = await blob.text();
+    if (!text) return '导出失败';
+    const data = JSON.parse(text);
+    return data.message || data.msg || '导出失败';
+  } catch {
+    return '导出失败';
+  }
+}
+
+async function handleImportFile(file) {
+  try {
+    await importFarmingRecords(file);
+    reload();
+  } catch (error) {
+    // 拦截器已处理错误提示
+  }
+  return false;
 }
 </script>
 

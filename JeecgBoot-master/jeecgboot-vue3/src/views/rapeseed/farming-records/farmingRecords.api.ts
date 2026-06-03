@@ -1,5 +1,4 @@
 import { defHttp } from '/@/utils/http/axios';
-import { AxiosRequestConfig } from 'axios';
 import { getBaseInfoList } from '../base-info/baseInfo.api';
 import { getPlotInfoList } from '../plot-info/plotInfo.api';
 
@@ -70,24 +69,24 @@ export const getFarmingRecordsList = async (params?: any) => {
  * 保存农事记录
  * @param params 参数
  */
-export const saveFarmingRecords = (params?: any) => {
-  return defHttp.post<any>({ url: Api.SaveFarmingRecords, params });
+export const saveFarmingRecords = (data?: any) => {
+  return defHttp.post<any>({ url: Api.SaveFarmingRecords, data });
 };
 
 /**
  * 编辑农事记录
- * @param params 参数
+ * @param data 参数
  */
-export const editFarmingRecords = (params?: any) => {
-  return defHttp.put<any>({ url: Api.EditFarmingRecords, params });
+export const editFarmingRecords = (data?: any) => {
+  return defHttp.put<any>({ url: Api.EditFarmingRecords, data });
 };
 
 /**
  * 删除农事记录
  * @param params 参数
  */
-export const deleteFarmingRecords = (params?: any) => {
-  return defHttp.delete<any>({ url: Api.DeleteFarmingRecords, params }, { joinParamsToUrl: true });
+export const deleteFarmingRecords = (id: string) => {
+  return defHttp.delete({ url: `${Api.DeleteFarmingRecords}/${id}` });
 };
 
 /**
@@ -111,12 +110,9 @@ export const getFarmingRecordsById = (params?: any) => {
  * @param params 参数
  */
 export const exportFarmingRecords = (params?: any) => {
-  return defHttp.download<any>(
-    {
-      url: Api.ExportFarmingRecords,
-      params,
-    },
-    '农事记录.xlsx'
+  return defHttp.get<any>(
+    { url: Api.ExportFarmingRecords, params, responseType: 'blob' },
+    { isReturnNativeResponse: true, isTransformResponse: false }
   );
 };
 
@@ -124,12 +120,6 @@ export const exportFarmingRecords = (params?: any) => {
  * 导入农事记录
  * @param params 参数
  */
-export const importFarmingRecords = (params?: any, config?: AxiosRequestConfig) => {
-  return defHttp.uploadFile<any>(
-    {
-      url: Api.ImportFarmingRecords,
-    },
-    params,
-    config
-  );
+export const importFarmingRecords = (file: File) => {
+  return defHttp.uploadFile<any>({ url: Api.ImportFarmingRecords }, { file });
 };
