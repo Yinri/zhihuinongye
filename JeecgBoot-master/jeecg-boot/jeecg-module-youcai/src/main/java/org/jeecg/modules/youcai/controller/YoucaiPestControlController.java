@@ -14,8 +14,10 @@ import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.dto.AiTaskRecordDTO;
 import org.jeecg.modules.youcai.dto.AiTaskResultDTO;
 import org.jeecg.modules.youcai.dto.AiTaskSubmitResponseDTO;
+import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionInsectTrendSuggestDTO;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import org.jeecg.modules.youcai.service.IAiAnalysisTaskService;
+import org.jeecg.modules.youcai.service.IYoucaiDecisionModelService;
 import org.jeecg.modules.youcai.service.IYoucaiPestControlService;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -51,6 +53,9 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 
 	@Autowired
 	private IAiAnalysisTaskService aiAnalysisTaskService;
+
+	@Autowired
+	private IYoucaiDecisionModelService decisionModelService;
 	
 	/**
 	 * 分页列表查询
@@ -189,7 +194,11 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 	@PostMapping("/aiAnalysis")
 	public Result<?> aiAnalysis(@RequestBody AnalysisRequestDTO req) {
 		try {
-			String aiResult = youcaiPestControlService.aiAnalysis(req);
+			YoucaiDecisionInsectTrendSuggestDTO trendSuggest = resolveTrendSuggest(req);
+			if (trendSuggest == null) {
+				return Result.error("今日虫情趋势与防治建议暂未生成");
+			}
+			String aiResult = formatTrendSuggestText(trendSuggest);
 			Result r = new Result<>();
 			r.setCode(CommonConstant.SC_OK_200);
 			r.setSuccess(true);
@@ -205,8 +214,8 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 	@Operation(summary = "提交虫情AI分析任务")
 	@PostMapping("/aiAnalysis/submit")
 	public Result<AiTaskSubmitResponseDTO> submitAiAnalysis(@RequestBody AnalysisRequestDTO req) {
-		if (req == null || req.getImageUrls() == null || req.getImageUrls().isEmpty()) {
-			return Result.error("图片URL列表不能为空");
+		if (req == null || (!StringUtils.hasText(req.getBaseId()) && !StringUtils.hasText(req.getBaseName()))) {
+			return Result.error("基地不能为空");
 		}
 		try {
 			String baseScope = StringUtils.hasText(req.getBaseId()) ? req.getBaseId().trim()
@@ -214,13 +223,13 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 			AiTaskSubmitResponseDTO submitResponse = aiAnalysisTaskService.submitTask(
 					"pest",
 					baseScope,
-					"pest",
+					"pest_trend_suggest",
 					() -> {
-						try {
-							return JSON.toJSONString(youcaiPestControlService.aiAnalysis(req));
-						} catch (Exception e) {
-							throw new IllegalStateException(e.getMessage(), e);
+						YoucaiDecisionInsectTrendSuggestDTO trendSuggest = resolveTrendSuggest(req);
+						if (trendSuggest == null) {
+							throw new IllegalStateException("今日虫情趋势与防治建议暂未生成");
 						}
+						return JSON.toJSONString(formatTrendSuggestText(trendSuggest));
 					}
 			);
 			return Result.OK(submitResponse);
@@ -249,5 +258,39 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 			response.setResult(JSON.parseObject(taskRecord.getResultJson(), String.class));
 		}
 		return Result.OK(response);
+	}
+
+	@Operation(summary = "获取预生成虫情趋势与防治建议")
+	@GetMapping("/trendSuggest")
+	public Result<String> getTrendSuggest(
+			@RequestParam(name = "baseId", required = false) String baseId,
+			@RequestParam(name = "baseName", required = false) String baseName) {
+		YoucaiDecisionInsectTrendSuggestDTO trendSuggest =
+				decisionModelService.getInsectTrendSuggestByBase(baseId, baseName);
+		if (trendSuggest == null) {
+			return Result.error("今日虫情趋势与防治建议暂未生成");
+		}
+		return Result.OK(formatTrendSuggestText(trendSuggest));
+	}
+
+	private YoucaiDecisionInsectTrendSuggestDTO resolveTrendSuggest(AnalysisRequestDTO req) {
+		if (req == null) {
+			return null;
+		}
+		return decisionModelService.getInsectTrendSuggestByBase(req.getBaseId(), req.getBaseName());
+	}
+
+	private String formatTrendSuggestText(YoucaiDecisionInsectTrendSuggestDTO trendSuggest) {
+		StringBuilder builder = new StringBuilder();
+		if (StringUtils.hasText(trendSuggest.getTrd())) {
+			builder.append(trendSuggest.getTrd().trim());
+		}
+		if (StringUtils.hasText(trendSuggest.getSgt())) {
+			if (builder.length() > 0) {
+				builder.append("\n");
+			}
+			builder.append(trendSuggest.getSgt().trim());
+		}
+		return builder.toString();
 	}
 }

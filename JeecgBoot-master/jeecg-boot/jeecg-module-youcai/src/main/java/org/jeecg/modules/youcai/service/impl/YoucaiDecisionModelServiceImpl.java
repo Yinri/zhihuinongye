@@ -1,10 +1,13 @@
 package org.jeecg.modules.youcai.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.dto.LodgingRiskAssessmentResponseDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionGrowthDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionHeightRiskDTO;
+import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionInsectTrendSuggestDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionLodgingDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestControlDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestDTO;
@@ -13,6 +16,7 @@ import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionYieldDTO;
 import org.jeecg.modules.youcai.entity.YoucaiBases;
 import org.jeecg.modules.youcai.entity.YoucaiGrowthMonitoring;
 import org.jeecg.modules.youcai.entity.YoucaiHistoricalYield;
+import org.jeecg.modules.youcai.entity.YoucaiInsectTrendSuggest;
 import org.jeecg.modules.youcai.entity.YoucaiPestControl;
 import org.jeecg.modules.youcai.entity.YoucaiPlots;
 import org.jeecg.modules.youcai.service.IIrrigationService;
@@ -21,6 +25,7 @@ import org.jeecg.modules.youcai.service.IYoucaiBasesService;
 import org.jeecg.modules.youcai.service.IYoucaiDecisionModelService;
 import org.jeecg.modules.youcai.service.IYoucaiGrowthMonitoringService;
 import org.jeecg.modules.youcai.service.IYoucaiHistoricalYieldService;
+import org.jeecg.modules.youcai.service.IYoucaiInsectTrendSuggestService;
 import org.jeecg.modules.youcai.service.IYoucaiLodgingRiskWarningService;
 import org.jeecg.modules.youcai.service.IYoucaiPestControlService;
 import org.jeecg.modules.youcai.service.IYoucaiPlotsService;
@@ -42,6 +47,12 @@ import java.util.*;
 @Slf4j
 @Service
 public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelService {
+    private static final String INSECT_TREND_STATUS_SUCCESS = "SUCCESS";
+    private static final String INSECT_TREND_STATUS_FAILED = "FAILED";
+    private static final String INSECT_TREND_STATUS_FALLBACK = "FALLBACK";
+    private static final Set<String> OILSEED_MAIN_PESTS = new HashSet<>(Arrays.asList(
+            "蚜虫", "菜青虫", "小菜蛾", "跳甲", "黄曲条跳甲", "菜粉蝶", "甜菜夜蛾", "斜纹夜蛾", "地老虎", "蓟马"
+    ));
 
     @Autowired
     private IYoucaiBasesService basesService;
@@ -69,6 +80,9 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
 
     @Autowired
     private IYoucaiGrowthMonitoringService growthMonitoringService;
+
+    @Autowired
+    private IYoucaiInsectTrendSuggestService insectTrendSuggestService;
 
     @Override
     public List<YoucaiDecisionYieldDTO> getInterface1Data() {
@@ -169,6 +183,49 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         return result;
     }
 
+    @Override
+    public List<YoucaiDecisionInsectTrendSuggestDTO> getInsectTrendSuggest() {
+        LocalDate today = LocalDate.now();
+        List<YoucaiInsectTrendSuggest> records = listInsectTrendRecords(today);
+        if (!CollectionUtils.isEmpty(records)) {
+            return toInsectTrendSuggestDTOList(records);
+        }
+
+        log.warn("今日虫情趋势建议暂无库表记录，使用不调用大模型的实时兜底数据");
+        return buildInsectTrendSuggestFallback(today);
+    }
+
+    @Override
+    public YoucaiDecisionInsectTrendSuggestDTO getInsectTrendSuggestByBase(String baseId, String baseName) {
+        for (YoucaiDecisionInsectTrendSuggestDTO item : getInsectTrendSuggest()) {
+            if (matchesBase(item, baseId, baseName)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<YoucaiDecisionInsectTrendSuggestDTO> refreshInsectTrendSuggest() {
+        LocalDate today = LocalDate.now();
+        List<YoucaiDecisionInsectTrendSuggestDTO> result = new ArrayList<>();
+        for (YoucaiBases base : listDecisionBases()) {
+            YoucaiInsectTrendSuggest record = buildAndSaveInsectTrendSuggestRecord(base, today);
+            result.add(toInsectTrendSuggestDTO(record));
+        }
+        return result;
+    }
+
+    private boolean matchesBase(YoucaiDecisionInsectTrendSuggestDTO item, String baseId, String baseName) {
+        if (item == null) {
+            return false;
+        }
+        if (StringUtils.hasText(baseId) && baseId.trim().equals(item.getSid())) {
+            return true;
+        }
+        return StringUtils.hasText(baseName) && baseName.trim().equals(item.getNam());
+    }
+
     private List<YoucaiBases> listDecisionBases() {
         QueryWrapper<YoucaiBases> siteQuery = new QueryWrapper<>();
         siteQuery.likeRight("id", "site").orderByAsc("id");
@@ -214,6 +271,154 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         }
         dto.setBug(topPests);
         dto.setSgt(buildPestSuggestion(topPests));
+        return dto;
+    }
+
+    private YoucaiDecisionInsectTrendSuggestDTO buildInsectTrendSuggestData(YoucaiBases base, LocalDate date) {
+        YoucaiDecisionInsectTrendSuggestDTO dto = new YoucaiDecisionInsectTrendSuggestDTO();
+        dto.setSid(base.getId());
+        dto.setNam(base.getBaseName());
+
+        List<Map<String, Object>> pestImages = fetchPestImages(base.getBaseName(), date, date);
+        Map<String, Integer> pestCountMap = aggregatePestCounts(pestImages);
+        List<Map.Entry<String, Integer>> sortedPests = sortPestCounts(pestCountMap);
+
+        dto.setDat(resolveLatestPestTime(pestImages));
+        dto.setImg(resolveLatestPestImage(pestImages));
+        dto.setIsc(formatInsectCounts(sortedPests));
+        dto.setTrd(buildInsectTrendText(sortedPests, pestImages.size()));
+        dto.setSgt(buildInsectControlSuggestion(sortedPests));
+        return dto;
+    }
+
+    private List<YoucaiDecisionInsectTrendSuggestDTO> buildInsectTrendSuggestFallback(LocalDate date) {
+        List<YoucaiDecisionInsectTrendSuggestDTO> result = new ArrayList<>();
+        for (YoucaiBases base : listDecisionBases()) {
+            result.add(buildInsectTrendSuggestData(base, date));
+        }
+        return result;
+    }
+
+    private YoucaiInsectTrendSuggest buildAndSaveInsectTrendSuggestRecord(YoucaiBases base, LocalDate date) {
+        List<Map<String, Object>> pestImages = fetchPestImages(base.getBaseName(), date, date);
+        Map<String, Integer> pestCountMap = aggregatePestCounts(pestImages);
+        List<Map.Entry<String, Integer>> sortedPests = sortPestCounts(pestCountMap);
+
+        YoucaiInsectTrendSuggest record = new YoucaiInsectTrendSuggest();
+        record.setBaseId(base.getId());
+        record.setBaseName(base.getBaseName());
+        record.setAnalysisDate(java.sql.Date.valueOf(date));
+        record.setAnalysisTime(parseDateTime(resolveLatestPestTime(pestImages)));
+        record.setImageUrl(resolveLatestPestImage(pestImages));
+        record.setInsectSummary(formatInsectCounts(sortedPests));
+        record.setTrendAnalysis(buildInsectTrendText(sortedPests, pestImages.size()));
+        record.setControlSuggestion(buildInsectControlSuggestion(sortedPests));
+        record.setRawInsectJson(JSON.toJSONString(pestCountMap));
+        record.setRawImageJson(JSON.toJSONString(pestImages));
+        record.setStatus(INSECT_TREND_STATUS_FALLBACK);
+        record.setSysOrgCode(base.getSysOrgCode());
+        record.setDelFlag(0);
+
+        if (!CollectionUtils.isEmpty(sortedPests)) {
+            try {
+                String aiText = analyzeInsectTrendWithAi(base, pestImages);
+                if (StringUtils.hasText(aiText)) {
+                    record.setTrendAnalysis(extractAiSection(aiText, "害虫趋势：", "防治建议：", record.getTrendAnalysis()));
+                    record.setControlSuggestion(extractAiSection(aiText, "防治建议：", null, record.getControlSuggestion()));
+                    record.setStatus(INSECT_TREND_STATUS_SUCCESS);
+                    record.setErrorMsg(null);
+                }
+            } catch (Exception e) {
+                log.warn("生成基地{}今日虫情趋势建议失败，使用兜底建议: {}", base.getBaseName(), e.getMessage());
+                record.setStatus(INSECT_TREND_STATUS_FAILED);
+                record.setErrorMsg(e.getMessage());
+            }
+        }
+
+        saveOrUpdateInsectTrendRecord(record, date);
+        return record;
+    }
+
+    private String analyzeInsectTrendWithAi(YoucaiBases base, List<Map<String, Object>> pestImages) throws Exception {
+        AnalysisRequestDTO request = new AnalysisRequestDTO();
+        request.setBaseId(base.getId());
+        request.setBaseName(base.getBaseName());
+
+        List<AnalysisRequestDTO.PestItem> pestData = new ArrayList<>();
+        List<String> imageUrls = new ArrayList<>();
+        for (Map<String, Object> pestImage : pestImages) {
+            AnalysisRequestDTO.PestItem item = new AnalysisRequestDTO.PestItem();
+            item.setAnalysisTime(firstTextValue(pestImage.get("analysis_time"), pestImage.get("dateCreated")));
+            Object insectsObject = pestImage.get("insects");
+            if (insectsObject instanceof Map) {
+                Map<String, Integer> insects = new LinkedHashMap<>();
+                ((Map<?, ?>) insectsObject).forEach((name, count) -> {
+                    Integer parsedCount = parseInteger(count);
+                    if (name != null && parsedCount != null) {
+                        insects.put(String.valueOf(name), parsedCount);
+                    }
+                });
+                item.setInsects(insects);
+            }
+            pestData.add(item);
+
+            String imageUrl = firstTextValue(pestImage.get("image_url"), pestImage.get("thumbnail"), pestImage.get("sthumbnail"));
+            if (StringUtils.hasText(imageUrl) && !imageUrls.contains(imageUrl)) {
+                imageUrls.add(imageUrl);
+            }
+        }
+
+        if (CollectionUtils.isEmpty(pestData) || CollectionUtils.isEmpty(imageUrls)) {
+            throw new IllegalStateException("虫情数据或图片地址为空，无法调用大模型");
+        }
+
+        request.setPestData(pestData);
+        request.setImageUrls(imageUrls);
+        return pestControlService.aiAnalysis(request);
+    }
+
+    private void saveOrUpdateInsectTrendRecord(YoucaiInsectTrendSuggest record, LocalDate date) {
+        QueryWrapper<YoucaiInsectTrendSuggest> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("base_id", record.getBaseId())
+                .eq("analysis_date", java.sql.Date.valueOf(date))
+                .last("LIMIT 1");
+        YoucaiInsectTrendSuggest existing = insectTrendSuggestService.getOne(queryWrapper, false);
+        Date now = new Date();
+        record.setUpdateTime(now);
+        if (existing == null) {
+            record.setCreateTime(now);
+            insectTrendSuggestService.save(record);
+            return;
+        }
+        record.setId(existing.getId());
+        record.setCreateBy(existing.getCreateBy());
+        record.setCreateTime(existing.getCreateTime());
+        insectTrendSuggestService.updateById(record);
+    }
+
+    private List<YoucaiInsectTrendSuggest> listInsectTrendRecords(LocalDate date) {
+        QueryWrapper<YoucaiInsectTrendSuggest> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("analysis_date", java.sql.Date.valueOf(date)).orderByAsc("base_id");
+        return insectTrendSuggestService.list(queryWrapper);
+    }
+
+    private List<YoucaiDecisionInsectTrendSuggestDTO> toInsectTrendSuggestDTOList(List<YoucaiInsectTrendSuggest> records) {
+        List<YoucaiDecisionInsectTrendSuggestDTO> result = new ArrayList<>();
+        for (YoucaiInsectTrendSuggest record : records) {
+            result.add(toInsectTrendSuggestDTO(record));
+        }
+        return result;
+    }
+
+    private YoucaiDecisionInsectTrendSuggestDTO toInsectTrendSuggestDTO(YoucaiInsectTrendSuggest record) {
+        YoucaiDecisionInsectTrendSuggestDTO dto = new YoucaiDecisionInsectTrendSuggestDTO();
+        dto.setSid(record.getBaseId());
+        dto.setNam(record.getBaseName());
+        dto.setDat(record.getAnalysisTime() == null ? "" : formatDateTime(record.getAnalysisTime()));
+        dto.setImg(record.getImageUrl());
+        dto.setIsc(record.getInsectSummary());
+        dto.setTrd(record.getTrendAnalysis());
+        dto.setSgt(record.getControlSuggestion());
         return dto;
     }
 
@@ -458,6 +663,213 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
             }
         }
         return counter;
+    }
+
+    private List<Map.Entry<String, Integer>> sortPestCounts(Map<String, Integer> pestCountMap) {
+        List<Map.Entry<String, Integer>> sortedPests = new ArrayList<>(pestCountMap.entrySet());
+        sortedPests.sort(Comparator
+                .comparing(Map.Entry<String, Integer>::getValue, Comparator.reverseOrder())
+                .thenComparing(Map.Entry::getKey));
+        return sortedPests;
+    }
+
+    private String formatInsectCounts(List<Map.Entry<String, Integer>> sortedPests) {
+        if (CollectionUtils.isEmpty(sortedPests)) {
+            return "暂无虫情数据";
+        }
+        List<String> parts = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : sortedPests) {
+            parts.add(entry.getKey() + entry.getValue());
+        }
+        return String.join("/", parts);
+    }
+
+    private String resolveLatestPestTime(List<Map<String, Object>> pestImages) {
+        if (!CollectionUtils.isEmpty(pestImages)) {
+            for (Map<String, Object> pestImage : pestImages) {
+                String analysisTime = firstTextValue(pestImage.get("analysis_time"), pestImage.get("dateCreated"));
+                if (StringUtils.hasText(analysisTime)) {
+                    return normalizeDateTimeText(analysisTime);
+                }
+            }
+        }
+        return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    private String resolveLatestPestImage(List<Map<String, Object>> pestImages) {
+        if (CollectionUtils.isEmpty(pestImages)) {
+            return "";
+        }
+        for (Map<String, Object> pestImage : pestImages) {
+            String imageUrl = firstTextValue(pestImage.get("image_url"), pestImage.get("thumbnail"), pestImage.get("sthumbnail"));
+            if (StringUtils.hasText(imageUrl)) {
+                return imageUrl;
+            }
+        }
+        return "";
+    }
+
+    private String buildInsectTrendText(List<Map.Entry<String, Integer>> sortedPests, int imageCount) {
+        if (CollectionUtils.isEmpty(sortedPests)) {
+            return "害虫趋势：今日暂无有效虫情识别数据，暂未发现明确害虫发生趋势，建议结合测报灯状态和田间巡查继续观察。";
+        }
+
+        int totalCount = sortedPests.stream().mapToInt(item -> item.getValue() == null ? 0 : item.getValue()).sum();
+        List<Map.Entry<String, Integer>> mainPests = filterMainPests(sortedPests);
+        Map.Entry<String, Integer> topPest = sortedPests.get(0);
+        int topCount = topPest.getValue() == null ? 0 : topPest.getValue();
+
+        String riskLevel;
+        if (topCount >= 50 || totalCount >= 120) {
+            riskLevel = "偏高";
+        } else if (topCount >= 20 || totalCount >= 60) {
+            riskLevel = "中等";
+        } else {
+            riskLevel = "较低";
+        }
+
+        StringBuilder builder = new StringBuilder("害虫趋势：");
+        builder.append("今日虫情测报灯共识别").append(totalCount).append("头昆虫");
+        if (imageCount > 0) {
+            builder.append("，来源于").append(imageCount).append("张抓拍图像");
+        }
+        builder.append("，虫口密度").append(riskLevel).append("。");
+        if (CollectionUtils.isEmpty(mainPests)) {
+            builder.append("监测结果以").append(joinTopPestNames(sortedPests, 3))
+                    .append("等非主要目标昆虫为主，油菜主要害虫未见明显集中发生。");
+        } else {
+            builder.append("主要需关注").append(joinTopPestNames(mainPests, 3))
+                    .append("，其中").append(topPest.getKey()).append("数量最高。");
+        }
+        builder.append("建议持续关注迁入性和突增性害虫动态。");
+        return builder.toString();
+    }
+
+    private String buildInsectControlSuggestion(List<Map.Entry<String, Integer>> sortedPests) {
+        if (CollectionUtils.isEmpty(sortedPests)) {
+            return "防治建议：保持虫情测报灯正常运行，配合人工巡田核查；暂无有效虫情数据时不建议直接采取化学防治。";
+        }
+
+        int totalCount = sortedPests.stream().mapToInt(item -> item.getValue() == null ? 0 : item.getValue()).sum();
+        List<Map.Entry<String, Integer>> mainPests = filterMainPests(sortedPests);
+        Map.Entry<String, Integer> topPest = sortedPests.get(0);
+        int topCount = topPest.getValue() == null ? 0 : topPest.getValue();
+
+        List<String> suggestions = new ArrayList<>();
+        suggestions.add("维持虫情测报灯监测，重点复核" + joinTopPestNames(CollectionUtils.isEmpty(mainPests) ? sortedPests : mainPests, 3) + "等虫情变化");
+        suggestions.add("及时清除田间及田边杂草，减少杂虫和迁入性害虫栖息地");
+        suggestions.add("优先采用杀虫灯、色板、性诱等绿色防控措施");
+        if (topCount >= 50 || totalCount >= 120) {
+            suggestions.add("虫量持续上升或局部超过防控阈值时，按植保要求开展分区处置");
+        } else {
+            suggestions.add("当前虫量未达到明显高发水平，暂不建议大面积化学防治");
+        }
+        return "防治建议：" + String.join("；", suggestions) + "。";
+    }
+
+    private List<Map.Entry<String, Integer>> filterMainPests(List<Map.Entry<String, Integer>> sortedPests) {
+        List<Map.Entry<String, Integer>> mainPests = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : sortedPests) {
+            if (isOilseedMainPest(entry.getKey())) {
+                mainPests.add(entry);
+            }
+        }
+        return mainPests;
+    }
+
+    private boolean isOilseedMainPest(String pestName) {
+        if (!StringUtils.hasText(pestName)) {
+            return false;
+        }
+        for (String mainPest : OILSEED_MAIN_PESTS) {
+            if (pestName.contains(mainPest) || mainPest.contains(pestName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String joinTopPestNames(List<Map.Entry<String, Integer>> sortedPests, int limit) {
+        if (CollectionUtils.isEmpty(sortedPests)) {
+            return "虫情";
+        }
+        List<String> names = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : sortedPests) {
+            if (StringUtils.hasText(entry.getKey()) && !names.contains(entry.getKey())) {
+                names.add(entry.getKey());
+            }
+            if (names.size() >= limit) {
+                break;
+            }
+        }
+        return String.join("、", names);
+    }
+
+    private String firstTextValue(Object... values) {
+        if (values == null) {
+            return "";
+        }
+        for (Object value : values) {
+            if (value == null) {
+                continue;
+            }
+            String text = String.valueOf(value).trim();
+            if (StringUtils.hasText(text) && !"null".equalsIgnoreCase(text)) {
+                return text;
+            }
+        }
+        return "";
+    }
+
+    private String extractAiSection(String text, String startMarker, String endMarker, String fallback) {
+        if (!StringUtils.hasText(text) || !StringUtils.hasText(startMarker)) {
+            return fallback;
+        }
+        int start = text.indexOf(startMarker);
+        if (start < 0) {
+            return fallback;
+        }
+        int contentStart = start + startMarker.length();
+        int end = StringUtils.hasText(endMarker) ? text.indexOf(endMarker, contentStart) : -1;
+        String content = end > contentStart ? text.substring(contentStart, end) : text.substring(contentStart);
+        content = content.trim();
+        if (!StringUtils.hasText(content)) {
+            return fallback;
+        }
+        return startMarker + content;
+    }
+
+    private Date parseDateTime(String value) {
+        String text = normalizeDateTimeText(value);
+        if (!StringUtils.hasText(text)) {
+            return new Date();
+        }
+        try {
+            LocalDateTime dateTime = LocalDateTime.parse(text, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
+        } catch (Exception ignored) {
+            try {
+                LocalDate date = LocalDate.parse(text, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                return java.sql.Date.valueOf(date);
+            } catch (Exception ignoredAgain) {
+                return new Date();
+            }
+        }
+    }
+
+    private String normalizeDateTimeText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        String text = value.trim().replace('T', ' ');
+        if (text.endsWith("Z")) {
+            text = text.substring(0, text.length() - 1);
+        }
+        int dotIndex = text.indexOf('.');
+        if (dotIndex > 0) {
+            text = text.substring(0, dotIndex);
+        }
+        return text.length() >= 19 ? text.substring(0, 19) : text;
     }
 
     private String buildPestSuggestion(List<YoucaiDecisionPestDTO.PestItem> topPests) {

@@ -6,6 +6,7 @@ enum Api {
   PestImages = '/youcai/youcaiPestControl/images',
   AIAnalysisSubmit = '/youcai/youcaiPestControl/aiAnalysis/submit',
   AIAnalysisTask = '/youcai/youcaiPestControl/aiAnalysis/task',
+  TrendSuggest = '/youcai/youcaiPestControl/trendSuggest',
 }
 
 export interface PestImageQueryParams {
@@ -41,6 +42,11 @@ export interface PestAnalysisRequest {
   image_urls: string[];
 }
 
+export interface PestTrendSuggestParams {
+  baseId?: string;
+  baseName?: string;
+}
+
 export const submitPestAnalysisTask = (data: PestAnalysisRequest) => {
   return defHttp.post<AiTaskSubmitResponse>({
     url: Api.AIAnalysisSubmit,
@@ -61,6 +67,17 @@ export const getPestAnalysisTask = (taskId: string) => {
 export const getPestImages = (params: PestImageQueryParams) => {
   return defHttp.get({
     url: Api.PestImages,
+    params,
+    timeout: 30 * 1000,
+  });
+};
+
+/**
+ * 获取后台定时任务预生成的虫情趋势与防治建议。
+ */
+export const getPestTrendSuggest = (params: PestTrendSuggestParams) => {
+  return defHttp.get<string>({
+    url: Api.TrendSuggest,
     params,
     timeout: 30 * 1000,
   });

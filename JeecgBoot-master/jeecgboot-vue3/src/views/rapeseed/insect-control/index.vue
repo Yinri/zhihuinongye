@@ -66,16 +66,16 @@
         <div v-if="!currentBaseName" class="analysis-empty">
           <a-empty description="请先选择基地" />
         </div>
-        <div v-else-if="pestImages.length === 0 && !pageLoading" class="analysis-empty">
-          <a-empty description="当前时间范围内暂无虫情数据" />
-        </div>
         <div v-else-if="analysisError" class="analysis-error">
           {{ analysisError }}
         </div>
         <div v-else-if="llmAnalysis" class="analysis-result" style="white-space: pre-line;">
           {{ llmAnalysis }}
         </div>
-        <div v-else class="analysis-placeholder">正在根据虫情图片生成趋势与防治建议...</div>
+        <div v-else-if="pestImages.length === 0 && !pageLoading" class="analysis-empty">
+          <a-empty description="当前时间范围内暂无虫情数据" />
+        </div>
+        <div v-else class="analysis-placeholder">正在读取预生成虫情趋势与防治建议...</div>
       </a-spin>
     </a-card>
 
@@ -91,12 +91,12 @@ import * as echarts from 'echarts';
 import { message } from 'ant-design-vue';
 import { useSelectStore } from '/@/store/selectStore';
 import {
-  getPestAnalysisTask,
   getPestImages,
-  submitPestAnalysisTask,
-  type PestAnalysisRequest,
+  getPestTrendSuggest,
   type PestImageQueryParams,
 } from './insectControl.api';
+
+defineOptions({ name: 'InsectControl' });
 
 interface PestRecord {
   dateCreated?: string;
@@ -112,9 +112,6 @@ interface InsectChartItem {
   name: string;
   value: number;
 }
-
-const ANALYSIS_POLL_INTERVAL = 2000;
-const ANALYSIS_MAX_POLL_COUNT = 90;
 
 const selectStore = useSelectStore();
 const currentBaseId = computed(() => String(selectStore.selectedBase.baseId || ''));
@@ -218,7 +215,6 @@ async function loadPestImages() {
     analysisError.value = '';
     if (pestImages.value.length === 0) {
       message.info('当前时间范围内无虫情图片');
-      return;
     }
   } catch (error) {
     console.error('加载虫情图片失败:', error);
@@ -230,7 +226,7 @@ async function loadPestImages() {
     pageLoading.value = false;
   }
 
-  void handleLLMAnalysis(pestImages.value);
+  void loadStoredTrendSuggest();
 }
 
 function renderBarChart() {
@@ -274,89 +270,31 @@ function renderBarChart() {
   chartInstance.resize();
 }
 
-async function handleLLMAnalysis(records: PestRecord[]) {
-  if (records.length === 0) {
-    return;
-  }
-
-  const imageUrls = records
-    .map((item) => item.image_url || item.thumbnail)
-    .filter((url): url is string => Boolean(url));
-
-  if (imageUrls.length === 0) {
-    llmAnalysis.value = '';
-    analysisError.value = '当前虫情图片缺少可分析的图片地址';
-    return;
-  }
-
+async function loadStoredTrendSuggest() {
   const token = ++latestAnalysisToken;
   analysisLoading.value = true;
   analysisError.value = '';
   try {
-    const requestData: PestAnalysisRequest = {
-      base_id: currentBaseId.value || undefined,
-      base_name: currentBaseName.value || undefined,
-      pest_data: records.map((item) => ({
-        analysis_time: item.analysis_time,
-        insects: item.insects,
-      })),
-      image_urls: imageUrls,
-    };
-
-    const submitResult = await submitPestAnalysisTask(requestData);
-    // 命中后端缓存复用时提交即SUCCESS，先单次读取任务结果，避免进入轮询。
-    const taskResult = await resolvePestAnalysisResult(submitResult.taskId, submitResult.status, token);
+    const trendSuggest = await getPestTrendSuggest({
+      baseId: currentBaseId.value || undefined,
+      baseName: currentBaseName.value || undefined,
+    });
     if (token !== latestAnalysisToken) {
       return;
     }
-    llmAnalysis.value = typeof taskResult === 'string' ? taskResult : JSON.stringify(taskResult, null, 2);
+    llmAnalysis.value = trendSuggest || '';
   } catch (error) {
     if (token !== latestAnalysisToken) {
       return;
     }
-    console.error('AI分析请求失败:', error);
+    console.error('读取虫情趋势与防治建议失败:', error);
     llmAnalysis.value = '';
-    analysisError.value = 'AI分析请求失败，请稍后重试';
-    message.error('AI分析请求失败，请稍后重试');
+    analysisError.value = '今日虫情趋势与防治建议暂未生成';
   } finally {
     if (token === latestAnalysisToken) {
       analysisLoading.value = false;
     }
   }
-}
-
-async function resolvePestAnalysisResult(taskId: string, submitStatus: string, token: number) {
-  if (submitStatus === 'SUCCESS') {
-    const task = await getPestAnalysisTask(taskId);
-    if (token !== latestAnalysisToken) {
-      throw new Error('分析任务已取消');
-    }
-    if (task.status === 'SUCCESS') {
-      return task.result || '';
-    }
-  }
-  return pollPestAnalysisTask(taskId, token);
-}
-
-async function pollPestAnalysisTask(taskId: string, token: number) {
-  for (let count = 0; count < ANALYSIS_MAX_POLL_COUNT; count += 1) {
-    const task = await getPestAnalysisTask(taskId);
-    if (token !== latestAnalysisToken) {
-      throw new Error('分析任务已取消');
-    }
-    if (task.status === 'SUCCESS') {
-      return task.result || '';
-    }
-    if (task.status === 'FAILED') {
-      throw new Error(task.errorMessage || 'AI分析失败');
-    }
-    await sleep(ANALYSIS_POLL_INTERVAL);
-  }
-  throw new Error('AI分析超时，请稍后重试');
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 async function handleSearch() {

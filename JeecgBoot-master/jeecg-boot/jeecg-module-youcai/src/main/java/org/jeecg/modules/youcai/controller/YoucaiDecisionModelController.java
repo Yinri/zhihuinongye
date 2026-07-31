@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionGrowthDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionHeightRiskDTO;
+import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionInsectTrendSuggestDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionLodgingDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestControlDTO;
 import org.jeecg.modules.youcai.dto.decision.YoucaiDecisionPestDTO;
@@ -70,5 +71,11 @@ public class YoucaiDecisionModelController {
         // 适配中英文逗号
         String normalizedNames = pestNames.replace("，", ",");
         return Result.OK(decisionModelService.getPestControlSuggestions(normalizedNames));
+    }
+
+    @Operation(summary = "接口8：基地今日虫情预警与防治数据")
+    @GetMapping("/insect_trends_suggest")
+    public Result<List<YoucaiDecisionInsectTrendSuggestDTO>> getInsectTrendSuggest() {
+        return Result.OK(decisionModelService.getInsectTrendSuggest());
     }
 }
