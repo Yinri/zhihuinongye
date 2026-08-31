@@ -75,7 +75,7 @@
         <div v-else-if="pestImages.length === 0 && !pageLoading" class="analysis-empty">
           <a-empty description="当前时间范围内暂无虫情数据" />
         </div>
-        <div v-else class="analysis-placeholder">正在读取预生成虫情趋势与防治建议...</div>
+        <div v-else class="analysis-placeholder">正在根据当前虫情数据分析趋势与防治建议...</div>
       </a-spin>
     </a-card>
 
@@ -91,9 +91,10 @@ import * as echarts from 'echarts';
 import { message } from 'ant-design-vue';
 import { useSelectStore } from '/@/store/selectStore';
 import {
+  analyzePestData,
   getPestImages,
-  getPestTrendSuggest,
   type PestImageQueryParams,
+  type PestAnalysisRequest,
 } from './insectControl.api';
 
 defineOptions({ name: 'InsectControl' });
@@ -199,6 +200,7 @@ function clearPestData() {
   pestImages.value = [];
   llmAnalysis.value = '';
   analysisError.value = '';
+  analysisLoading.value = false;
 }
 
 async function loadPestImages() {
@@ -208,11 +210,13 @@ async function loadPestImages() {
   }
 
   pageLoading.value = true;
+  let loaded = false;
   try {
     const res = await getPestImages(buildPestQueryParams());
     pestImages.value = Array.isArray(res) ? res : [];
     llmAnalysis.value = '';
     analysisError.value = '';
+    loaded = true;
     if (pestImages.value.length === 0) {
       message.info('当前时间范围内无虫情图片');
     }
@@ -226,7 +230,9 @@ async function loadPestImages() {
     pageLoading.value = false;
   }
 
-  void loadStoredTrendSuggest();
+  if (loaded) {
+    void loadRealtimeAnalysis();
+  }
 }
 
 function renderBarChart() {
@@ -270,15 +276,39 @@ function renderBarChart() {
   chartInstance.resize();
 }
 
-async function loadStoredTrendSuggest() {
+function buildPestAnalysisRequest(): PestAnalysisRequest {
+  return {
+    base_id: currentBaseId.value || undefined,
+    base_name: currentBaseName.value || undefined,
+    pest_data: pestImages.value.map((record) => {
+      const insects: Record<string, number> = {};
+      Object.entries(record.insects || {}).forEach(([name, count]) => {
+        insects[name] = Number(count || 0);
+      });
+      return {
+        analysis_time: record.analysis_time || record.dateCreated,
+        insects,
+      };
+    }),
+    image_urls: [],
+  };
+}
+
+async function loadRealtimeAnalysis() {
+  if (!currentBaseName.value) {
+    return;
+  }
+  if (pestImages.value.length === 0) {
+    llmAnalysis.value = '';
+    analysisError.value = '';
+    return;
+  }
+
   const token = ++latestAnalysisToken;
   analysisLoading.value = true;
   analysisError.value = '';
   try {
-    const trendSuggest = await getPestTrendSuggest({
-      baseId: currentBaseId.value || undefined,
-      baseName: currentBaseName.value || undefined,
-    });
+    const trendSuggest = await analyzePestData(buildPestAnalysisRequest());
     if (token !== latestAnalysisToken) {
       return;
     }
@@ -287,9 +317,9 @@ async function loadStoredTrendSuggest() {
     if (token !== latestAnalysisToken) {
       return;
     }
-    console.error('读取虫情趋势与防治建议失败:', error);
+    console.error('实时分析虫情趋势与防治建议失败:', error);
     llmAnalysis.value = '';
-    analysisError.value = '今日虫情趋势与防治建议暂未生成';
+    analysisError.value = '实时虫情趋势与防治建议分析失败';
   } finally {
     if (token === latestAnalysisToken) {
       analysisLoading.value = false;

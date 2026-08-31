@@ -35,9 +35,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -95,13 +99,32 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
 
     @Override
     public List<YoucaiDecisionPestDTO> getInterface2Data() {
-        List<YoucaiDecisionPestDTO> result = new ArrayList<>();
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = endDate.minusDays(6);
-        for (YoucaiBases base : listDecisionBases()) {
-            result.add(buildPestData(base, startDate, endDate));
+        List<YoucaiBases> bases = listDecisionBases();
+        if (CollectionUtils.isEmpty(bases)) {
+            return Collections.emptyList();
         }
-        return result;
+
+        try {
+            // 虫情设备接口彼此独立，放到 boundedElastic 上并行查询，避免四个基地串行累计等待。
+            return Flux.fromIterable(bases)
+                    .flatMapSequential(base -> Mono.fromCallable(() -> buildPestData(base, startDate, endDate))
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .onErrorResume(error -> {
+                                log.error("获取基地{}近7天虫情数据失败，返回空数据: {}", base.getBaseName(), error.getMessage(), error);
+                                return Mono.just(buildEmptyPestData(base));
+                            }), bases.size())
+                    .collectList()
+                    .block(Duration.ofSeconds(20));
+        } catch (Exception e) {
+            log.error("批量获取近7天虫情数据失败，返回基地空数据: {}", e.getMessage(), e);
+            List<YoucaiDecisionPestDTO> fallback = new ArrayList<>();
+            for (YoucaiBases base : bases) {
+                fallback.add(buildEmptyPestData(base));
+            }
+            return fallback;
+        }
     }
 
     @Override
@@ -274,6 +297,15 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         return dto;
     }
 
+    private YoucaiDecisionPestDTO buildEmptyPestData(YoucaiBases base) {
+        YoucaiDecisionPestDTO dto = new YoucaiDecisionPestDTO();
+        dto.setSid(base.getId());
+        dto.setNam(base.getBaseName());
+        dto.setBug(Collections.emptyList());
+        dto.setSgt(buildPestSuggestion(Collections.emptyList()));
+        return dto;
+    }
+
     private YoucaiDecisionInsectTrendSuggestDTO buildInsectTrendSuggestData(YoucaiBases base, LocalDate date) {
         YoucaiDecisionInsectTrendSuggestDTO dto = new YoucaiDecisionInsectTrendSuggestDTO();
         dto.setSid(base.getId());
@@ -345,7 +377,6 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
         request.setBaseName(base.getBaseName());
 
         List<AnalysisRequestDTO.PestItem> pestData = new ArrayList<>();
-        List<String> imageUrls = new ArrayList<>();
         for (Map<String, Object> pestImage : pestImages) {
             AnalysisRequestDTO.PestItem item = new AnalysisRequestDTO.PestItem();
             item.setAnalysisTime(firstTextValue(pestImage.get("analysis_time"), pestImage.get("dateCreated")));
@@ -361,19 +392,13 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
                 item.setInsects(insects);
             }
             pestData.add(item);
-
-            String imageUrl = firstTextValue(pestImage.get("image_url"), pestImage.get("thumbnail"), pestImage.get("sthumbnail"));
-            if (StringUtils.hasText(imageUrl) && !imageUrls.contains(imageUrl)) {
-                imageUrls.add(imageUrl);
-            }
         }
 
-        if (CollectionUtils.isEmpty(pestData) || CollectionUtils.isEmpty(imageUrls)) {
-            throw new IllegalStateException("虫情数据或图片地址为空，无法调用大模型");
+        if (CollectionUtils.isEmpty(pestData)) {
+            throw new IllegalStateException("虫情数据不能为空，无法调用大模型");
         }
 
         request.setPestData(pestData);
-        request.setImageUrls(imageUrls);
         return pestControlService.aiAnalysis(request);
     }
 

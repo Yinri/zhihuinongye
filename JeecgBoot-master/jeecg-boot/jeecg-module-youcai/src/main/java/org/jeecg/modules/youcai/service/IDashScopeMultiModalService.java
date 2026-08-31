@@ -3,7 +3,7 @@ package org.jeecg.modules.youcai.service;
 import java.util.List;
 
 /**
- * DashScope 多模态图片分析服务。
+ * DashScope 分析服务
  */
 public interface IDashScopeMultiModalService {
 
@@ -15,4 +15,12 @@ public interface IDashScopeMultiModalService {
      * @return 模型返回的文本结果
      */
     String analyzeImages(List<String> imageUrls, String prompt);
+
+    /**
+     * 仅使用文本提示词调用 DashScope。
+     *
+     * @param prompt 分析提示词
+     * @return 模型返回的文本结果
+     */
+    String analyzeText(String prompt);
 }

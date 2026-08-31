@@ -4,9 +4,9 @@ const ANALYZE_TIMEOUT = 120 * 1000;
 
 enum Api {
   PestImages = '/youcai/youcaiPestControl/images',
+  AIAnalysis = '/youcai/youcaiPestControl/aiAnalysis',
   AIAnalysisSubmit = '/youcai/youcaiPestControl/aiAnalysis/submit',
   AIAnalysisTask = '/youcai/youcaiPestControl/aiAnalysis/task',
-  TrendSuggest = '/youcai/youcaiPestControl/trendSuggest',
 }
 
 export interface PestImageQueryParams {
@@ -39,12 +39,7 @@ export interface PestAnalysisRequest {
     analysis_time?: string;
     insects?: Record<string, number>;
   }>;
-  image_urls: string[];
-}
-
-export interface PestTrendSuggestParams {
-  baseId?: string;
-  baseName?: string;
+  image_urls?: string[];
 }
 
 export const submitPestAnalysisTask = (data: PestAnalysisRequest) => {
@@ -52,6 +47,14 @@ export const submitPestAnalysisTask = (data: PestAnalysisRequest) => {
     url: Api.AIAnalysisSubmit,
     data,
     timeout: 30 * 1000,
+  });
+};
+
+export const analyzePestData = (data: PestAnalysisRequest) => {
+  return defHttp.post<string>({
+    url: Api.AIAnalysis,
+    data,
+    timeout: ANALYZE_TIMEOUT,
   });
 };
 
@@ -67,17 +70,6 @@ export const getPestAnalysisTask = (taskId: string) => {
 export const getPestImages = (params: PestImageQueryParams) => {
   return defHttp.get({
     url: Api.PestImages,
-    params,
-    timeout: 30 * 1000,
-  });
-};
-
-/**
- * 获取后台定时任务预生成的虫情趋势与防治建议。
- */
-export const getPestTrendSuggest = (params: PestTrendSuggestParams) => {
-  return defHttp.get<string>({
-    url: Api.TrendSuggest,
     params,
     timeout: 30 * 1000,
   });

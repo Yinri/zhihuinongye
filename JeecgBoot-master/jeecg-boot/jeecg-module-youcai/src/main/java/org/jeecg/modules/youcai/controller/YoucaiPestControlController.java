@@ -8,7 +8,6 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
-import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.dto.AiTaskRecordDTO;
@@ -194,18 +193,7 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 	@PostMapping("/aiAnalysis")
 	public Result<?> aiAnalysis(@RequestBody AnalysisRequestDTO req) {
 		try {
-			YoucaiDecisionInsectTrendSuggestDTO trendSuggest = resolveTrendSuggest(req);
-			if (trendSuggest == null) {
-				return Result.error("今日虫情趋势与防治建议暂未生成");
-			}
-			String aiResult = formatTrendSuggestText(trendSuggest);
-			Result r = new Result<>();
-			r.setCode(CommonConstant.SC_OK_200);
-			r.setSuccess(true);
-			r.setMessage("");
-			r.setResult(aiResult);
-			r.setTimestamp(System.currentTimeMillis());
-			return r;
+			return Result.OK(youcaiPestControlService.aiAnalysis(req));
 		} catch (Exception e) {
 			return Result.error("AI 分析失败: " + e.getMessage());
 		}
@@ -225,11 +213,11 @@ public class YoucaiPestControlController extends JeecgController<YoucaiPestContr
 					baseScope,
 					"pest_trend_suggest",
 					() -> {
-						YoucaiDecisionInsectTrendSuggestDTO trendSuggest = resolveTrendSuggest(req);
-						if (trendSuggest == null) {
-							throw new IllegalStateException("今日虫情趋势与防治建议暂未生成");
+						try {
+							return JSON.toJSONString(youcaiPestControlService.aiAnalysis(req));
+						} catch (Exception e) {
+							throw new IllegalStateException(e.getMessage(), e);
 						}
-						return JSON.toJSONString(formatTrendSuggestText(trendSuggest));
 					}
 			);
 			return Result.OK(submitResponse);

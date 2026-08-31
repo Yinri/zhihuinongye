@@ -47,7 +47,7 @@ import java.util.concurrent.ExecutionException;
 public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMapper, YoucaiSensorInfo> implements IYoucaiSensorInfoService {
     private static final String HUJI_WATER_GATE_DEVICE_CODE = "HJ-WATER-GATE";
     private static final String HUJI_WATER_GATE_DEVICE_TYPE = "水阀控制设备";
-    
+
     @Autowired
     private IoTApiUtil ioTApiUtil;
 
@@ -56,79 +56,79 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
 
     @Autowired
     private IYoucaiProjectInfoService youcaiProjectInfoService;
-    
+
     @Override
     public WeatherSensorDataDTO getWeatherSensorData(String baseId) {
         try {
             log.info("获取基地ID {} 的气象传感器实时数据", baseId);
-            
+
             // 1. 查询基地下的气象传感器
             QueryWrapper<YoucaiSensorInfo> queryWrapper = new QueryWrapper<>();
             // queryWrapper.eq("base_id", baseId);
             queryWrapper.eq("sensor_type_id", 1); // 1=气象传感器
             queryWrapper.last("LIMIT 1"); // 只取第一个气象传感器
-            
+
             YoucaiSensorInfo sensorInfo = this.getOne(queryWrapper);
             if (sensorInfo == null) {
                 log.warn("基地 {} 下未找到气象传感器", baseId);
                 return null;
             }
-            
+
             // 2. 获取传感器实时数据
             Object sensorData = getSensorRealTimeDataRaw(sensorInfo.getSensorSerial());
             if (sensorData == null) {
                 log.warn("获取传感器 {} 实时数据失败", sensorInfo.getSensorSerial());
                 return null;
             }
-            
+
             // 3. 解析数据并构建DTO
             WeatherSensorDataDTO weatherData = parseWeatherData(sensorData, sensorInfo);
             log.info("成功获取气象传感器数据: {}", weatherData);
-            
+
             return weatherData;
         } catch (Exception e) {
             log.error("获取气象传感器数据失败", e);
             return null;
         }
     }
-    
+
     @Override
     public List<YoucaiSensorInfo> getBaseSensorList(String baseId) {
         try {
             log.info("获取基地ID {} 的传感器列表", baseId);
-            
+
             QueryWrapper<YoucaiSensorInfo> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("base_id", baseId);
             queryWrapper.orderByAsc("sensor_type", "sensor_name");
-            
+
             List<YoucaiSensorInfo> sensorList = this.list(queryWrapper);
             log.info("基地 {} 共有 {} 个传感器", baseId, sensorList.size());
-            
+
             return sensorList;
         } catch (Exception e) {
             log.error("获取基地传感器列表失败", e);
             return new ArrayList<>();
         }
     }
-    
+
     @Override
     public List<WeatherSensorDataDTO> getSensorHistoryData(String sensorId, String startDate, String endDate) {
         try {
             log.info("获取传感器ID {} 在 {} 至 {} 的历史数据", sensorId, startDate, endDate);
-            
+
             // 1. 查询传感器信息
             YoucaiSensorInfo sensorInfo = this.getById(sensorId);
             if (sensorInfo == null) {
                 log.warn("未找到传感器ID为 {} 的传感器", sensorId);
                 return new ArrayList<>();
             }
-            
+
             // 2. 获取历史数据（这里需要根据实际API实现）
             // 目前IoTApiUtil中没有获取历史数据的方法，这里先返回空列表
             // 实际项目中需要实现历史数据获取逻辑
             log.warn("获取历史数据功能尚未实现");
             return new ArrayList<>();
-            
+
         } catch (Exception e) {
             log.error("获取传感器历史数据失败", e);
             return new ArrayList<>();
@@ -316,8 +316,8 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         String address = base.getAddress();
         String codePrefix = base.getCodePrefix();
         return "HJ".equalsIgnoreCase(codePrefix)
-            || (baseName != null && baseName.contains("胡集"))
-            || (address != null && address.contains("胡集镇尚湾村"));
+                || (baseName != null && baseName.contains("胡集"))
+                || (address != null && address.contains("胡集镇尚湾村"));
     }
 
     private Object unwrapListCandidate(Object data) {
@@ -401,8 +401,8 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         int direction = ringIndex % 2 == 0 ? -1 : 1;
         int step = (ringIndex + 1) / 2;
         BigDecimal offset = BigDecimal.valueOf(step)
-            .multiply(new BigDecimal(longitude ? "0.00018" : "0.00012"))
-            .multiply(BigDecimal.valueOf(direction));
+                .multiply(new BigDecimal(longitude ? "0.00018" : "0.00012"))
+                .multiply(BigDecimal.valueOf(direction));
         return baseCoordinate.add(offset).setScale(6, RoundingMode.HALF_UP).toPlainString();
     }
 
@@ -427,8 +427,8 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
             SensorListRequest request = new SensorListRequest();
             request.setProjectId(projectId);
             request.setSensorTypeId(sensorTypeId);
-           
-            
+
+
             ApiResponse response = ioTApiUtil.getSensorList(request).block();
 
             if (response == null || response.getCode() != 1 || response.getData() == null) {
@@ -529,7 +529,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
                     sensorInfo.setProjectId(projectId);
                     sensorInfo.setIsDelete(0);
                     sensorInfo.setSyncTime(LocalDateTime.now());
-            
+
 
                     this.save(sensorInfo);
                     addCount++;
@@ -622,13 +622,13 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
             }
         }
     }
-    
+
     /**
      * 解析设备数据，转换为UnifiedDeviceDto列表
      */
     private List<UnifiedDeviceDto> parseDeviceData(Object data, String deviceType) {
         List<UnifiedDeviceDto> deviceList = new ArrayList<>();
-        
+
         try {
             // 将数据转换为JSON数组
             JSONArray jsonArray = null;
@@ -643,12 +643,12 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
                 String jsonString = JSON.toJSONString(data);
                 jsonArray = JSON.parseArray(jsonString);
             }
-            
+
             if (jsonArray != null) {
                 for (int i = 0; i < jsonArray.size(); i++) {
                     JSONObject deviceJson = jsonArray.getJSONObject(i);
                     UnifiedDeviceDto device = new UnifiedDeviceDto();
-                    
+
                     // 设置设备编号
                     // 传感器设备使用sensorSerial作为设备编号
                     if (deviceJson.containsKey("sensorSerial")) {
@@ -658,23 +658,23 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
                     } else if (deviceJson.containsKey("deviceCode")) {
                         device.setDeviceCode(deviceJson.getString("deviceCode"));
                     }
-                    
+
                     // 设置经纬度
                     if (deviceJson.containsKey("Lat")) {
                         device.setLat(deviceJson.getString("Lat"));
                     } else if (deviceJson.containsKey("lat")) {
                         device.setLat(deviceJson.getString("lat"));
                     }
-                    
+
                     if (deviceJson.containsKey("Lng")) {
                         device.setLng(deviceJson.getString("Lng"));
                     } else if (deviceJson.containsKey("lng")) {
                         device.setLng(deviceJson.getString("lng"));
                     }
-                    
+
                     // 设置设备类型
                     device.setDeviceType(deviceType);
-                    
+
                     // 只有当设备编号不为空时才添加到列表
                     if (device.getDeviceCode() != null && !device.getDeviceCode().isEmpty()) {
                         deviceList.add(device);
@@ -684,16 +684,16 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         } catch (Exception e) {
             log.error("解析设备数据失败", e);
         }
-        
+
         return deviceList;
     }
-    
+
     /**
      * 解析光谱设备数据，转换为UnifiedDeviceDto列表
      */
     private List<UnifiedDeviceDto> parseSpectrumDeviceData(Object data) {
         List<UnifiedDeviceDto> deviceList = new ArrayList<>();
-        
+
         try {
             // 将数据转换为JSON数组
             JSONArray jsonArray = null;
@@ -708,33 +708,33 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
                 String jsonString = JSON.toJSONString(data);
                 jsonArray = JSON.parseArray(jsonString);
             }
-            
+
             if (jsonArray != null) {
                 for (int i = 0; i < jsonArray.size(); i++) {
                     JSONObject item = jsonArray.getJSONObject(i);
-                    
+
                     // 光谱设备的数据结构是 {"q": {...}, "cropName": "..."}
                     if (item.containsKey("q")) {
                         JSONObject deviceJson = item.getJSONObject("q");
                         UnifiedDeviceDto device = new UnifiedDeviceDto();
-                        
+
                         // 设置设备编号 (sensorSerial)
                         if (deviceJson.containsKey("sensorSerial")) {
                             device.setDeviceCode(deviceJson.getString("sensorSerial"));
                         }
-                        
+
                         // 设置经纬度
                         if (deviceJson.containsKey("lat")) {
                             device.setLat(deviceJson.getString("lat"));
                         }
-                        
+
                         if (deviceJson.containsKey("lng")) {
                             device.setLng(deviceJson.getString("lng"));
                         }
-                        
+
                         // 设置设备类型为光谱设备
                         device.setDeviceType("光谱设备");
-                        
+
                         // 只有当设备编号不为空时才添加到列表
                         if (device.getDeviceCode() != null && !device.getDeviceCode().isEmpty()) {
                             deviceList.add(device);
@@ -745,7 +745,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         } catch (Exception e) {
             log.error("解析光谱设备数据失败", e);
         }
-        
+
         return deviceList;
     }
 
@@ -755,23 +755,24 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
     private Object getSensorRealTimeDataRaw(String deviceCode) {
         try {
             log.info("开始获取传感器实时数据，设备编号: {}", deviceCode);
-            
+
             // 使用IoTApiUtil获取实时数据
             ApiResponse<Object> response = ioTApiUtil.getSensorRealTimeData(deviceCode).block();
-            
+            log.warn("传感器实时数据:{}",response);
+
             if (response == null) {
                 log.error("获取传感器实时数据失败: API响应为null");
                 return null;
             }
-            
+
             log.info("API响应状态: {}, 消息: {}", response.getCode(), response.getMsg());
-            
+
             if (response.getCode() == 1 && response.getData() != null) {
                 // 直接返回原始数据
                 Object data = response.getData();
                 log.info("传感器数据类型: {}", data.getClass().getName());
                 log.info("传感器数据内容: {}", data.toString());
-                
+
                 return data;
             } else {
                 log.warn("获取传感器实时数据失败: {}", response.getMsg());
@@ -782,7 +783,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
             return null;
         }
     }
-    
+
     /**
      * 获取传感器实时数据
      */
@@ -790,22 +791,22 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         try {
             // 获取原始数据
             Object data = getSensorRealTimeDataRaw(deviceCode);
-            
+
             if (data == null) {
                 return null;
             }
-            
+
             // 如果已经是JSONObject类型，直接返回
             if (data instanceof JSONObject) {
                 return (JSONObject) data;
             }
-            
+
             // 如果是ArrayList，直接返回null，让调用方处理
             if (data instanceof ArrayList) {
                 log.info("数据是ArrayList类型，直接返回null，让调用方处理");
                 return null;
             }
-            
+
             // 尝试将数据转换为JSONObject
             try {
                 return (JSONObject) JSON.toJSON(data);
@@ -818,58 +819,58 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
             return null;
         }
     }
-    
+
     /**
      * 解析气象数据
      */
     private WeatherSensorDataDTO parseWeatherData(Object sensorData, YoucaiSensorInfo sensorInfo) {
         WeatherSensorDataDTO weatherData = new WeatherSensorDataDTO();
-        
+
         // 设置传感器基本信息
         weatherData.setSensorId(sensorInfo.getId().toString());
         weatherData.setSensorName(sensorInfo.getSensorName());
-        
+
         // 如果是JSONObject类型，使用原有逻辑
         if (sensorData instanceof JSONObject) {
             JSONObject realTimeData = (JSONObject) sensorData;
-            
+
             // 解析实时数据
             if (realTimeData.containsKey("Temperature")) {
                 weatherData.setTemperature(realTimeData.getFloatValue("Temperature"));
             }
-            
+
             if (realTimeData.containsKey("Humidity")) {
                 weatherData.setHumidity(realTimeData.getFloatValue("Humidity"));
             }
-            
+
             if (realTimeData.containsKey("AirPressure")) {
                 weatherData.setAirPressure(realTimeData.getFloatValue("AirPressure"));
             }
-            
+
             if (realTimeData.containsKey("WindSpeed")) {
                 weatherData.setWindSpeed(realTimeData.getFloatValue("WindSpeed"));
             }
-            
+
             if (realTimeData.containsKey("WindDirection")) {
                 weatherData.setWindDirection(realTimeData.getFloatValue("WindDirection"));
             }
-            
+
             if (realTimeData.containsKey("LightIntensity")) {
                 weatherData.setLightIntensity(realTimeData.getFloatValue("LightIntensity"));
             }
-            
+
             if (realTimeData.containsKey("Rainfall")) {
                 weatherData.setRainfall(realTimeData.getFloatValue("Rainfall"));
             }
-            
+
             if (realTimeData.containsKey("CO2")) {
                 weatherData.setCo2Level(realTimeData.getFloatValue("CO2"));
             }
-            
+
             if (realTimeData.containsKey("TotalRadiation")) {
                 weatherData.setTotalRadiation(realTimeData.getFloatValue("TotalRadiation"));
             }
-            
+
             // 设置更新时间
             if (realTimeData.containsKey("UpdateTime")) {
                 weatherData.setUpdateTime(realTimeData.getString("UpdateTime"));
@@ -881,22 +882,22 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
         else if (sensorData instanceof ArrayList) {
             ArrayList<?> dataList = (ArrayList<?>) sensorData;
             log.info("解析ArrayList格式的传感器数据，共{}项", dataList.size());
-            
+
             // 遍历数组，解析各项传感器数据
             for (Object item : dataList) {
                 if (item instanceof Map) {
                     Map<?, ?> sensorItem = (Map<?, ?>) item;
                     String name = String.valueOf(sensorItem.get("name"));
                     Object q = sensorItem.get("q");
-                    
+
                     log.info("解析传感器项: name={}, q={}", name, q);
-                    
+
                     // 解析q字段
                     if (q instanceof Map) {
                         Map<?, ?> qMap = (Map<?, ?>) q;
                         Object sensorNum = qMap.get("sensorNum");
                         Object collectime = qMap.get("collectime");
-                        
+
                         // 根据传感器名称设置对应的值
                         if ("空气温度".equals(name) && sensorNum != null) {
                             weatherData.setTemperature(Float.parseFloat(String.valueOf(sensorNum)));
@@ -926,7 +927,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
                             weatherData.setTotalRadiation(Float.parseFloat(String.valueOf(sensorNum)));
                             log.info("设置总辐射: {}", sensorNum);
                         }
-                        
+
                         // 设置更新时间（使用最后一项的时间）
                         if (collectime != null) {
                             weatherData.setUpdateTime(String.valueOf(collectime));
@@ -934,13 +935,13 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
                     }
                 }
             }
-            
+
             // 如果没有设置更新时间，使用当前时间
             if (weatherData.getUpdateTime() == null) {
                 weatherData.setUpdateTime(String.valueOf(System.currentTimeMillis()));
             }
         }
-        
+
         return weatherData;
     }
 
@@ -948,28 +949,28 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
     public Result<List<Map<String, Object>>> getVideoDevicesByBaseId(String baseId) {
         try {
             log.info("获取基地ID {} 的视频设备列表", baseId);
-            
+
             YoucaiBases base = youcaiBasesMapper.selectById(baseId);
             if (base == null) {
                 log.warn("基地不存在: {}", baseId);
                 return Result.error("基地不存在");
             }
-            
+
             String baseName = base.getBaseName();
             Integer projectId = 229;
             ApiResponse response = ioTApiUtil.getVideoDeviceList(projectId).block();
-            
+
             if (response == null || response.getCode() != 1 || response.getData() == null) {
                 log.warn("获取视频设备列表失败: {}", response != null ? response.getMsg() : "响应为空");
                 return Result.OK(new ArrayList<>());
             }
-            
+
             JSONArray jsonArray = convertToJsonArray(response.getData());
             if (jsonArray == null || jsonArray.isEmpty()) {
                 log.info("视频设备API无数据");
                 return Result.OK(new ArrayList<>());
             }
-            
+
             List<Map<String, Object>> videoDevices = new ArrayList<>();
 
             String keyword = extractSensorNamePrefix(baseName);
@@ -996,7 +997,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
                     log.error("解析视频设备第{}条数据失败: {}", i + 1, e.getMessage());
                 }
             }
-            
+
             log.info("基地 {} 共获取到 {} 个视频设备", baseName, videoDevices.size());
             return Result.OK(videoDevices);
         } catch (Exception e) {

@@ -6,12 +6,16 @@ import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationR
 import com.alibaba.dashscope.common.MultiModalMessage;
 import com.alibaba.dashscope.common.Role;
 import com.alibaba.dashscope.utils.Constants;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jeecg.modules.youcai.service.IDashScopeMultiModalService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -57,6 +61,12 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
     @Value("${dashscope.model:qwen-vl-max-latest}")
     private String model;
 
+    @Value("${dashscope.text-model:qwen-turbo}")
+    private String textModel;
+
+    @Value("${dashscope.text-api-url:https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation}")
+    private String textApiUrl;
+
     @Value("${dashscope.download-concurrency:4}")
     private int downloadConcurrency;
 
@@ -70,6 +80,7 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
     private int cacheMaxEntries;
 
     private final WebClient webClient = WebClient.builder()
+            .clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true)))
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(MAX_IMAGE_BYTES))
             .build();
     private final ConcurrentHashMap<String, CacheEntry<String>> imageDataUriCache = new ConcurrentHashMap<>();
@@ -129,7 +140,7 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
 
             MultiModalConversationParam param = MultiModalConversationParam.builder()
                     .apiKey(dashscopeApiKey)
-                    .model(model)
+                    .model(textModel)
                     .messages(Collections.singletonList(userMessage))
                     .build();
 
@@ -147,6 +158,50 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
         } catch (Exception e) {
             log.error("DashScope 多模态分析失败，图片数: {}", validImageUrls.size(), e);
             throw new IllegalStateException("DashScope 多模态分析失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public String analyzeText(String prompt) {
+        if (!StringUtils.hasText(dashscopeApiKey)) {
+            throw new IllegalStateException("未配置 DashScope API Key");
+        }
+        if (!StringUtils.hasText(prompt)) {
+            throw new IllegalArgumentException("提示词不能为空");
+        }
+
+        try {
+            String analysisCacheKey = buildTextAnalysisCacheKey(prompt);
+            String cachedResult = getCachedValue(analysisResultCache, analysisCacheKey);
+            if (cachedResult != null) {
+                return cachedResult;
+            }
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("model", textModel);
+            requestBody.put("input", new JSONObject() {{
+                put("prompt", prompt);
+            }});
+            requestBody.put("parameters", new JSONObject() {{
+                put("temperature", 0.3);
+                put("top_p", 0.9);
+            }});
+
+            String result = webClient.post()
+                    .uri(textApiUrl)
+                    .header("Authorization", "Bearer " + dashscopeApiKey)
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody.toJSONString())
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            String responseText = extractTextGenerationResponse(result);
+            cacheValue(analysisResultCache, analysisCacheKey, responseText, analysisCacheSeconds);
+            return responseText;
+        } catch (Exception e) {
+            log.error("DashScope 文本分析失败", e);
+            throw new IllegalStateException("DashScope 文本分析失败: " + e.getMessage(), e);
         }
     }
 
@@ -245,6 +300,42 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
     private String buildAnalysisCacheKey(List<String> validImageUrls, String prompt) {
         String raw = model + "|" + prompt + "|" + String.join("||", validImageUrls);
         return sha256(raw);
+    }
+
+    private String buildTextAnalysisCacheKey(String prompt) {
+        return sha256(textModel + "|" + prompt);
+    }
+
+    private String extractResponseText(MultiModalConversationResult result) {
+        if (result == null
+                || result.getOutput() == null
+                || result.getOutput().getChoices() == null
+                || result.getOutput().getChoices().isEmpty()
+                || result.getOutput().getChoices().get(0).getMessage() == null
+                || result.getOutput().getChoices().get(0).getMessage().getContent() == null
+                || result.getOutput().getChoices().get(0).getMessage().getContent().isEmpty()) {
+            return "";
+        }
+        Object text = result.getOutput()
+                .getChoices()
+                .get(0)
+                .getMessage()
+                .getContent()
+                .get(0)
+                .get("text");
+        return text == null ? "" : String.valueOf(text);
+    }
+
+    private String extractTextGenerationResponse(String result) {
+        if (!StringUtils.hasText(result)) {
+            return "";
+        }
+        JSONObject json = JSON.parseObject(result);
+        if (json == null || json.getJSONObject("output") == null) {
+            return "";
+        }
+        String text = json.getJSONObject("output").getString("text");
+        return text == null ? "" : text;
     }
 
     private String getCachedValue(ConcurrentHashMap<String, CacheEntry<String>> cache, String key) {

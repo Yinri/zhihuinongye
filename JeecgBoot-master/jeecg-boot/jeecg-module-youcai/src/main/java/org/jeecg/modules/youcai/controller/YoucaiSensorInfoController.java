@@ -207,11 +207,11 @@ public class YoucaiSensorInfoController extends JeecgController<YoucaiSensorInfo
             if (weatherData != null) {
                 return Result.OK(weatherData);
             } else {
-                return Result.error("获取气象传感器数据失败");
+                return Result.error("该基地气象传感器暂无实时数据");
             }
         } catch (Exception e) {
             log.error("获取气象传感器数据异常", e);
-            return Result.error("获取气象传感器数据异常：" + e.getMessage());
+            return Result.error(e.getMessage() != null ? e.getMessage() : "获取气象传感器数据异常");
         }
     }
     

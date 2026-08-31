@@ -20,23 +20,6 @@
           </div>
         </div>
 
-        <!-- 地块下拉框（已与基地下拉框结构对齐） -->
-        <div class="custom-select" v-if="!hidePlotDropdown" @click="toggleDropdown('plot')">
-          <div class="select-value">{{ selectedPlot?.plotName || '请选择地块' }}</div>
-          <div class="select-icon" :class="{ open: isDropdownOpen.plot }">▼</div>
-          <div class="select-options" v-if="isDropdownOpen.plot">
-            <div class="options-scroll">
-              <div
-                class="option-item"
-                v-for="item in plotList"
-                :key="item.plotId"
-                @click.stop="selectItem('plot', item.plotName)"
-              >
-                {{ item.plotName }}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div class="stage-tag-group" v-if="!hideGrowthStage && selectedBase?.baseId">
@@ -47,6 +30,10 @@
           :style="{'--index': index}"
           :class="{ active: currentGrowthStage === stage }"
         >
+          <div v-if="currentGrowthStage === stage" class="stage-indicator" aria-hidden="true">
+            <span class="stage-indicator-arrow"></span>
+            <span class="stage-indicator-label">当前生育期</span>
+          </div>
           {{ stage }}
         </div>
       </div>
@@ -59,9 +46,9 @@
 </template>
 
 <script setup lang="ts">
-import {ref, reactive, onMounted, watch, computed} from 'vue';
+import {ref, onMounted, computed} from 'vue';
 import { useSelectStore } from '../../../../store/selectStore';
-import {getBaseList, getPlotsByBaseId, getGrowthMonitoringByBaseId} from '../../../../views/rapeseed/production-plan/center/base.api';
+import {getBaseList} from '../../../../views/rapeseed/production-plan/center/base.api';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -69,31 +56,6 @@ const route = useRoute();
 const hideGrowthStage = computed(() => {
   const currentPath = route.path;
   return currentPath.includes('/rapeseed/production-plan/center');
-});
-
-const hidePlotDropdown = computed(() => {
-  const currentPath = route.path;
-  return currentPath.includes('/dashboard/rapeseed') ||
-         currentPath.includes('/rapeseed/work-area') ||
-         currentPath.includes('/rapeseed/lodging-risk') ||
-         currentPath.includes('/rapeseed/harvest/index') ||
-         currentPath.includes('/rapeseed/base-info') ||
-         currentPath.includes('/rapeseed/plot-info') ||
-         currentPath.includes('/rapeseed/variety-info') ||
-         currentPath.includes('/rapeseed/fertilizer-info') ||
-         currentPath.includes('/rapeseed/pesticide-info') ||
-         currentPath.includes('/rapeseed/harvest/machine') ||
-         currentPath.includes('/rapeseed/harvest/task') ||
-         currentPath.includes('/rapeseed/farming-records')||
-         currentPath.includes('/rapeseed/pest-control')||
-         currentPath.includes('/rapeseed/disease-control')||
-         currentPath.includes('/rapeseed/seedling-quality')||
-         currentPath.includes('/rapeseed/production-plan')||
-      currentPath.includes('/rapeseed/fertilization')||
-      currentPath.includes('/rapeseed/irrigation')
-
-         ;
-
 });
 
 // 定义基地类型接口
@@ -105,9 +67,8 @@ interface BaseItem {
   latitude?: string;   // 添加纬度字段
 }
 
-// 下拉框数据（基地和地块均从接口获取）
+// 下拉框数据
 const baseList = ref<BaseItem[]>([]);
-const plotList = ref<{ plotId: string | number; plotName: string }[]>([]);
 
 // 存储当前选中基地的生长阶段
 const currentGrowthStage = ref('');
@@ -117,18 +78,20 @@ const selectStore = useSelectStore();
 
 // 选中值
 const selectedBase = ref<BaseItem | null>(null);
-const selectedPlot = ref<{ plotId: string | number; plotName: string } | null>(null);
 
 // 下拉框状态
 const isDropdownOpen = ref({
-  base: false,
-  plot: false
+  base: false
 });
 
 // 生育阶段数据
 const stageList = ref([
   '发芽出苗期', '苗期', '蕾薹期', '开花期', '角果发育成熟期'
 ]);
+
+const resolveFixedGrowthStage = (base: BaseItem | null) => {
+  return base?.baseId ? '角果发育成熟期' : '';
+};
 
 // 弹窗状态与表单数据
 
@@ -162,6 +125,7 @@ const syncSelectedBase = (base: BaseItem) => {
     longitude: base.longitude,
     latitude: base.latitude,
   });
+  currentGrowthStage.value = resolveFixedGrowthStage(base);
 };
 
 // 获取基地列表
@@ -182,41 +146,11 @@ const fetchBaseList = async () => {
         (item) => String(item.baseId) === String(selectStore.selectedBase?.baseId || '')
       ) || baseList.value[0];
       syncSelectedBase(preferredBase);
-      // 加载第一个基地的地块
-      fetchPlotList();
     }
 
   } catch (error) {
     console.error('获取基地列表错误：', error);
     showMessage('获取基地列表失败，请检查网络', true);
-  }
-};
-
-// 获取地块列表（根据当前选中的基地ID）
-const fetchPlotList = async () => {
-  const currentBaseId = selectedBase.value?.baseId;
-  if (!currentBaseId) {
-    plotList.value = [];
-    selectedPlot.value = null;
-    selectStore.updateSelectedPlot(null);
-    return;
-  }
-  try {
-    const res = await getPlotsByBaseId(currentBaseId);
-    // 添加"全部地块"选项作为第一个选项
-    plotList.value = [
-      { plotId: 'all', plotName: '全部地块' },
-      ...res.map((item: any) => ({
-        plotId: String(item.id),
-        plotName: item.plotName
-      }))
-    ];
-    // 默认选择"全部地块"
-    selectedPlot.value = plotList.value[0];
-    selectStore.updateSelectedPlot(plotList.value[0]);
-  } catch (error) {
-    console.error('获取地块列表错误：', error);
-    showMessage('获取地块列表失败，请检查网络', true);
   }
 };
 
@@ -226,67 +160,22 @@ onMounted(() => {
 });
 
 // 切换下拉框显示状态
-const toggleDropdown = (type: 'base' | 'plot') => {
-  Object.keys(isDropdownOpen.value).forEach(key => {
-    if (key !== type) isDropdownOpen.value[key as 'base' | 'plot'] = false;
-  });
+const toggleDropdown = (type: 'base') => {
   isDropdownOpen.value[type] = !isDropdownOpen.value[type];
 };
 
 // 选择下拉项
-const selectItem = (type: 'base' | 'plot', value: string) => {
+const selectItem = (type: 'base', value: string) => {
   if (type === 'base') {
     // 匹配选中的基地对象
     const matchedBase = baseList.value.find(item => item.baseName === value);
     if (matchedBase) {
       syncSelectedBase(matchedBase);
-      // 重置地块选择
-      selectedPlot.value = null;
-      selectStore.updateSelectedPlot(null);
-      // 加载该基地的地块
-      fetchPlotList();
-    }
-  } else if (type === 'plot') {
-    // 匹配选中的地块对象
-    const matchedPlot = plotList.value.find(item => item.plotName === value);
-    if (matchedPlot) {
-      selectedPlot.value = matchedPlot;
-      // 同步到全局状态
-      selectStore.updateSelectedPlot({
-        plotId: String(matchedPlot.plotId), // 关键：转为字符串
-        plotName: matchedPlot.plotName
-      });
-      
     }
   }
   // 关闭下拉框
   isDropdownOpen.value[type] = false;
 };
-
-// 打开创建弹窗
-// 根据基地ID查询生长阶段
-const fetchBaseGrowthStage = async (baseId: string | number) => {
-  try {
-    const res = await getGrowthMonitoringByBaseId(baseId);
-    currentGrowthStage.value = res.growthStage || '';
-  } catch (error) {
-    console.error('获取基地生长阶段失败：', error);
-    currentGrowthStage.value = '';
-  }
-};
-
-// 监听选中基地变化，实时更新生长阶段
-watch(
-  () => selectedBase.value?.baseId,
-  (newBaseId) => {
-    if (newBaseId) {
-      fetchBaseGrowthStage(newBaseId);
-    } else {
-      currentGrowthStage.value = '';
-    }
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped lang="less">
@@ -297,12 +186,12 @@ watch(
 
 .growth-stage-tag-container {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 20px;
   width: 100%;
   box-sizing: border-box;
-  height: 50px;
-  padding: 0 20px;
+  height: 72px;
+  padding: 10px 20px 8px;
   background-color: #fff;
   position: relative;
   z-index: 1001;
@@ -404,32 +293,43 @@ watch(
     display: flex;
     align-items: center;
     gap: 0;
+    padding-top: 0;
 
     .stage-tag {
       position: relative;
       width: 140px;
       text-align: center;
-      padding: 8px 0;
-      color: #333;
+      padding: 10px 0 9px;
+      color: #2f3a25;
       font-size: 14px;
+      line-height: 18px;
       background: hsl(
         calc(60 + (var(--index) * 10)),
         100%,
         70%
       );
-      &.active {
-        font-weight: 700; // 字体加粗（700=bold）
-        border: 2px solid #2d8cf0; // 蓝色外边框（醒目不突兀）
-        border-radius: 4px; // 边框圆角，更美观
-        box-shadow: 0 0 10px rgba(45, 140, 240, 0.3); // 淡蓝色阴影，增强层次感
+      transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 
-        // 箭头颜色同步原背景色，避免边框冲突
+      &.active {
+        color: #7a1010;
+        font-size: 15px;
+        font-weight: 800;
+        border: 2px solid #e53935;
+        border-radius: 6px 0 0 6px;
+        box-shadow: 0 8px 18px rgba(229, 57, 53, 0.24), 0 0 0 4px rgba(229, 57, 53, 0.08);
+        transform: translateY(-2px);
+        z-index: 4;
+
         &:after {
-          border-left-color: hsl(calc(60 + (var(--index) * 10)),
-          100%,
-          70%);
+          top: -2px;
+          right: -14px;
+          border-top-width: 20px;
+          border-bottom-width: 20px;
+          border-left-width: 12px;
+          border-left-color: #e53935;
         }
       }
+
       &:not(:last-child) {
         margin-right: 10px;
         z-index: 1;
@@ -448,6 +348,54 @@ watch(
           70%
         );
         z-index: 2;
+      }
+
+      .stage-indicator {
+        position: absolute;
+        top: -23px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 5px;
+        pointer-events: none;
+        z-index: 5;
+
+        .stage-indicator-arrow {
+          position: relative;
+          width: 14px;
+          height: 18px;
+          border-radius: 999px;
+          background: #e53935;
+          box-shadow: 0 3px 8px rgba(229, 57, 53, 0.35);
+
+          &:before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 11px solid transparent;
+            border-right: 11px solid transparent;
+            border-bottom: 14px solid #e53935;
+          }
+        }
+
+        .stage-indicator-label {
+          padding: 3px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(229, 57, 53, 0.24);
+          background: #fff5f5;
+          color: #d32f2f;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 16px;
+          box-shadow: 0 4px 10px rgba(229, 57, 53, 0.12);
+          white-space: nowrap;
+        }
       }
 
     }

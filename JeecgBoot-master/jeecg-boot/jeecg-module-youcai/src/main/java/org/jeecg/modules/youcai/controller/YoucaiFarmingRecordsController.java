@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.system.vo.LoginUser;
 import org.jeecg.common.system.query.QueryGenerator;
-import org.jeecg.modules.youcai.dto.YoucaiFarmingRecordsExcel;
+//import org.jeecg.modules.youcai.dto.YoucaiFarmingRecordsExcel;
 import org.jeecg.modules.youcai.entity.YoucaiFarmingRecords;
 import org.jeecg.modules.youcai.service.IYoucaiFarmingRecordsService;
 
@@ -263,144 +263,144 @@ public class YoucaiFarmingRecordsController extends JeecgController<YoucaiFarmin
 		IPage<YoucaiFarmingRecords> pageList = youcaiFarmingRecordsService.page(page, queryWrapper);
 		return Result.OK(pageList);
 	}
-
-    /**
-    * 导出excel
-    *
-    * @param request
-    * @param youcaiFarmingRecords
-    */
+//
+//    /**
+//    * 导出excel
+//    *
+//    * @param request
+//    * @param youcaiFarmingRecords
+//    */
     //@RequiresPermissions("youcai:youcai_farming_records:exportXls")
-    @RequestMapping(value = "/exportXls")
-    public ModelAndView exportXls(HttpServletRequest request, YoucaiFarmingRecords youcaiFarmingRecords) {
-		QueryWrapper<YoucaiFarmingRecords> queryWrapper = QueryGenerator.initQueryWrapper(youcaiFarmingRecords, request.getParameterMap());
-		String selections = request.getParameter("selections");
-		if (StringUtils.hasText(selections)) {
-			queryWrapper.in("id", Arrays.asList(selections.split(",")));
-		}
-		List<YoucaiFarmingRecords> records = youcaiFarmingRecordsService.list(queryWrapper);
-		Map<String, YoucaiBases> baseMap = youcaiBasesService.list().stream()
-				.collect(Collectors.toMap(YoucaiBases::getId, item -> item, (left, right) -> left));
-		Map<String, YoucaiPlots> plotMap = youcaiPlotsService.list().stream()
-				.collect(Collectors.toMap(YoucaiPlots::getId, item -> item, (left, right) -> left));
-		List<YoucaiFarmingRecordsExcel> exportList = records.stream()
-				.map(item -> toExcel(item, baseMap, plotMap))
-				.collect(Collectors.toList());
-
-		ModelAndView mv = new ModelAndView(new JeecgEntityExcelView());
-		mv.addObject(NormalExcelConstants.FILE_NAME, "农事记录表");
-		mv.addObject(NormalExcelConstants.CLASS, YoucaiFarmingRecordsExcel.class);
-		LoginUser sysUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
-		String realname = sysUser == null ? "" : sysUser.getRealname();
-		ExportParams exportParams = new ExportParams("农事记录表报表", "导出人:" + realname, "农事记录表");
-		exportParams.setType(ExcelType.XSSF);
-		mv.addObject(NormalExcelConstants.PARAMS, exportParams);
-		mv.addObject(NormalExcelConstants.DATA_LIST, exportList);
-		return mv;
-    }
-
-    /**
-      * 通过excel导入数据
-    *
-    * @param request
-    * @param response
-    * @return
-    */
-    //@RequiresPermissions("youcai:youcai_farming_records:importExcel")
-    @RequestMapping(value = "/importExcel", method = RequestMethod.POST)
-    public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
-		MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
-		Map<String, MultipartFile> fileMap = multipartRequest.getFileMap();
-		if (fileMap.isEmpty()) {
-			return Result.error("文件导入失败：未获取到上传文件");
-		}
-		for (MultipartFile file : fileMap.values()) {
-			ImportParams params = new ImportParams();
-			params.setTitleRows(2);
-			params.setHeadRows(1);
-			params.setNeedSave(false);
-			try {
-				List<YoucaiFarmingRecordsExcel> excelList = ExcelImportUtil.importExcel(file.getInputStream(), YoucaiFarmingRecordsExcel.class, params);
-				if (excelList == null || excelList.isEmpty()) {
-					return Result.error("文件导入失败：未读取到数据");
-				}
-				List<YoucaiFarmingRecords> records = new ArrayList<>(excelList.size());
-				Map<String, Integer> importSeqMap = new HashMap<>();
-				Set<String> recordCodes = new HashSet<>();
-				for (int i = 0; i < excelList.size(); i++) {
-					YoucaiFarmingRecords record = fromExcel(excelList.get(i), i + 1, importSeqMap, recordCodes);
-					records.add(record);
-				}
-				youcaiFarmingRecordsService.saveBatch(records);
-				return Result.ok("文件导入成功！数据行数：" + records.size());
-			} catch (IllegalArgumentException e) {
-				log.warn("农事记录导入校验失败", e);
-				return Result.error("文件导入失败：" + e.getMessage());
-			} catch (Exception e) {
-				String msg = e.getMessage();
-				log.error("农事记录导入失败", e);
-				if (msg != null && msg.contains("Duplicate entry")) {
-					return Result.error("文件导入失败：记录编号重复");
-				}
-				return Result.error("文件导入失败：" + msg);
-			}
-		}
-		return Result.error("文件导入失败！");
-    }
-
-	private YoucaiFarmingRecordsExcel toExcel(YoucaiFarmingRecords item, Map<String, YoucaiBases> baseMap, Map<String, YoucaiPlots> plotMap) {
-		YoucaiFarmingRecordsExcel excel = new YoucaiFarmingRecordsExcel();
-		excel.setRecordCode(item.getRecordCode());
-		excel.setBaseId(item.getBaseId());
-		YoucaiBases base = baseMap.get(item.getBaseId());
-		excel.setBaseName(base == null ? null : base.getBaseName());
-		excel.setPlotId(item.getPlotId());
-		YoucaiPlots plot = plotMap.get(item.getPlotId());
-		excel.setPlotName(plot == null ? null : plot.getPlotName());
-		excel.setFarmingType(farmingTypeToName(item.getFarmingType()));
-		excel.setFarmingDate(item.getFarmingDate());
-		excel.setWorker(item.getWorker());
-		excel.setWorkArea(item.getWorkArea());
-		excel.setMaterials(item.getMaterials());
-		excel.setMaterialAmount(item.getMaterialAmount());
-		excel.setWorkDuration(item.getWorkDuration());
-		excel.setWorkStatus(workStatusToName(item.getWorkStatus()));
-		excel.setRemark(item.getRemark());
-		return excel;
-	}
-
-	private YoucaiFarmingRecords fromExcel(YoucaiFarmingRecordsExcel excel, int rowNo, Map<String, Integer> importSeqMap, Set<String> recordCodes) {
-		YoucaiBases base = resolveBase(excel.getBaseId(), excel.getBaseName(), rowNo);
-		YoucaiPlots plot = resolvePlot(excel.getPlotId(), excel.getPlotName(), base.getId(), rowNo);
-		YoucaiFarmingRecords record = new YoucaiFarmingRecords();
-		record.setBaseId(base.getId());
-		record.setPlotId(plot == null ? null : plot.getId());
-		record.setFarmingType(parseFarmingType(excel.getFarmingType(), rowNo));
-		record.setFarmingDate(excel.getFarmingDate());
-		record.setWorker(excel.getWorker());
-		record.setWorkArea(excel.getWorkArea());
-		record.setMaterials(excel.getMaterials());
-		record.setMaterialAmount(excel.getMaterialAmount());
-		record.setWorkDuration(excel.getWorkDuration());
-		record.setWorkStatus(parseWorkStatus(excel.getWorkStatus(), rowNo));
-		record.setRemark(excel.getRemark());
-		record.setDelFlag(0);
-
-		String recordCode = excel.getRecordCode();
-		if (!StringUtils.hasText(recordCode)) {
-			recordCode = generateRecordCode(base.getId(), importSeqMap);
-		}
-		if (!recordCodes.add(recordCode)) {
-			throw new IllegalArgumentException("第" + rowNo + "行记录编号在本次导入中重复：" + recordCode);
-		}
-		LambdaQueryWrapper<YoucaiFarmingRecords> qw = new LambdaQueryWrapper<>();
-		qw.eq(YoucaiFarmingRecords::getRecordCode, recordCode).last("LIMIT 1");
-		if (youcaiFarmingRecordsService.getOne(qw) != null) {
-			throw new IllegalArgumentException("第" + rowNo + "行记录编号已存在：" + recordCode);
-		}
-		record.setRecordCode(recordCode);
-		return record;
-	}
+//    @RequestMapping(value = "/exportXls")
+//    public ModelAndView exportXls(HttpServletRequest request, YoucaiFarmingRecords youcaiFarmingRecords) {
+//		QueryWrapper<YoucaiFarmingRecords> queryWrapper = QueryGenerator.initQueryWrapper(youcaiFarmingRecords, request.getParameterMap());
+//		String selections = request.getParameter("selections");
+//		if (StringUtils.hasText(selections)) {
+//			queryWrapper.in("id", Arrays.asList(selections.split(",")));
+//		}
+//		List<YoucaiFarmingRecords> records = youcaiFarmingRecordsService.list(queryWrapper);
+//		Map<String, YoucaiBases> baseMap = youcaiBasesService.list().stream()
+//				.collect(Collectors.toMap(YoucaiBases::getId, item -> item, (left, right) -> left));
+//		Map<String, YoucaiPlots> plotMap = youcaiPlotsService.list().stream()
+//				.collect(Collectors.toMap(YoucaiPlots::getId, item -> item, (left, right) -> left));
+//		List<YoucaiFarmingRecordsExcel> exportList = records.stream()
+//				.map(item -> toExcel(item, baseMap, plotMap))
+//				.collect(Collectors.toList());
+//
+//		ModelAndView mv = new ModelAndView(new JeecgEntityExcelView());
+//		mv.addObject(NormalExcelConstants.FILE_NAME, "农事记录表");
+//		mv.addObject(NormalExcelConstants.CLASS, YoucaiFarmingRecordsExcel.class);
+//		LoginUser sysUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+//		String realname = sysUser == null ? "" : sysUser.getRealname();
+//		ExportParams exportParams = new ExportParams("农事记录表报表", "导出人:" + realname, "农事记录表");
+//		exportParams.setType(ExcelType.XSSF);
+//		mv.addObject(NormalExcelConstants.PARAMS, exportParams);
+//		mv.addObject(NormalExcelConstants.DATA_LIST, exportList);
+//		return mv;
+//    }
+//
+//    /**
+//      * 通过excel导入数据
+//    *
+//    * @param request
+//    * @param response
+//    * @return
+//    */
+//    //@RequiresPermissions("youcai:youcai_farming_records:importExcel")
+//    @RequestMapping(value = "/importExcel", method = RequestMethod.POST)
+//    public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
+//		MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+//		Map<String, MultipartFile> fileMap = multipartRequest.getFileMap();
+//		if (fileMap.isEmpty()) {
+//			return Result.error("文件导入失败：未获取到上传文件");
+//		}
+//		for (MultipartFile file : fileMap.values()) {
+//			ImportParams params = new ImportParams();
+//			params.setTitleRows(2);
+//			params.setHeadRows(1);
+//			params.setNeedSave(false);
+//			try {
+//				List<YoucaiFarmingRecordsExcel> excelList = ExcelImportUtil.importExcel(file.getInputStream(), YoucaiFarmingRecordsExcel.class, params);
+//				if (excelList == null || excelList.isEmpty()) {
+//					return Result.error("文件导入失败：未读取到数据");
+//				}
+//				List<YoucaiFarmingRecords> records = new ArrayList<>(excelList.size());
+//				Map<String, Integer> importSeqMap = new HashMap<>();
+//				Set<String> recordCodes = new HashSet<>();
+//				for (int i = 0; i < excelList.size(); i++) {
+//					YoucaiFarmingRecords record = fromExcel(excelList.get(i), i + 1, importSeqMap, recordCodes);
+//					records.add(record);
+//				}
+//				youcaiFarmingRecordsService.saveBatch(records);
+//				return Result.ok("文件导入成功！数据行数：" + records.size());
+//			} catch (IllegalArgumentException e) {
+//				log.warn("农事记录导入校验失败", e);
+//				return Result.error("文件导入失败：" + e.getMessage());
+//			} catch (Exception e) {
+//				String msg = e.getMessage();
+//				log.error("农事记录导入失败", e);
+//				if (msg != null && msg.contains("Duplicate entry")) {
+//					return Result.error("文件导入失败：记录编号重复");
+//				}
+//				return Result.error("文件导入失败：" + msg);
+//			}
+//		}
+//		return Result.error("文件导入失败！");
+//    }
+//
+//	private YoucaiFarmingRecordsExcel toExcel(YoucaiFarmingRecords item, Map<String, YoucaiBases> baseMap, Map<String, YoucaiPlots> plotMap) {
+//		YoucaiFarmingRecordsExcel excel = new YoucaiFarmingRecordsExcel();
+//		excel.setRecordCode(item.getRecordCode());
+//		excel.setBaseId(item.getBaseId());
+//		YoucaiBases base = baseMap.get(item.getBaseId());
+//		excel.setBaseName(base == null ? null : base.getBaseName());
+//		excel.setPlotId(item.getPlotId());
+//		YoucaiPlots plot = plotMap.get(item.getPlotId());
+//		excel.setPlotName(plot == null ? null : plot.getPlotName());
+//		excel.setFarmingType(farmingTypeToName(item.getFarmingType()));
+//		excel.setFarmingDate(item.getFarmingDate());
+//		excel.setWorker(item.getWorker());
+//		excel.setWorkArea(item.getWorkArea());
+//		excel.setMaterials(item.getMaterials());
+//		excel.setMaterialAmount(item.getMaterialAmount());
+//		excel.setWorkDuration(item.getWorkDuration());
+//		excel.setWorkStatus(workStatusToName(item.getWorkStatus()));
+//		excel.setRemark(item.getRemark());
+//		return excel;
+//	}
+//
+//	private YoucaiFarmingRecords fromExcel(YoucaiFarmingRecordsExcel excel, int rowNo, Map<String, Integer> importSeqMap, Set<String> recordCodes) {
+//		YoucaiBases base = resolveBase(excel.getBaseId(), excel.getBaseName(), rowNo);
+//		YoucaiPlots plot = resolvePlot(excel.getPlotId(), excel.getPlotName(), base.getId(), rowNo);
+//		YoucaiFarmingRecords record = new YoucaiFarmingRecords();
+//		record.setBaseId(base.getId());
+//		record.setPlotId(plot == null ? null : plot.getId());
+//		record.setFarmingType(parseFarmingType(excel.getFarmingType(), rowNo));
+//		record.setFarmingDate(excel.getFarmingDate());
+//		record.setWorker(excel.getWorker());
+//		record.setWorkArea(excel.getWorkArea());
+//		record.setMaterials(excel.getMaterials());
+//		record.setMaterialAmount(excel.getMaterialAmount());
+//		record.setWorkDuration(excel.getWorkDuration());
+//		record.setWorkStatus(parseWorkStatus(excel.getWorkStatus(), rowNo));
+//		record.setRemark(excel.getRemark());
+//		record.setDelFlag(0);
+//
+//		String recordCode = excel.getRecordCode();
+//		if (!StringUtils.hasText(recordCode)) {
+//			recordCode = generateRecordCode(base.getId(), importSeqMap);
+//		}
+//		if (!recordCodes.add(recordCode)) {
+//			throw new IllegalArgumentException("第" + rowNo + "行记录编号在本次导入中重复：" + recordCode);
+//		}
+//		LambdaQueryWrapper<YoucaiFarmingRecords> qw = new LambdaQueryWrapper<>();
+//		qw.eq(YoucaiFarmingRecords::getRecordCode, recordCode).last("LIMIT 1");
+//		if (youcaiFarmingRecordsService.getOne(qw) != null) {
+//			throw new IllegalArgumentException("第" + rowNo + "行记录编号已存在：" + recordCode);
+//		}
+//		record.setRecordCode(recordCode);
+//		return record;
+//	}
 
 	private YoucaiBases resolveBase(String baseId, String baseName, int rowNo) {
 		if (StringUtils.hasText(baseId)) {

@@ -147,6 +147,9 @@ public class IoTApiUtil {
 
 
    public Mono<ApiResponse> getPestPhotos(String DeviceCode, Integer CountType, String StarDate, String EndDate) {
+    long startNanos = System.nanoTime();
+    log.info("开始请求虫情设备平台 GetDevImage，deviceCode={}, countType={}, startDate={}, endDate={}",
+            DeviceCode, CountType, StarDate, EndDate);
     return checkTokenAndRequest(() -> {
         java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
         requestBody.put("DeviceCode", DeviceCode);
@@ -159,7 +162,15 @@ public class IoTApiUtil {
                 .body(BodyInserters.fromValue(requestBody))
                 .retrieve()
                 .bodyToMono(ApiResponse.class);
-    });
+    })
+      // pest-top3 面向大屏，设备平台异常时返回结构化空数据，避免上层收到 Mono.empty()。
+      .timeout(Duration.ofSeconds(15), Mono.fromSupplier(this::createFallbackResponse))
+      .switchIfEmpty(Mono.fromSupplier(this::createFallbackResponse))
+      .doOnSuccess(response -> log.info("虫情设备平台 GetDevImage 返回，deviceCode={}, code={}, elapsedMs={}, emptyResponse={}",
+            DeviceCode, response == null ? null : response.getCode(),
+            (System.nanoTime() - startNanos) / 1_000_000, response == null))
+      .doOnError(error -> log.error("虫情设备平台 GetDevImage 异常，deviceCode={}, elapsedMs={}, error={}",
+              DeviceCode, (System.nanoTime() - startNanos) / 1_000_000, error.getMessage(), error));
 }
 
     public Mono<ApiResponse> getDiseasePhotos(String DeviceCode, Integer CountType, String StarDate, String EndDate) {
