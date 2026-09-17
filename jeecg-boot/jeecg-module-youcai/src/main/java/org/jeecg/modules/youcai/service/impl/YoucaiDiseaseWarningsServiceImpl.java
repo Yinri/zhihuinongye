@@ -1,21 +1,18 @@
 package org.jeecg.modules.youcai.service.impl;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import okhttp3.*;
 import org.jeecg.modules.youcai.dto.AnalysisRequestDTO;
 import org.jeecg.modules.youcai.entity.YoucaiDiseaseWarnings;
 import org.jeecg.modules.youcai.mapper.YoucaiDiseaseWarningsMapper;
 import org.jeecg.modules.youcai.service.IYoucaiDiseaseWarningsService;
+import org.jeecg.modules.youcai.service.IDashScopeMultiModalService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
@@ -107,9 +104,8 @@ public class YoucaiDiseaseWarningsServiceImpl extends ServiceImpl<YoucaiDiseaseW
         }
     }
 
-    private static final String API_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-    @Value("${youcai.dashscope.api-key:}")
-    private String apiKey;
+    @Autowired
+    private IDashScopeMultiModalService dashScopeMultiModalService;
 
     @Override
     public String analyzeDisease(String disease) throws Exception {
@@ -127,34 +123,8 @@ public class YoucaiDiseaseWarningsServiceImpl extends ServiceImpl<YoucaiDiseaseW
                 .append("5. 不要输出 Markdown 代码块，不要编造与该病害无关的虫害、施肥或倒伏内容。\n\n")
                 .append("病害名称：").append(disease).append("\n");
 
-        // ---- 构建请求体 ----
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("model", "qwen-turbo"); // 可换成你使用的模型
-        requestBody.put("input", new JSONObject() {
-            {
-                put("prompt", prompt.toString());
-            }
-        });
-        requestBody.put("parameters", new JSONObject() {
-            {
-                put("temperature", 0.3);
-                put("top_p", 0.9);
-            }
-        });
-        // ---- 调用 LLM ----
-        WebClient client = WebClient.builder().build();
-        String result = client.post()
-                .uri(API_URL)
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", "application/json")
-                .bodyValue(requestBody.toJSONString())
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-
-        // ---- 解析返回文本 ----
-        JSONObject json = JSON.parseObject(result);
-        return json.getJSONObject("output").getString("text");
+        // ---- 统一调用大模型（qwen3.8-max）----
+        return dashScopeMultiModalService.analyzeText(prompt.toString());
     }
 
     @Override

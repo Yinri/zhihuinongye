@@ -1,12 +1,7 @@
 package org.jeecg.modules.youcai.service.impl;
 
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
-import com.alibaba.dashscope.common.MultiModalMessage;
-import com.alibaba.dashscope.common.Role;
-import com.alibaba.dashscope.utils.Constants;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jeecg.modules.youcai.service.IDashScopeMultiModalService;
@@ -23,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.time.Duration;
@@ -38,7 +34,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * 基于 DashScope Java SDK 的多模态图片分析服务。
+ * 基于阿里云百炼 DashScope 的统一大模型服务。
+ * 统一使用 qwen3.8-max（原生多模态，兼容 OpenAI 协议），同时支持图片分析与纯文本分析。
  */
 @Slf4j
 @Service
@@ -55,17 +52,11 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
     @Value("${dashscope.api-key:${DASHSCOPE_API_KEY:}}")
     private String dashscopeApiKey;
 
-    @Value("${dashscope.base-url:https://dashscope.aliyuncs.com/api/v1}")
-    private String baseUrl;
+    @Value("${dashscope.chat-api-url:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}")
+    private String chatApiUrl;
 
-    @Value("${dashscope.model:qwen-vl-max-latest}")
+    @Value("${dashscope.model:qwen3.8-max}")
     private String model;
-
-    @Value("${dashscope.text-model:qwen-turbo}")
-    private String textModel;
-
-    @Value("${dashscope.text-api-url:https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation}")
-    private String textApiUrl;
 
     @Value("${dashscope.download-concurrency:4}")
     private int downloadConcurrency;
@@ -88,10 +79,7 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
     private ExecutorService downloadExecutor;
 
     @PostConstruct
-    public void configureDashScope() {
-        if (StringUtils.hasText(baseUrl)) {
-            Constants.baseHttpApiUrl = baseUrl;
-        }
+    public void configureExecutor() {
         int threadCount = Math.max(1, downloadConcurrency);
         this.downloadExecutor = Executors.newFixedThreadPool(threadCount, new DownloadThreadFactory());
     }
@@ -131,28 +119,9 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
             }
 
             List<Map<String, Object>> content = new ArrayList<>(buildImageContent(validImageUrls));
-            content.add(Collections.singletonMap("text", prompt));
+            content.add(buildTextContent(prompt));
 
-            MultiModalMessage userMessage = MultiModalMessage.builder()
-                    .role(Role.USER.getValue())
-                    .content(content)
-                    .build();
-
-            MultiModalConversationParam param = MultiModalConversationParam.builder()
-                    .apiKey(dashscopeApiKey)
-                    .model(textModel)
-                    .messages(Collections.singletonList(userMessage))
-                    .build();
-
-            MultiModalConversationResult result = callConversationWithRetry(param, validImageUrls.size());
-            Object text = result.getOutput()
-                    .getChoices()
-                    .get(0)
-                    .getMessage()
-                    .getContent()
-                    .get(0)
-                    .get("text");
-            String responseText = text == null ? "" : String.valueOf(text);
+            String responseText = callChatCompletions(content);
             cacheValue(analysisResultCache, analysisCacheKey, responseText, analysisCacheSeconds);
             return responseText;
         } catch (Exception e) {
@@ -177,26 +146,9 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
                 return cachedResult;
             }
 
-            JSONObject requestBody = new JSONObject();
-            requestBody.put("model", textModel);
-            requestBody.put("input", new JSONObject() {{
-                put("prompt", prompt);
-            }});
-            requestBody.put("parameters", new JSONObject() {{
-                put("temperature", 0.3);
-                put("top_p", 0.9);
-            }});
+            List<Map<String, Object>> content = Collections.singletonList(buildTextContent(prompt));
 
-            String result = webClient.post()
-                    .uri(textApiUrl)
-                    .header("Authorization", "Bearer " + dashscopeApiKey)
-                    .header("Content-Type", "application/json")
-                    .bodyValue(requestBody.toJSONString())
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-
-            String responseText = extractTextGenerationResponse(result);
+            String responseText = callChatCompletions(content);
             cacheValue(analysisResultCache, analysisCacheKey, responseText, analysisCacheSeconds);
             return responseText;
         } catch (Exception e) {
@@ -205,11 +157,23 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
         }
     }
 
+    private Map<String, Object> buildTextContent(String prompt) {
+        Map<String, Object> textPart = new HashMap<>();
+        textPart.put("type", "text");
+        textPart.put("text", prompt);
+        return textPart;
+    }
+
     private List<Map<String, Object>> buildImageContent(List<String> validImageUrls) {
         List<CompletableFuture<IndexedContent>> futures = IntStream.range(0, validImageUrls.size())
                 .mapToObj(index -> CompletableFuture.supplyAsync(
-                        () -> new IndexedContent(index,
-                                Collections.singletonMap("image", getOrDownloadAsDataUri(validImageUrls.get(index)))),
+                        () -> {
+                            String dataUri = getOrDownloadAsDataUri(validImageUrls.get(index));
+                            Map<String, Object> imagePart = new HashMap<>();
+                            imagePart.put("type", "image_url");
+                            imagePart.put("image_url", Collections.singletonMap("url", dataUri));
+                            return new IndexedContent(index, imagePart);
+                        },
                         downloadExecutor))
                 .collect(Collectors.toList());
 
@@ -279,22 +243,66 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
         return "data:" + mimeType + ";base64," + base64;
     }
 
-    private MultiModalConversationResult callConversationWithRetry(MultiModalConversationParam param, int imageCount) throws Exception {
+    private String callChatCompletions(List<Map<String, Object>> content) throws Exception {
+        Map<String, Object> userMessage = new HashMap<>();
+        userMessage.put("role", "user");
+        userMessage.put("content", content);
+
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("model", model);
+        requestBody.put("messages", Collections.singletonList(userMessage));
+        requestBody.put("temperature", 0.3);
+        requestBody.put("top_p", 0.9);
+
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_MODEL_RETRIES; attempt++) {
             try {
-                MultiModalConversation conversation = new MultiModalConversation();
-                return conversation.call(param);
+                String result = webClient.post()
+                        .uri(chatApiUrl)
+                        .header("Authorization", "Bearer " + dashscopeApiKey)
+                        .header("Content-Type", "application/json")
+                        .bodyValue(requestBody.toJSONString())
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+                return extractChatCompletionText(result);
             } catch (Exception e) {
                 lastException = e;
                 if (attempt == MAX_MODEL_RETRIES) {
                     break;
                 }
-                log.warn("DashScope 调用失败，准备重试，attempt={}, imageCount={}", attempt, imageCount, e);
+                log.warn("DashScope 调用失败，准备重试，attempt={}", attempt, e);
                 sleepQuietly(RETRY_BASE_DELAY_MS * attempt);
             }
         }
         throw lastException == null ? new IllegalStateException("DashScope 调用失败") : lastException;
+    }
+
+    private String extractChatCompletionText(String result) {
+        if (!StringUtils.hasText(result)) {
+            return "";
+        }
+        JSONObject json = JSON.parseObject(result);
+        if (json == null) {
+            return "";
+        }
+        JSONArray choices = json.getJSONArray("choices");
+        if (choices == null || choices.isEmpty()) {
+            return "";
+        }
+        Object content = choices.getJSONObject(0).getJSONObject("message").get("content");
+        if (content instanceof String) {
+            return (String) content;
+        }
+        if (content instanceof List) {
+            for (Object part : (List<?>) content) {
+                if (part instanceof Map && "text".equals(((Map<?, ?>) part).get("type"))) {
+                    Object text = ((Map<?, ?>) part).get("text");
+                    return text == null ? "" : String.valueOf(text);
+                }
+            }
+        }
+        return "";
     }
 
     private String buildAnalysisCacheKey(List<String> validImageUrls, String prompt) {
@@ -303,39 +311,7 @@ public class DashScopeMultiModalServiceImpl implements IDashScopeMultiModalServi
     }
 
     private String buildTextAnalysisCacheKey(String prompt) {
-        return sha256(textModel + "|" + prompt);
-    }
-
-    private String extractResponseText(MultiModalConversationResult result) {
-        if (result == null
-                || result.getOutput() == null
-                || result.getOutput().getChoices() == null
-                || result.getOutput().getChoices().isEmpty()
-                || result.getOutput().getChoices().get(0).getMessage() == null
-                || result.getOutput().getChoices().get(0).getMessage().getContent() == null
-                || result.getOutput().getChoices().get(0).getMessage().getContent().isEmpty()) {
-            return "";
-        }
-        Object text = result.getOutput()
-                .getChoices()
-                .get(0)
-                .getMessage()
-                .getContent()
-                .get(0)
-                .get("text");
-        return text == null ? "" : String.valueOf(text);
-    }
-
-    private String extractTextGenerationResponse(String result) {
-        if (!StringUtils.hasText(result)) {
-            return "";
-        }
-        JSONObject json = JSON.parseObject(result);
-        if (json == null || json.getJSONObject("output") == null) {
-            return "";
-        }
-        String text = json.getJSONObject("output").getString("text");
-        return text == null ? "" : text;
+        return sha256(model + "|" + prompt);
     }
 
     private String getCachedValue(ConcurrentHashMap<String, CacheEntry<String>> cache, String key) {

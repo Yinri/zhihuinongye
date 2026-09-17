@@ -6,19 +6,16 @@ import org.apache.http.HttpEntity;
 import org.jeecg.modules.youcai.entity.YoucaiColorQuality;
 import org.jeecg.modules.youcai.mapper.YoucaiColorQualityMapper;
 import org.jeecg.modules.youcai.service.IYoucaiColorQualityService;
+import org.jeecg.modules.youcai.service.IDashScopeMultiModalService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.aliyun.oss.common.utils.HttpHeaders;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -56,11 +53,8 @@ public class YoucaiColorQualityServiceImpl extends ServiceImpl<YoucaiColorQualit
 
 
 
-      private static final String API_URL =
-        "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-
-      @Value("${youcai.dashscope.api-key:}")
-      private String apiKey;
+      @Autowired
+      private IDashScopeMultiModalService dashScopeMultiModalService;
       @Override
       public String generateAdvice(JsonNode analysisJson) throws Exception {
 
@@ -75,31 +69,8 @@ public class YoucaiColorQualityServiceImpl extends ServiceImpl<YoucaiColorQualit
                 .append("3. 给出可执行的肥料和施肥方法\n")
                 .append("请用简单的口吻回复，建议不超过200字。");
 
-          // ---- 构建请求体 ----
-          JSONObject requestBody = new JSONObject();
-          requestBody.put("model", "qwen-turbo");
-          requestBody.put("input", new JSONObject() {{
-              put("prompt", prompt.toString());
-          }});
-          requestBody.put("parameters", new JSONObject() {{
-              put("temperature", 0.3);
-              put("top_p", 0.9);
-          }});
-
-          // ---- 调用 DashScope ----
-          WebClient client = WebClient.builder().build();
-          String result = client.post()
-                  .uri(API_URL)
-                  .header("Authorization", "Bearer " + apiKey)
-                  .header("Content-Type", "application/json")
-                  .bodyValue(requestBody.toJSONString())
-                  .retrieve()
-                  .bodyToMono(String.class)
-                  .block();
-
-          // ---- 直接返回模型文本 ----
-          JSONObject json = JSON.parseObject(result);
-          return json.getJSONObject("output").getString("text");
+          // ---- 统一调用大模型（qwen3.8-max）----
+          return dashScopeMultiModalService.analyzeText(prompt.toString());
       }
 
 
