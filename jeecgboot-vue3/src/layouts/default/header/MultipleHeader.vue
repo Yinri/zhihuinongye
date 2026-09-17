@@ -71,7 +71,7 @@
 
       const getWrapStyle = computed((): CSSProperties => {
         const style: CSSProperties = {};
-        if (unref(getFixed) && !glob.isQiankunMicro) {
+        if (unref(getFixed)) {
           style.width = unref(getIsMobile) ? '100%' : unref(getCalcContentWidth);
         }
         if (unref(getShowFullHeaderRef)) {
@@ -114,8 +114,6 @@
       const getClass = computed(() => {
         return [prefixCls, `${prefixCls}--${unref(getHeaderTheme)}`, {
           [`${prefixCls}--fixed`]: unref(getIsFixed),
-          // 【JEECG作为乾坤子应用】
-          [`${prefixCls}--qiankun-micro`]: glob.isQiankunMicro,
         }];
       });
 
@@ -149,15 +147,6 @@
       top: 0;
       z-index: @multiple-tab-fixed-z-index;
       width: 100%;
-    }
-
-    // 【JEECG作为乾坤子应用】
-    &--qiankun-micro {
-      position: absolute;
-
-      :deep(.@{namespace}-layout-header--qiankun-micro) {
-        width: 100%;
-      }
     }
 
   }

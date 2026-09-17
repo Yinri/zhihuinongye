@@ -15,14 +15,11 @@ import {useI18n} from "/@/hooks/web/useI18n";
 
 export type LayoutMapKey = 'LAYOUT';
 const IFRAME = () => import('/@/views/sys/iframe/FrameBlank.vue');
-const LayoutContent = () => import('/@/layouts/default/content/index.vue');
 
 const LayoutMap = new Map<string, () => Promise<typeof import('*.vue')>>();
 
 LayoutMap.set('LAYOUT', LAYOUT);
 LayoutMap.set('IFRAME', IFRAME);
-//微前端qiankun
-LayoutMap.set('LayoutsContent', LayoutContent);
 
 let dynamicViewsModules: Record<string, () => Promise<Recordable>>;
 

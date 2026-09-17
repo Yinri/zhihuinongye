@@ -42,12 +42,11 @@
   import { propTypes } from '/@/utils/propTypes';
   import { ref } from 'vue';
   import { buildUUID } from '@/utils/uuid';
-  import {getElectronFileUrl, getFileAccessHttpUrl} from '@/utils/common/compUtils';
+  import {getFileAccessHttpUrl} from '@/utils/common/compUtils';
   import { DownloadOutlined, EyeOutlined, PaperClipOutlined } from '@ant-design/icons-vue';
   import { encryptByBase64 } from '@/utils/cipher';
   import { useGlobSetting } from '@/hooks/setting';
   import { getToken } from "@/utils/auth";
-  import {$electron} from "@/electron";
   const glob = useGlobSetting();
   // 获取props
   defineProps({
@@ -106,11 +105,7 @@
       let url = encodeURIComponent(encryptByBase64(getFileAccessHttpUrl(filePath)));
       //update-end-author:scott---date:2026-04-16--for: 【Github #8855】修复文件预览路径处理问题，filePath需要先拼接完整URL再编码
       let previewUrl = `${glob.viewUrl}?url=` + url;
-      //update-begin-author:liusq---date:2025-12-16--for: JHHB-1139桌面端 文件预览统一修改 
-      if($electron.isElectron()){
-        previewUrl = getElectronFileUrl(filePath);
-      }
-      //update-end-author:liusq---date:2025-12-16--for: JHHB-1139桌面端 文件预览统一修改
+
       window.open(previewUrl, '_blank');
     }
   }

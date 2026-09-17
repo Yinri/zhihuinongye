@@ -18,10 +18,7 @@ import { configCompressPlugin } from './compress';
 import { configVisualizerConfig } from './visualizer';
 import { configThemePlugin } from './theme';
 import { configSvgIconsPlugin } from './svgSprite';
-import { configQiankunMicroPlugin } from './qiankunMicro';
 import { configPwaPlugin } from './pwa';
-// // electron plugin
-// import { configElectronPlugin } from "./electron";
 // //预编译加载插件(不支持vite3作废)
 // import OptimizationPersist from 'vite-plugin-optimize-persist';
 // import PkgConfig from 'vite-plugin-package-config';
@@ -30,12 +27,10 @@ import { configPwaPlugin } from './pwa';
  *
  * @param viteEnv
  * @param isBuild
- * @param isQiankunMicro 是否【JEECG作为乾坤子应用】
  */
 export async function createVitePlugins(
   viteEnv: ViteEnv,
   isBuild: boolean,
-  isQiankunMicro: boolean,
 ) {
   const { VITE_USE_MOCK, VITE_BUILD_COMPRESS, VITE_BUILD_COMPRESS_DELETE_ORIGIN_FILE } = viteEnv;
 
@@ -95,7 +90,7 @@ export async function createVitePlugins(
   // update-end--author:liaozhiyang---date:20260302---for:【QQYUN-14806】antd采用unplugin-vue-components实现按需加载
 
   // vite-plugin-html
-  vitePlugins.push(configHtmlPlugin(viteEnv, isBuild, isQiankunMicro));
+  vitePlugins.push(configHtmlPlugin(viteEnv, isBuild));
 
   // vite-plugin-svg-icons
   vitePlugins.push(configSvgIconsPlugin(isBuild));
@@ -125,28 +120,14 @@ export async function createVitePlugins(
   // vite-plugin-theme
   vitePlugins.push(configThemePlugin(isBuild));
 
-  // 【JEECG作为乾坤子应用】注册乾坤子应用模式插件
-  if (isQiankunMicro) {
-    // vite-plugin-qiankun
-    vitePlugins.push(...configQiankunMicroPlugin(viteEnv))
-  }
-
-  // // electron plugin
-  const isElectron = viteEnv.VITE_GLOB_RUN_PLATFORM === 'electron';
-  // if (isElectron) {
-  //   vitePlugins.push(configElectronPlugin(viteEnv, isBuild))
-  // }
-
   // The following plugins only work in the production environment
   if (isBuild) {
-    
+
     // rollup-plugin-gzip
     vitePlugins.push(configCompressPlugin(VITE_BUILD_COMPRESS, VITE_BUILD_COMPRESS_DELETE_ORIGIN_FILE));
 
     // vite-plugin-pwa (PWA 插件注册)
-    if (!isElectron) {
-      vitePlugins.push(configPwaPlugin(isBuild));
-    }
+    vitePlugins.push(configPwaPlugin(isBuild));
   }
 
   // //vite-plugin-theme【预编译加载插件，解决vite首次打开界面加载慢问题】

@@ -1,7 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 import type { App } from 'vue';
 
-import { $electron } from "@/electron";
 import { basicRoutes } from './routes';
 import {createRouter as createVueRouter, destroyRouter, router} from './router'
 
@@ -38,8 +37,7 @@ export function createRouter() {
       strict: true,
       scrollBehavior: () => ({left: 0, top: 0}),
     },
-    // 如果是 Electron 环境，则使用 hash 路由
-    $electron.isElectron(),
+    false,
   )
 
   // TODO 【QQYUN-4517】【表单设计器】记录分享路由守卫测试

@@ -36,12 +36,6 @@ function createConfig(params: CreateConfigParams) {
     console.log(colors.cyan(`✨ [${pkg.name}]`) + ` - configuration file is build successfully:`);
     console.log(colors.gray(OUTPUT_DIR + '/' + colors.green(configFileName)) + '\n');
 
-    // 如果是 Electron 环境，还需要将配置文件写入到 JSON 文件中
-    if (config.VITE_GLOB_RUN_PLATFORM === 'electron') {
-      writeFileSync(getRootPath(`${OUTPUT_DIR}/electron/env.json`), JSON.stringify(config));
-      console.log(colors.cyan(`✨ [${pkg.name}]`) + ` - electron env file is build successfully:`);
-      console.log(colors.gray(OUTPUT_DIR + '/' + colors.green('electron/env.json')) + '\n');
-    }
 
   } catch (error) {
     console.log(colors.red('configuration file configuration file failed to package:\n' + error));

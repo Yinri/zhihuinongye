@@ -3,7 +3,6 @@ import type { GlobEnvConfig } from '/#/config';
 import { warn } from '/@/utils/log';
 import pkg from '../../package.json';
 import { getConfigFileName } from '../../build/getConfigFileName';
-import { getGlobal } from "@/qiankun/micro";
 
 export function getCommonStoragePrefix() {
   const { VITE_GLOB_APP_SHORT_NAME } = getAppEnvConfig();
@@ -18,7 +17,7 @@ export function getStorageShortName() {
 export function getAppEnvConfig() {
   const ENV_NAME = getConfigFileName(import.meta.env);
 
-  const global = getGlobal();
+  const global = window;
 
   const ENV = (import.meta.env.DEV
     ? // Get the global configuration (the configuration will be extracted independently when packaging)
@@ -32,19 +31,13 @@ export function getAppEnvConfig() {
     VITE_GLOB_APP_SHORT_NAME,
     VITE_GLOB_API_URL_PREFIX,
     VITE_GLOB_APP_OPEN_SSO,
-    VITE_GLOB_APP_OPEN_QIANKUN,
     VITE_GLOB_APP_CAS_BASE_URL,
     VITE_GLOB_DOMAIN_URL,
     VITE_GLOB_ONLINE_VIEW_URL,
     // 全局隐藏哪些布局，多个用逗号隔开
     VITE_GLOB_HIDE_LAYOUT_TYPES,
     // 当前运行在什么平台
-    VITE_GLOB_RUN_PLATFORM,
 
-    // 【JEECG作为乾坤子应用】
-    VITE_GLOB_QIANKUN_MICRO_APP_NAME,
-    VITE_GLOB_QIANKUN_MICRO_APP_ENTRY,
-    
     //在线文档编辑版本。可选属性：wps, onlyoffice
     VITE_GLOB_ONLINE_DOCUMENT_VERSION,
   } = ENV;
@@ -62,16 +55,10 @@ export function getAppEnvConfig() {
     VITE_GLOB_APP_SHORT_NAME,
     VITE_GLOB_API_URL_PREFIX,
     VITE_GLOB_APP_OPEN_SSO,
-    VITE_GLOB_APP_OPEN_QIANKUN,
     VITE_GLOB_APP_CAS_BASE_URL,
     VITE_GLOB_DOMAIN_URL,
     VITE_GLOB_ONLINE_VIEW_URL,
     VITE_GLOB_HIDE_LAYOUT_TYPES,
-    VITE_GLOB_RUN_PLATFORM,
-
-    // 【JEECG作为乾坤子应用】
-    VITE_GLOB_QIANKUN_MICRO_APP_NAME,
-    VITE_GLOB_QIANKUN_MICRO_APP_ENTRY,
 
     //在线文档编辑版本。可选属性：wps, onlyoffice
     VITE_GLOB_ONLINE_DOCUMENT_VERSION

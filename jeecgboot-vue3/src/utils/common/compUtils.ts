@@ -11,9 +11,6 @@ import Big from 'big.js';
 import { Modal } from "ant-design-vue";
 import { defHttp } from "@/utils/http/axios";
 import { useI18n } from "@/hooks/web/useI18n";
-import {$electron} from "@/electron";
-import {router} from "@/router";
-import {encryptByBase64} from "@/utils/cipher";
 //存放部门路径的数组
 const departNamePath = ref<Record<string, string>>({});
 // 正在请求中的部门路径名称，避免同一参数并发重复调用
@@ -50,17 +47,6 @@ export const getFileAccessHttpUrl = (fileUrl, prefix = 'http') => {
     }
   } catch (err) {}
   return result;
-};
-/**
- *  获取桌面端wps的文件服务访问路径
- * @param fileUrl 文件路径
- */
-export const getElectronFileUrl = (url) => {
-  let fileUrl: any = url;
-  if (url && $electron.isElectron()) {
-    fileUrl = router.resolve({path: '/onlinePreview', query: {url: encryptByBase64(getFileAccessHttpUrl(url))}}).href;
-  }
-  return fileUrl;
 };
 
 /**

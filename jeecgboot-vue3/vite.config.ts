@@ -31,21 +31,11 @@ export default async ({ command, mode }: ConfigEnv): Promise<UserConfig> => {
 
   const isBuild = command === 'build';
 
-  const serverOptions: Recordable = {}
-
-  // JEECG 作为乾坤子应用时，需要开启跨域并指定 origin
-  const {VITE_GLOB_QIANKUN_MICRO_APP_NAME, VITE_GLOB_QIANKUN_MICRO_APP_ENTRY} = viteEnv;
-  const isQiankunMicro = VITE_GLOB_QIANKUN_MICRO_APP_NAME != null && VITE_GLOB_QIANKUN_MICRO_APP_NAME !== '';
-  if (isQiankunMicro && !isBuild) {
-    serverOptions.cors = true;
-    serverOptions.origin = VITE_GLOB_QIANKUN_MICRO_APP_ENTRY!.split('/').slice(0, 3).join('/');
-  }
-
   console.log('[init] Start Port: ', VITE_PORT);
   console.debug('[init] Vite Proxy Config: ', VITE_PROXY);
 
   return {
-    base: isQiankunMicro ? VITE_GLOB_QIANKUN_MICRO_APP_ENTRY : VITE_PUBLIC_PATH,
+    base: VITE_PUBLIC_PATH,
     root,
     resolve: {
       alias: [
@@ -87,7 +77,6 @@ export default async ({ command, mode }: ConfigEnv): Promise<UserConfig> => {
       https: false,
       port: VITE_PORT,
       proxy: createProxy(VITE_PROXY),
-      ...serverOptions,
       // 启动时预构建部分常用入口页面，访问时更快
       warmup: {
         clientFiles: [
@@ -175,7 +164,7 @@ export default async ({ command, mode }: ConfigEnv): Promise<UserConfig> => {
     },
 
     // The vite plugin used by the project. The quantity is large, so it is separately extracted and managed
-    plugins: await createVitePlugins(viteEnv, isBuild, isQiankunMicro),
+    plugins: await createVitePlugins(viteEnv, isBuild),
 
     optimizeDeps: {
       // Vite 8 uses Rolldown for dep optimization; esbuildOptions is deprecated.

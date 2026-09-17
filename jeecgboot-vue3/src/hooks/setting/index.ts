@@ -10,14 +10,9 @@ export const useGlobSetting = (): Readonly<GlobConfig> => {
     VITE_GLOB_API_URL_PREFIX,
     VITE_GLOB_APP_CAS_BASE_URL,
     VITE_GLOB_APP_OPEN_SSO,
-    VITE_GLOB_APP_OPEN_QIANKUN,
     VITE_GLOB_DOMAIN_URL,
     VITE_GLOB_ONLINE_VIEW_URL,
-    VITE_GLOB_RUN_PLATFORM,
 
-    // 【JEECG作为乾坤子应用】
-    VITE_GLOB_QIANKUN_MICRO_APP_NAME,
-    VITE_GLOB_QIANKUN_MICRO_APP_ENTRY,
   } = getAppEnvConfig();
 
   // if (!/[a-zA-Z\_]*/.test(VITE_GLOB_APP_SHORT_NAME)) {
@@ -36,23 +31,15 @@ export const useGlobSetting = (): Readonly<GlobConfig> => {
     shortName: VITE_GLOB_APP_SHORT_NAME,
     shortTitle: shortTitle,
     openSso: VITE_GLOB_APP_OPEN_SSO,
-    openQianKun: VITE_GLOB_APP_OPEN_QIANKUN,
     casBaseUrl: VITE_GLOB_APP_CAS_BASE_URL,
     urlPrefix: VITE_GLOB_API_URL_PREFIX,
     uploadUrl: VITE_GLOB_DOMAIN_URL,
     viewUrl: VITE_GLOB_ONLINE_VIEW_URL,
     // true: 新任务办理页面弹窗, false:旧的任务办理页面弹窗
     useNewTaskModal: true,
-    // 当前是否运行在 electron 平台
-    isElectronPlatform: VITE_GLOB_RUN_PLATFORM === 'electron',
 
-    // 【JEECG作为乾坤子应用】是否以乾坤子应用模式启动
-    isQiankunMicro: VITE_GLOB_QIANKUN_MICRO_APP_NAME != null && VITE_GLOB_QIANKUN_MICRO_APP_NAME !== '',
-    // 【JEECG作为乾坤子应用】乾坤子应用入口
-    qiankunMicroAppEntry: VITE_GLOB_QIANKUN_MICRO_APP_ENTRY,
   };
 
-  // 【JEECG作为乾坤子应用】乾坤子应用下，需要定义一下
   if (!window['_CONFIG']) {
     window['_CONFIG'] = {}
   }

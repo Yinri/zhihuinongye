@@ -84,8 +84,6 @@
           {
             [`${prefixCls}--fixed`]: unref(getMenuFixed),
             [`${prefixCls}--mix`]: unref(getIsMixMode) && !unref(getIsMobile),
-            // 【JEECG作为乾坤子应用】
-            [`${prefixCls}--qiankun-micro`]: glob.isQiankunMicro,
           },
         ];
       });
@@ -141,11 +139,6 @@
       top: 0;
       left: 0;
       height: 100%;
-    }
-
-    // 【JEECG作为乾坤子应用】
-    &--qiankun-micro {
-      position: absolute !important;
     }
 
     &--mix {

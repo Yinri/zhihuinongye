@@ -1,9 +1,6 @@
 <template>
-  <template v-if="isQiankunRoute">
-    <!-- qiankun 路由不显示空白页提示 -->
-  </template>
   <!-- 【QQYUN-13593】空白页美化 -->
-  <div v-else class="animationEffect" :style="effectVars">
+  <div class="animationEffect" :style="effectVars">
     <div class="effect-layer">
       <div class="blob blob-a"></div>
       <div class="blob blob-b"></div>
@@ -17,12 +14,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
-import { router } from "@/router";
 import { useEmpty } from '../useEmpty';
-
-// 判断是否是 qiankun 路由
-const isQiankunRoute = computed(() => !!router.currentRoute.value?.meta?.isQiankunRoute);
 
 const {pageTip, effectVars} = useEmpty();
 </script>

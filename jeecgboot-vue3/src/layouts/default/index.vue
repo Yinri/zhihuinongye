@@ -48,7 +48,6 @@
       const { getShowFullHeaderRef } = useHeaderSetting();
       const { getShowSidebar, getIsMixSidebar, getShowMenu, getMenuType } = useMenuSetting();
       const glob = useGlobSetting();
-      const { isQiankunMicro } = glob;
 
       // Create a lock screen monitor
       const lockEvents = useLockPage();
@@ -72,10 +71,6 @@
       const layoutMainClass = computed(() => {
         let cls: string[] = [`${prefixCls}-main`];
 
-        // 【JEECG作为乾坤子应用】
-        if (unref(isQiankunMicro)) {
-          cls.push(`${prefixCls}-main--qiankun-micro`);
-        }
         return cls;
       });
 
@@ -85,7 +80,6 @@
         prefixCls,
         getIsMobile,
         getIsMixSidebar,
-        isQiankunMicro,
         layoutBoxClass,
         layoutClass,
         layoutMainClass,
@@ -105,7 +99,6 @@
     flex-direction: column;
 
     &--menu {
-      // 【JEECG作为乾坤子应用】
       &-mix-sidebar {
 
         .@{namespace}-layout-mix-sider {
@@ -118,7 +111,6 @@
         }
       }
 
-      // 【JEECG作为乾坤子应用】
       &-mix {
         .@{namespace}-multiple-tabs {
           margin-top: 0 !important;
@@ -134,15 +126,6 @@
       width: 100%;
       // 代码逻辑说明:【issues/8709】LayoutContent样式多出1px
       // margin-left: 1px;
-
-      // 【JEECG作为乾坤子应用】根 Layout 作为 absolute 定位的参照容器
-      &--qiankun-micro {
-        position: relative;
-
-        .@{namespace}-multiple-tabs {
-          margin-top: 60px;
-        }
-      }
 
     }
   }

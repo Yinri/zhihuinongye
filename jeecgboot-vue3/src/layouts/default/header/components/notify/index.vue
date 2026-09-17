@@ -33,7 +33,6 @@
 
   import SysMessageModal from '/@/views/system/message/components/SysMessageModal.vue'
   import ChangePasswordModal from './ChangePasswordModal.vue'
-  import { ElectronEnum } from '/@/enums/jeecgEnum';
   import { defHttp } from "@/utils/http/axios";
 
   export default defineComponent({
@@ -74,7 +73,7 @@
       const noticeType = ref<string>('system');
       //未读消息
       const unReadNum = ref<any>({});
-      
+
       function clickBadge(value){
         // //消息列表弹窗前去除角标
         // for (let i = 0; i < listData.value.length; i++) {
@@ -114,11 +113,7 @@
           // 代码逻辑说明: 【QQYUN-12162】OA项目改造，系统重消息拆分，目前消息都在一起 需按分类进行拆分---
           unReadNum.value = msgCount;
           messageCount.value = msgCount.count?msgCount.count:0;
-          // 代码逻辑说明: 【JHHB-13】桌面应用消息通知
-          if (glob.isElectronPlatform) {
-            window[ElectronEnum.ELECTRON_API].sendNotifyFlash(messageCount.value);
-            window[ElectronEnum.ELECTRON_API].trayFlash();
-          }
+
         } catch (e) {
           console.warn('系统消息通知异常：', e);
         }
@@ -166,43 +161,11 @@
           }
           //后台保存数据太慢 前端延迟刷新消息
           setTimeout(()=>{
-            // 代码逻辑说明: 【JHHB-13】桌面应用消息通知
-            notification(data);
             loadData();
           }, 1000)
         }
       }
-      // 桌面应用通知
-      function notification(data) {
-        if (glob.isElectronPlatform && (data.noticeType || data.cmd == 'email')) {
-          // 流程、文件、日程、系统、会议
-          // flow、file、plan、system、meeting
-          let title = '';
-          let msgTxt = '';
-          let path = '';
-          if (data.noticeType === 'flow') {
-            title = '流程';
-            path = '/task/myHandleTaskInfo';
-          } else if (data.noticeType === 'file') {
-            title = '文件';
-            path = '/file';
-          } else if (data.noticeType === 'plan') {
-            title = '日程';
-            path = '/plan/view';
-          } else if (data.noticeType === 'system') {
-            title = '系统';
-            path = '/monitor/mynews';
-          } else if (data.noticeType === 'meeting') {
-            title = '会议';
-            path = '/meeting';
-          } else if (data.cmd === 'email') {
-            title = '邮件';
-            path = '/eoa/email?type=inbox';
-          }
-          msgTxt = data.msgTxt ?? '查看详情';
-          window[ElectronEnum.ELECTRON_API].sendNotification(`有新的${title}消息`, msgTxt, path);
-        }
-      }
+
       // 清空消息
       function onEmptyNotify() {
         popoverVisible.value = false;
@@ -240,7 +203,7 @@
 
       //验证是否为默认密码
       verifyIzDefaultPwd();
-      
+
       /**
        * 验证是否为默认密码
        */

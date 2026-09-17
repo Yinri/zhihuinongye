@@ -13,7 +13,6 @@
   import { getTenantId, getToken } from '/@/utils/auth';
   import { getFileAccessHttpUrl } from '/@/utils/common/compUtils';
   import { uploadFile } from '@/api/common/api';
-  import {$electron} from "@/electron";
 
   type Lang = 'zh_CN' | 'en_US' | 'ja_JP' | 'ko_KR' | undefined;
 
@@ -112,9 +111,6 @@
 
         // vditor组件本地化的路径配置【QQYUN-12053】
         let localCdn = '/resource/vditor@3.9.4';
-        if ($electron.isElectron()) {
-          localCdn = '.' + localCdn;
-        }
 
         const bindValue = { ...attrs, ...props };
         const insEditor = new Vditor(wrapEl, {

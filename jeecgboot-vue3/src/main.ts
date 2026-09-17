@@ -14,13 +14,10 @@ import { setupRouterGuard } from '/@/router/guard';
 import { setupStore } from '/@/store';
 import { setupGlobDirectives } from '/@/directives';
 import { setupI18n } from '/@/locales/setupI18n';
-import { setupElectron } from "@/electron";
 import { registerGlobComp } from '/@/components/registerGlobComp';
 import { registerThirdComp } from '/@/settings/registerThirdComp';
 import { registerSuper } from '/@/views/super/registerSuper';
 import { useSso } from '/@/hooks/web/useSso';
-import { checkIsQiankunMicro } from "/@/qiankun/micro";
-import { autoUseQiankunMicro } from "/@/qiankun/micro/qiankunMicro";
 import { useAppStoreWithOut } from "@/store/modules/app";
 
 // 注册online模块lib
@@ -28,16 +25,7 @@ import { registerPackages } from '/@/utils/monorepo/registerPackages';
 
 // 程序入口
 async function main() {
-  if (checkIsQiankunMicro()) {
-    // 【JEECG作为乾坤子应用】以乾坤子应用模式启动
-    // await autoUseQiankunMicro(bootstrap)
-    await autoUseQiankunMicro(bootstrap)
-  } else {
-    // 获取参数
-    const props = getMainAppProps();
-    // 普通启动
-    await bootstrap(props)
-  }
+  await bootstrap(getMainAppProps());
 }
 
 main();
@@ -74,7 +62,7 @@ async function bootstrap(props?: MainAppProps) {
 
   // 注册super应用路由
   await registerSuper(app);
-  
+
   // 配置路由
   setupRouter(app);
 
@@ -89,9 +77,6 @@ async function bootstrap(props?: MainAppProps) {
 
   // 注册第三方组件
   await registerThirdComp(app);
-
-  // 配置electron
-  setupElectron(app)
 
   // 当路由准备好时再执行挂载( https://next.router.vuejs.org/api/#isready)
   await router.isReady();

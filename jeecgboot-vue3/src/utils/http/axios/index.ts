@@ -98,11 +98,7 @@ const transform: AxiosTransform = {
     if(requestUrl!=null && (requestUrl.startsWith("http:") || requestUrl.startsWith("https:"))){
       isStartWithHttp = true;
     }
-    // 代码逻辑说明: 【QQYUN-9685】构建 electron 桌面应用
-    if (!isStartWithHttp && requestUrl != null) {
-      // 由于electron的url是file://开头的，所以需要判断一下
-      isStartWithHttp = requestUrl.startsWith('file://');
-    }
+
     if (!isStartWithHttp && joinPrefix) {
       config.url = `${urlPrefix}${config.url}`;
     }
@@ -110,7 +106,7 @@ const transform: AxiosTransform = {
     if (!isStartWithHttp && apiUrl && isString(apiUrl)) {
       config.url = `${apiUrl}${config.url}`;
     }
-    
+
     const params = config.params || {};
     const data = config.data || false;
     formatDate && data && !isString(data) && formatRequestDate(data);
@@ -144,13 +140,6 @@ const transform: AxiosTransform = {
       }
     }
 
-    // 代码逻辑说明: 【JEECG作为乾坤子应用】作为乾坤子应用启动时，拼接请求路径
-    if (globSetting.isQiankunMicro) {
-      if (config.url && config.url.startsWith('/')) {
-        config.url = globSetting.qiankunMicroAppEntry + config.url
-      }
-    }
-
     return config;
   },
 
@@ -161,17 +150,17 @@ const transform: AxiosTransform = {
     // 请求之前处理config
     const token = getToken();
     let tenantId: string | number = getTenantId();
-    
+
     // 将签名和时间戳，添加在请求接口 Header
     config.headers[ConfigEnum.TIMESTAMP] = signMd5Utils.getTimestamp();
     config.headers[ConfigEnum.Sign] = signMd5Utils.getSign(config.url, cloneDeep(config.params), cloneDeep(config.data));
-    
+
     config.headers[ConfigEnum.VERSION] = 'v3';
     if (token && (config as Recordable)?.requestOptions?.withToken !== false) {
       // jwt token
       config.headers.Authorization = options.authenticationScheme ? `${options.authenticationScheme} ${token}` : token;
       config.headers[ConfigEnum.TOKEN] = token;
-      
+
       // 将签名和时间戳，添加在请求接口 Header
       //config.headers[ConfigEnum.TIMESTAMP] = signMd5Utils.getTimestamp();
       //config.headers[ConfigEnum.Sign] = signMd5Utils.getSign(config.url, config.params);

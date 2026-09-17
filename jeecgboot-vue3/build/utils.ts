@@ -51,11 +51,6 @@ export function wrapperEnv(envConf: Recordable): ViteEnv {
  */
 function getConfFiles() {
 
-  // 代码逻辑说明: 【QQYUN-9685】构建 electron 桌面应用
-  const {VITE_GLOB_RUN_PLATFORM} = process.env
-  if (VITE_GLOB_RUN_PLATFORM === 'electron') {
-    return ['.env', '.env.prod_electron'];
-  }
 
   const script = process.env.npm_lifecycle_script;
   // 代码逻辑说明: 【QQYUN-8690】修正获取当前环境下的文件名

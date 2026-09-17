@@ -152,7 +152,6 @@ export interface GlobConfig {
   // Upload url (作废)
   uploadUrl?: string;
   openSso?: string;
-  openQianKun?: string;
   casBaseUrl?: string;
   // onlineview url
   viewUrl?: string;
@@ -164,13 +163,7 @@ export interface GlobConfig {
   shortTitle: string;
   // 使用新任务弹窗
   useNewTaskModal: boolean;
-  // 当前是否运行在 electron 平台
-  isElectronPlatform: boolean;
 
-  // 【JEECG作为乾坤子应用】是否以乾坤子应用模式启动
-  isQiankunMicro: boolean;
-  // 【JEECG作为乾坤子应用】乾坤子应用入口
-  qiankunMicroAppEntry?: string;
 }
 export interface GlobEnvConfig {
   // Site title
@@ -185,7 +178,6 @@ export interface GlobEnvConfig {
   //是否开启单点登录
   VITE_GLOB_APP_OPEN_SSO: string;
   //是否开启微应用模式
-  VITE_GLOB_APP_OPEN_QIANKUN: string;
   //单点服务端地址
   VITE_GLOB_APP_CAS_BASE_URL: string;
   VITE_GLOB_DOMAIN_URL: string;
@@ -196,12 +188,7 @@ export interface GlobEnvConfig {
   // 全局隐藏哪些布局，多个用逗号隔开
   VITE_GLOB_HIDE_LAYOUT_TYPES?: string;
 
-  // 【JEECG作为乾坤子应用】填写后将作为乾坤子应用启动，主应用注册时AppName需保持一致
-  VITE_GLOB_QIANKUN_MICRO_APP_NAME?: string;
-  // 【JEECG作为乾坤子应用】作为乾坤子应用启动时必填，需与qiankun主应用注册子应用时填写的 entry 保持一致
-  VITE_GLOB_QIANKUN_MICRO_APP_ENTRY?: string;
   //在线文档编辑版本。可选属性：wps, onlyoffice
   VITE_GLOB_ONLINE_DOCUMENT_VERSION?: string;
   // 当前运行在什么平台
-  VITE_GLOB_RUN_PLATFORM?: 'web' | 'electron';
 }

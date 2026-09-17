@@ -167,7 +167,6 @@
   import AiAppSettingModal from './components/AiAppSettingModal.vue';
   import AiAppSendModal from './components/AiAppSendModal.vue';
   import Icon from '@/components/Icon';
-  import { $electron } from "@/electron";
   import { appList, copyApp, deleteApp, releaseApp, queryById } from './AiApp.api';
   import { useMessage } from '@/hooks/web/useMessage';
   import { copyTextToClipboard } from '@/hooks/web/useCopyToClipboard';
@@ -307,14 +306,6 @@
         if (item.shareToken) {
           url += '?shareToken=' + item.shareToken;
         }
-
-        // update-begin--author:sunjianlei---date:20250411---for：【QQYUN-9685】构建 electron 桌面应用
-        if ($electron.isElectron()) {
-          url = $electron.resolveRoutePath(url);
-          window.open(url, '_blank', 'width=1200,height=800');
-          return
-        }
-        // update-end----author:sunjianlei---date:20250411---for：【QQYUN-9685】构建 electron 桌面应用
 
         window.open(url, '_blank');
       }

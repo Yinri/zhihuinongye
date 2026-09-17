@@ -70,10 +70,6 @@
       const getIsShowLogo = computed(() => unref(getShowLogo) && unref(getIsSidebarType));
 
       const getUseScroll = computed(() => {
-        // 【JEECG作为乾坤子应用】在乾坤子应用下，菜单不固定
-        if (glob.isQiankunMicro) {
-          return false;
-        }
 
         return (
           !unref(getIsHorizontal) &&

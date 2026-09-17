@@ -64,12 +64,7 @@ declare global {
     VITE_USE_CDN: boolean;
     VITE_BUILD_COMPRESS: 'gzip' | 'brotli' | 'none';
     VITE_BUILD_COMPRESS_DELETE_ORIGIN_FILE: boolean;
-    // 【JEECG作为乾坤子应用】乾坤子应用名，主应用注册时AppName需保持一致
-    VITE_GLOB_QIANKUN_MICRO_APP_NAME?: string;
-    // 【JEECG作为乾坤子应用】非必填，需与qiankun主应用注册子应用时填写的 entry 保持一致
-    VITE_GLOB_QIANKUN_MICRO_APP_ENTRY?: string;
     // 当前运行在什么平台
-    VITE_GLOB_RUN_PLATFORM?: 'web' | 'electron';
     // iconify图标使用在线还是本地。可选属性：online, local
     VITE_GLOB_ICONIFY_USE_TYPE?: 'online' | 'local';
   }
