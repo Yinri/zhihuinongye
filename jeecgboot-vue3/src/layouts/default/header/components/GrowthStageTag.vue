@@ -49,6 +49,7 @@
 import {ref, onMounted, computed} from 'vue';
 import { useSelectStore } from '../../../../store/selectStore';
 import {getBaseList} from '../../../../views/rapeseed/production-plan/center/base.api';
+import { getLatestGrowthMonitoringByBaseId } from '../../../../api/rapeseed/growthMonitoring';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -89,8 +90,19 @@ const stageList = ref([
   '发芽出苗期', '苗期', '蕾薹期', '开花期', '角果发育成熟期'
 ]);
 
-const resolveFixedGrowthStage = (base: BaseItem | null) => {
-  return base?.baseId ? '角果发育成熟期' : '';
+// 从后端获取基地真实的当前生育期（与决策模型接口 / 生长监测接口同源，避免写死导致不一致）
+const fetchGrowthStage = async (base: BaseItem | null) => {
+  if (!base?.baseId) {
+    currentGrowthStage.value = '';
+    return;
+  }
+  try {
+    const data: any = await getLatestGrowthMonitoringByBaseId(base.baseId);
+    currentGrowthStage.value = data?.growthStage || '';
+  } catch (error) {
+    console.error('获取生育期失败：', error);
+    currentGrowthStage.value = '';
+  }
 };
 
 // 弹窗状态与表单数据
@@ -125,7 +137,7 @@ const syncSelectedBase = (base: BaseItem) => {
     longitude: base.longitude,
     latitude: base.latitude,
   });
-  currentGrowthStage.value = resolveFixedGrowthStage(base);
+  fetchGrowthStage(base);
 };
 
 // 获取基地列表

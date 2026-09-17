@@ -122,10 +122,11 @@
                               v-model:value="growthForm.growthStage"
                               placeholder="请选择生长阶段"
                             >
+                              <a-select-option value="发芽出苗期">发芽出苗期</a-select-option>
                               <a-select-option value="苗期">苗期</a-select-option>
                               <a-select-option value="蕾薹期">蕾薹期</a-select-option>
                               <a-select-option value="开花期">开花期</a-select-option>
-                              <a-select-option value="角果成熟期">角果成熟期</a-select-option>
+                              <a-select-option value="角果发育成熟期">角果发育成熟期</a-select-option>
                             </a-select>
                           </a-form-item>
                         </a-col>

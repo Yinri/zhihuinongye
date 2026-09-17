@@ -295,10 +295,11 @@
                               v-model:value="growthForm.growthStage" 
                               placeholder="请选择生长阶段"
                             >
+                              <a-select-option value="发芽出苗期">发芽出苗期</a-select-option>
                               <a-select-option value="苗期">苗期</a-select-option>
                               <a-select-option value="蕾薹期">蕾薹期</a-select-option>
                               <a-select-option value="开花期">开花期</a-select-option>
-                              <a-select-option value="角果成熟期">角果成熟期</a-select-option>
+                              <a-select-option value="角果发育成熟期">角果发育成熟期</a-select-option>
                             </a-select>
                           </a-form-item>
                           
@@ -1239,12 +1240,11 @@ function formatDateTime(dateTimeStr: string): string {
 
 // 生长阶段配置
 const GROWTH_STAGES = {
+  EMERGENCE: { id: '发芽出苗期', name: '发芽出苗期', valid: true },
   SEEDLING: { id: '苗期', name: '苗期', valid: true },
   BOLTING: { id: '蕾薹期', name: '蕾薹期', valid: true },
   FLOWERING: { id: '开花期', name: '开花期', valid: true },
-  POD_MATURING: { id: '角果成熟期', name: '角果成熟期', valid: true },
-  HARVEST: { id: '收获期', name: '收获期', valid: false },
-  FALLOW: { id: '休耕期', name: '休耕期', valid: false }
+  POD_MATURING: { id: '角果发育成熟期', name: '角果发育成熟期', valid: true }
 };
 
 // 检查生长阶段是否适合显示倒伏风险

@@ -1780,12 +1780,23 @@ public class YoucaiDecisionModelServiceImpl implements IYoucaiDecisionModelServi
             long daysAgo = (System.currentTimeMillis() - latest.getMonitoringDate().getTime())
                     / (1000 * 60 * 60 * 24);
             if (daysAgo <= 30) {
-                return latest.getGrowthStage();
+                return normalizeGrowthStage(latest.getGrowthStage());
             }
         }
 
         // 数据过期或不存在，按当前日期推算
         return inferGrowthStageByDate();
+    }
+
+    /**
+     * 生育期命名归一化：统一为标准五阶段（发芽出苗期/苗期/蕾薹期/开花期/角果发育成熟期），
+     * 兼容历史数据中可能存在的"角果成熟期"旧命名
+     */
+    private String normalizeGrowthStage(String stage) {
+        if ("角果成熟期".equals(stage)) {
+            return "角果发育成熟期";
+        }
+        return stage;
     }
 
     /**
