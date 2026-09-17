@@ -24,7 +24,8 @@
   import { MenuTypeEnum } from '/@/enums/menuEnum';
 
   // 代码逻辑说明: 【QQYUN-8774】网站header区域加高
-  const HEADER_HEIGHT = 60;
+  // 油菜系统定制：header 内含生长阶段按钮行(GrowthStageTag 高72px)，需与老版本保持一致，否则固定header会遮挡内容、标签栏位置被挤掉
+  const HEADER_HEIGHT = 110;
 
   // updateBy:sunjianlei---updateDate:2021-09-03---修改tab切换栏样式：更改高度
   const TABS_HEIGHT = 32;
