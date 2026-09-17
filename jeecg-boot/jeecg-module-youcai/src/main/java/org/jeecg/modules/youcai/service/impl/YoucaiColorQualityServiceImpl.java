@@ -8,6 +8,7 @@ import org.jeecg.modules.youcai.mapper.YoucaiColorQualityMapper;
 import org.jeecg.modules.youcai.service.IYoucaiColorQualityService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -58,7 +59,8 @@ public class YoucaiColorQualityServiceImpl extends ServiceImpl<YoucaiColorQualit
       private static final String API_URL =
         "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
 
-      private static final String API_KEY = "sk-5f775477a8c04db4893d8a39d308e151";
+      @Value("${youcai.dashscope.api-key:}")
+      private String apiKey;
       @Override
       public String generateAdvice(JsonNode analysisJson) throws Exception {
 
@@ -88,7 +90,7 @@ public class YoucaiColorQualityServiceImpl extends ServiceImpl<YoucaiColorQualit
           WebClient client = WebClient.builder().build();
           String result = client.post()
                   .uri(API_URL)
-                  .header("Authorization", "Bearer " + API_KEY)
+                  .header("Authorization", "Bearer " + apiKey)
                   .header("Content-Type", "application/json")
                   .bodyValue(requestBody.toJSONString())
                   .retrieve()

@@ -9,6 +9,7 @@ import org.jeecg.modules.youcai.mapper.YoucaiDiseaseWarningsMapper;
 import org.jeecg.modules.youcai.service.IYoucaiDiseaseWarningsService;
 import org.jeecg.modules.youcai.util.IoTApiUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -107,7 +108,8 @@ public class YoucaiDiseaseWarningsServiceImpl extends ServiceImpl<YoucaiDiseaseW
     }
 
     private static final String API_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-    private static final String API_KEY = "sk-5f775477a8c04db4893d8a39d308e151";
+    @Value("${youcai.dashscope.api-key:}")
+    private String apiKey;
 
     @Override
     public String analyzeDisease(String disease) throws Exception {
@@ -143,7 +145,7 @@ public class YoucaiDiseaseWarningsServiceImpl extends ServiceImpl<YoucaiDiseaseW
         WebClient client = WebClient.builder().build();
         String result = client.post()
                 .uri(API_URL)
-                .header("Authorization", "Bearer " + API_KEY)
+                .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .bodyValue(requestBody.toJSONString())
                 .retrieve()
