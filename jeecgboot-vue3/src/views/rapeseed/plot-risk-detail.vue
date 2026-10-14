@@ -272,14 +272,14 @@
             class="suggestions-panel" 
           >
             <template #extra>
-              <a-tag :color="index === 0 ? 'red' : 'orange'">
-                {{ index === 0 ? '立即实施' : '中长期策略' }}
+              <a-tag :color="suggestion.title === '紧急措施' ? 'red' : suggestion.title === '风险预警' ? 'blue' : 'orange'">
+                {{ suggestion.title === '紧急措施' ? '立即实施' : suggestion.title === '风险预警' ? '风险提示' : '防控策略' }}
               </a-tag>
             </template>
             <div class="suggestions-content">
               <div v-for="(item, itemIndex) in suggestion.items" :key="itemIndex" class="suggestion-item">
-                <div class="suggestion-icon" :class="index === 0 ? 'danger' : 'warning'">
-                  <ExclamationCircleOutlined v-if="index === 0" />
+                <div class="suggestion-icon" :class="suggestion.title === '紧急措施' ? 'danger' : 'warning'">
+                  <ExclamationCircleOutlined v-if="suggestion.title === '紧急措施'" />
                   <InfoCircleOutlined v-else />
                 </div>
                 <div class="suggestion-text">
@@ -311,6 +311,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { normalizeRiskSuggestions } from './riskSuggestions';
 import { 
   ArrowLeftOutlined, 
   ExclamationCircleOutlined, 
@@ -827,13 +828,7 @@ async function loadPlotData() {
           riskFactors: {}
         },
         // 确保comprehensive_suggestions字段存在
-        comprehensive_suggestions: response.comprehensive_suggestions || {
-          riskAlert: [],
-          immediate: [],
-          shortTerm: [],
-          mediumTerm: [],
-          longTerm: []
-        }
+        comprehensive_suggestions: normalizeRiskSuggestions(response)
       };
       console.log('转换后地块数据:', JSON.stringify(plotData.value, null, 2));
       console.log('7天预测风险:', plotData.value.forecast_7_days?.dailyRisks);
