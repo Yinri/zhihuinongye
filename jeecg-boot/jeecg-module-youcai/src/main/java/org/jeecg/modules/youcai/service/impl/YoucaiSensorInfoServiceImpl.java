@@ -962,7 +962,7 @@ public class YoucaiSensorInfoServiceImpl extends ServiceImpl<YoucaiSensorInfoMap
 
             if (response == null || response.getCode() != 1 || response.getData() == null) {
                 log.warn("获取视频设备列表失败: {}", response != null ? response.getMsg() : "响应为空");
-                return Result.OK(new ArrayList<>());
+                return Result.error("获取视频设备列表失败");
             }
 
             JSONArray jsonArray = convertToJsonArray(response.getData());

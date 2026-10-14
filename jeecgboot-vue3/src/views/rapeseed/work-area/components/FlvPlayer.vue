@@ -1,12 +1,22 @@
 <template>
   <div class="flv-player-container">
-    <div class="video-title">{{ title }}</div>
+    <div class="video-title">
+      <span>{{ title }}</span>
+      <span class="device-status" :class="onlineStatus === true ? 'online' : onlineStatus === false ? 'offline' : 'unknown'">
+        ● {{ onlineStatus === true ? '在线' : onlineStatus === false ? '离线' : '状态未知' }}
+      </span>
+      <span v-if="onlineStatus !== false" class="playback-status">
+        {{ error ? '播放失败' : playing ? '播放中' : loading ? '加载中' : '未播放' }}
+      </span>
+    </div>
     <div class="video-wrapper" ref="containerRef">
-      <div v-if="loading && !error" class="video-loading">
+      <div v-if="onlineStatus === false" class="video-offline">设备离线</div>
+      <div v-else-if="!url" class="video-offline">暂无可用视频流</div>
+      <div v-if="onlineStatus !== false && url && loading && !error" class="video-loading">
         <a-spin size="small" />
         <span style="margin-left: 8px">{{ loadingText }}</span>
       </div>
-      <div v-if="error" class="video-error">
+      <div v-if="onlineStatus !== false && error" class="video-error">
         <span class="error-icon">!</span>
         <span>{{ error }}</span>
       </div>
@@ -18,6 +28,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 
 interface Props {
+  onlineStatus?: boolean | null;
   url?: string;
   title?: string;
   loadingText?: string;
@@ -27,11 +38,14 @@ const props = withDefaults(defineProps<Props>(), {
   url: '',
   title: '',
   loadingText: '加载中...',
+  onlineStatus: null,
 });
 
 const containerRef = ref<HTMLElement | null>(null);
 const loading = ref(true);
 const error = ref('');
+const playing = ref(false);
+let playerGeneration = 0;
 let player: any = null;
 let retryCount = 0;
 const maxRetry = 3;
@@ -69,7 +83,8 @@ function loadJessibuca(): Promise<any> {
 async function initPlayer() {
   if (!isMounted) return;
   
-  if (!props.url) {
+  if (!props.url || props.onlineStatus === false) {
+    destroyPlayer();
     loading.value = false;
     error.value = '';
     return;
@@ -86,10 +101,11 @@ async function initPlayer() {
     }
 
     destroyPlayer();
+    const generation = playerGeneration;
 
     const Jessibuca = await loadJessibuca();
     
-    if (!isMounted) return;
+    if (!isMounted || generation !== playerGeneration || props.onlineStatus === false) return;
 
     player = new Jessibuca({
       container: containerRef.value,
@@ -122,6 +138,7 @@ async function initPlayer() {
     player.on('play', () => {
       if (!isMounted) return;
       loading.value = false;
+      playing.value = true;
       retryCount = 0;
     });
 
@@ -129,6 +146,7 @@ async function initPlayer() {
       console.error('视频播放错误:', err);
       if (!isMounted) return;
       loading.value = false;
+      playing.value = false;
       if (err === 'webglContextLostError' && retryCount < maxRetry) {
         retryCount++;
         error.value = `WebGL资源不足，正在重试(${retryCount}/${maxRetry})...`;
@@ -145,6 +163,7 @@ async function initPlayer() {
     player.on('timeout', () => {
       if (!isMounted) return;
       loading.value = false;
+      playing.value = false;
       error.value = '视频加载超时';
     });
 
@@ -157,6 +176,7 @@ async function initPlayer() {
       if (!isMounted) return;
       if (performance.fps > 0) {
         loading.value = false;
+        playing.value = true;
       }
     });
 
@@ -181,6 +201,8 @@ async function initPlayer() {
 }
 
 function destroyPlayer() {
+  playerGeneration++;
+  playing.value = false;
   if (retryTimeoutId) {
     clearTimeout(retryTimeoutId);
     retryTimeoutId = null;
@@ -208,6 +230,16 @@ watch(() => props.url, (newUrl) => {
       loading.value = false;
       error.value = '';
     }
+  }
+});
+
+watch(() => props.onlineStatus, (status, previous) => {
+  if (status === false) {
+    destroyPlayer();
+    loading.value = false;
+    error.value = '';
+  } else if (previous === false && props.url) {
+    initPlayer();
   }
 });
 
@@ -239,12 +271,34 @@ defineExpose({
 }
 
 .video-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
   font-size: 12px;
   flex-shrink: 0;
   z-index: 10;
+}
+
+.device-status {
+  margin-left: auto;
+  white-space: nowrap;
+  &.online { color: #73d13d; }
+  &.offline { color: #bfbfbf; }
+  &.unknown { color: #ffc53d; }
+}
+.playback-status { color: #bfbfbf; white-space: nowrap; }
+.video-offline {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bfbfbf;
+  z-index: 20;
 }
 
 .video-wrapper {

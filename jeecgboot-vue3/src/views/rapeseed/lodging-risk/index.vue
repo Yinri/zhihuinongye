@@ -19,15 +19,17 @@
           <!-- 左侧：视频监控 -->
           <a-col :span="12">                                                                                                                                                       <a-card title="视频监控" class="video-card">
               <div class="video-grid" :class="`video-grid-${Math.min(videoDevices.length, 4)}`">
-                <div v-for="device in videoDevices" :key="device.equipmentCode" class="video-monitor-card">
+                <div v-for="device in videoDevices" :key="device.renderKey" class="video-monitor-card">
                   <FlvPlayer
                     :url="device.streamUrl"
                     :title="device.equipmentName"
+                    :online-status="device.onlineStatus"
                     class="video-item"
                   />
                   <PtzControlPanel
                     :device-code="device.equipmentCode"
                     :channel-num="device.channelNum || '1'"
+                    :disabled="device.onlineStatus !== true"
                   />
                 </div>
                 <a-empty v-if="videoDevices.length === 0" description="暂无视频设备" />
@@ -489,7 +491,7 @@ import {
   type GrowthMonitoringData
 } from '/@/api/rapeseed/growthMonitoring';
 import { getWeatherSensorData } from '/@/api/rapeseed/weatherSensor';
-import { getVideoDevices, getVideoStream } from '/@/views/rapeseed/work-area/workArea.api';
+import { useVideoDevices } from '/@/views/rapeseed/work-area/useVideoDevices';
 import type { 
   LodgingRiskData, 
   WeatherSensorData, 
@@ -532,11 +534,24 @@ const ANALYSIS_POLL_INTERVAL = 2000;
 const ANALYSIS_MAX_POLL_COUNT = 90;
 
 // ==================== 视频监控与倒伏分析相关 ====================
-const videoDevices = ref<any[]>([]);
+const { videoDevices, refreshVideoDevices } = useVideoDevices(() => selectStore.selectedBase?.baseId);
 const videoLoading = ref(false);
 const analysisLoading = ref(false);
 const analysisResult = ref<VideoLodgingAnalysisResult | null>(null);
 let latestVideoAnalysisToken = 0;
+
+watch(
+  () => videoDevices.value.filter(device => device.onlineStatus === true).map(device => device.renderKey).join(','),
+  (onlineDevices, previous) => {
+    if (previous && onlineDevices !== previous) {
+      // 设备离线或状态未知后，不再展示包含这些设备的旧分析结果。
+      latestVideoAnalysisToken++;
+      analysisLoading.value = false;
+      analysisResult.value = null;
+    }
+  },
+  { flush: 'sync' }
+);
 
 // 地图相关
 const mapInstance = ref(null);
@@ -545,6 +560,9 @@ const fieldOverlayRef = ref(null);
 
 // ==================== 视频监控与倒伏分析方法 ====================
 async function loadVideoDevices() {
+  const analysisToken = ++latestVideoAnalysisToken;
+  analysisLoading.value = false;
+  analysisResult.value = null;
   const baseId = selectStore.selectedBase.baseId;
   if (!baseId) {
     latestVideoAnalysisToken += 1;
@@ -555,23 +573,10 @@ async function loadVideoDevices() {
   
   videoLoading.value = true;
   try {
-    const result = await getVideoDevices(String(baseId));
-    videoDevices.value = (result || []).map((device: any) => ({
-      ...device,
-      streamUrl: null,
-    }));
+    await refreshVideoDevices();
+    if (analysisToken !== latestVideoAnalysisToken || baseId !== selectStore.selectedBase?.baseId) return;
     
-    for (let i = 0; i < videoDevices.value.length; i++) {
-      const device = videoDevices.value[i];
-      try {
-        const streamUrl = await getVideoStream(device.equipmentCode, device.channelNum || '1');
-        videoDevices.value[i].streamUrl = streamUrl;
-      } catch (e) {
-        console.error(`加载设备 ${device.equipmentName} 视频流失败`, e);
-      }
-    }
-    
-    if (videoDevices.value.length > 0) {
+    if (videoDevices.value.some(device => device.onlineStatus === true)) {
       void autoAnalyzeAllVideos();
     } else {
       analysisResult.value = null;
@@ -589,7 +594,7 @@ async function autoAnalyzeAllVideos() {
   if (videoDevices.value.length === 0) return;
   
   const videoIds = videoDevices.value
-    .filter(device => device.id)
+    .filter(device => device.id && device.onlineStatus === true)
     .map(device => device.id);
   
   if (videoIds.length === 0) {

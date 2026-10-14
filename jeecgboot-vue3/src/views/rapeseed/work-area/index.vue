@@ -8,12 +8,14 @@
               <FlvPlayer
                 :url="device.streamUrl"
                 :title="device.equipmentName"
+                :online-status="device.onlineStatus"
                 class="video-item"
               />
               <PtzControlPanel
                 class="video-control-panel"
                 :device-code="device.equipmentCode"
                 :channel-num="device.channelNum"
+                :disabled="device.onlineStatus !== true"
               />
             </div>
             <a-empty v-if="videoDevices.length === 0" description="暂无视频设备" />
@@ -132,12 +134,11 @@ import {
   getMachineList,
   getOperationRecords,
   getTrackData,
-  getVideoDevices,
-  getVideoStream,
 } from './workArea.api';
 import dayjs from 'dayjs';
 import FlvPlayer from './components/FlvPlayer.vue';
 import PtzControlPanel from './components/PtzControlPanel.vue';
+import { useVideoDevices } from './useVideoDevices';
 import { loadTiandituAPI } from '/@/utils/tianditu';
 
 const selectStore = useSelectStore();
@@ -169,8 +170,8 @@ const trackStats = reactive({
 });
 const trackLoading = ref(false);
 
-const videoDevices = ref<any[]>([]);
 const MAX_VIDEO_STREAMS = 4;
+const { videoDevices, refreshVideoDevices } = useVideoDevices(() => selectedBaseId.value, MAX_VIDEO_STREAMS);
 
 const operationRecords = ref<any[]>([]);
 const loading = ref(false);
@@ -311,55 +312,8 @@ function extractBaseKeyword(baseName: string) {
 }
 
 async function loadVideoDevices(baseId = selectedBaseId.value, currentToken = dataLoadToken) {
-  if (!baseId) {
-    videoDevices.value = [];
-    return;
-  }
-
-  try {
-    const res = await getVideoDevices(String(baseId));
-    const devices = (res || []).map((device: any) => ({
-      ...device,
-      channelNum: String(device.channelNum || '1'),
-      streamUrl: '',
-      renderKey: `${baseId}-${device.equipmentCode}-${device.channelNum || '1'}`,
-    }));
-    const limitedDevices = devices.slice(0, MAX_VIDEO_STREAMS);
-
-    if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
-      return;
-    }
-
-    videoDevices.value = limitedDevices;
-    await Promise.allSettled(
-      videoDevices.value.map(async (device: any, index: number) => {
-        try {
-          const streamUrl = await getVideoStream(device.equipmentCode, device.channelNum);
-          if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
-            return;
-          }
-          videoDevices.value[index] = {
-            ...videoDevices.value[index],
-            streamUrl: streamUrl || '',
-          };
-        } catch (e) {
-          console.error(`加载设备 ${device.equipmentName} 视频流失败`, e);
-          if (currentToken !== dataLoadToken || String(baseId) !== String(selectedBaseId.value || '')) {
-            return;
-          }
-          videoDevices.value[index] = {
-            ...videoDevices.value[index],
-            streamUrl: '',
-          };
-        }
-      })
-    );
-  } catch (e) {
-    console.error('加载视频设备失败', e);
-    if (currentToken === dataLoadToken) {
-      videoDevices.value = [];
-    }
-  }
+  if (currentToken !== dataLoadToken || baseId !== selectedBaseId.value) return;
+  await refreshVideoDevices();
 }
 
 async function loadOperationRecords(baseMachines = machines.value, currentToken = dataLoadToken) {

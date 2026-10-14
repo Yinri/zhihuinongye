@@ -175,6 +175,7 @@ import { message } from 'ant-design-vue';
 import { controlVideoStream, type VideoPtzCommand } from '../workArea.api';
 
 interface Props {
+  disabled?: boolean;
   deviceCode?: string;
   channelNum?: string;
   speed?: string;
@@ -204,7 +205,7 @@ const commandTextMap: Record<VideoPtzCommand, string> = {
   zoomout: '缩小',
 };
 
-const isDisabled = computed(() => !props.deviceCode || !props.channelNum);
+const isDisabled = computed(() => props.disabled || !props.deviceCode || !props.channelNum);
 const statusText = computed(() => {
   if (activeCommand.value) {
     return `执行中: ${commandTextMap[activeCommand.value]}`;
@@ -236,6 +237,7 @@ function toggleAdvanced() {
 }
 
 async function handleCommand(command: VideoPtzCommand, continuous = false) {
+  if (props.disabled) return;
   if (!props.deviceCode || !props.channelNum) {
     message.warning('当前视频缺少设备编码或通道号，暂不可控制');
     return;

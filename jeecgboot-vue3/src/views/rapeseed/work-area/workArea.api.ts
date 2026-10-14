@@ -92,8 +92,8 @@ export const getTrackData = (beidouSn: string, startDate: string, endDate: strin
   return defHttp.get({ url: Api.TrackData, params: { beidouSn, startDate, endDate } });
 };
 
-export const getVideoDevices = (baseId: string) => {
-  return defHttp.get({ url: Api.VideoList, params: { baseId } });
+export const getVideoDevices = (baseId: string, silent = false) => {
+  return defHttp.get({ url: Api.VideoList, params: { baseId } }, { errorMessageMode: silent ? 'none' : 'message' });
 };
 
 export const getVideoStream = (equipmentCode: string, channelNum: string) => {
