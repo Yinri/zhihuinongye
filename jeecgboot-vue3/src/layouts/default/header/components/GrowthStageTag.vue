@@ -31,8 +31,8 @@
           :class="{ active: currentGrowthStage === stage }"
         >
           <div v-if="currentGrowthStage === stage" class="stage-indicator" aria-hidden="true">
-            <span class="stage-indicator-arrow"></span>
             <span class="stage-indicator-label">当前生育期</span>
+            <span class="stage-indicator-arrow"></span>
           </div>
           {{ stage }}
         </div>
@@ -202,8 +202,8 @@ const selectItem = (type: 'base', value: string) => {
   gap: 20px;
   width: 100%;
   box-sizing: border-box;
-  height: 72px;
-  padding: 10px 20px 8px;
+  height: 100px;
+  padding: 38px 20px 12px;
   background-color: #fff;
   position: relative;
   z-index: 1001;
@@ -364,36 +364,22 @@ const selectItem = (type: 'base', value: string) => {
 
       .stage-indicator {
         position: absolute;
-        top: -23px;
+        top: -34px;
         left: 50%;
         transform: translateX(-50%);
         display: inline-flex;
-        flex-direction: row;
+        flex-direction: column;
         align-items: center;
-        gap: 5px;
+        gap: 2px;
         pointer-events: none;
         z-index: 5;
 
         .stage-indicator-arrow {
-          position: relative;
-          width: 14px;
-          height: 18px;
-          border-radius: 999px;
-          background: #e53935;
-          box-shadow: 0 3px 8px rgba(229, 57, 53, 0.35);
-
-          &:before {
-            content: '';
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 11px solid transparent;
-            border-right: 11px solid transparent;
-            border-bottom: 14px solid #e53935;
-          }
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 8px solid #e53935;
         }
 
         .stage-indicator-label {

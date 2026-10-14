@@ -1,12 +1,13 @@
 <template>
   <div :style="getPlaceholderDomStyle" v-if="getIsShowPlaceholderDom"></div>
-  <div :style="getWrapStyle" :class="getClass">
+  <div ref="headerWrapperRef" :style="getWrapStyle" :class="getClass">
     <LayoutHeader v-if="getShowHeader" />
     <MultipleTabs v-if="getShowTabs" />
   </div>
 </template>
 <script lang="ts">
-  import { defineComponent, unref, computed, CSSProperties } from 'vue';
+  import { defineComponent, unref, computed, ref, CSSProperties } from 'vue';
+  import { useResizeObserver } from '@vueuse/core';
 
   import LayoutHeader from './index.vue';
   import MultipleTabs from '../tabs/index.vue';
@@ -21,11 +22,10 @@
   import { useDesign } from '/@/hooks/web/useDesign';
   import { useLayoutHeight } from '../content/useContentViewHeight';
   import { TabsThemeEnum } from '/@/enums/appEnum';
-  import { MenuTypeEnum } from '/@/enums/menuEnum';
 
   // 代码逻辑说明: 【QQYUN-8774】网站header区域加高
   // 油菜系统定制：header 内含生长阶段按钮行(GrowthStageTag 高72px)，需与老版本保持一致，否则固定header会遮挡内容、标签栏位置被挤掉
-  const HEADER_HEIGHT = 110;
+  const HEADER_HEIGHT = 160;
 
   // updateBy:sunjianlei---updateDate:2021-09-03---修改tab切换栏样式：更改高度
   const TABS_HEIGHT = 32;
@@ -37,12 +37,18 @@
     components: { LayoutHeader, MultipleTabs },
     setup() {
       const { setHeaderHeight } = useLayoutHeight();
+      const headerWrapperRef = ref<HTMLElement>();
+      const measuredHeaderHeight = ref<number>();
+      // 同步真实高度，覆盖生育期栏、标签栏及响应式布局，不依赖固定估值。
+      useResizeObserver(headerWrapperRef, () => {
+        measuredHeaderHeight.value = headerWrapperRef.value?.getBoundingClientRect().height;
+      });
       const { prefixCls } = useDesign('layout-multiple-header');
 
       const appStore = useAppStore()
       const glob = useGlobSetting()
 
-      const { getCalcContentWidth, getSplit, getMenuType } = useMenuSetting();
+      const { getCalcContentWidth } = useMenuSetting();
       const { getIsMobile } = useAppInject();
       const { getFixed, getShowInsetHeaderRef, getShowFullHeaderRef, getHeaderTheme } = useHeaderSetting();
 
@@ -98,14 +104,11 @@
       });
 
       const getPlaceholderDomStyle = computed((): CSSProperties => {
-        let height = 0;
-        // 代码逻辑说明: 【issues/7561】主题切换为顶部混合模式时，页面顶部内容显示不出来，被遮盖
-        if ((unref(getShowFullHeaderRef) || !unref(getSplit)) && unref(getShowHeader) && !unref(getFullContent) || unref(getMenuType) == MenuTypeEnum.MIX) {
-          height += HEADER_HEIGHT;
-        }
-        if (unref(getShowTabs) && !unref(getFullContent)) {
-          height += unref(getTabsThemeHeight);
-        }
+        let height = unref(measuredHeaderHeight) ?? (
+          (unref(getShowHeader) && !unref(getFullContent) ? HEADER_HEIGHT : 0)
+          + (unref(getShowTabs) ? unref(getTabsThemeHeight) : 0)
+        );
+        if (unref(getShowFullHeaderRef) && !unref(getFullContent)) height += HEADER_HEIGHT;
         setHeaderHeight(height);
         return {
           height: `${height}px`,
@@ -119,6 +122,7 @@
       });
 
       return {
+        headerWrapperRef,
         glob,
         getClass,
         prefixCls,
