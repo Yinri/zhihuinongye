@@ -7,6 +7,8 @@ import org.jeecg.modules.youcai.entity.weatherEntity.QWeatherResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
@@ -31,7 +33,7 @@ public class QWeatherApiUtil {
         this.config = config;
         // 根据和风天气API规范，使用HTTPS协议和用户配置的Host
         String baseUrl = "https://" + config.getHost();
-        this.webClient = webClientBuilder
+        this.webClient = webClientBuilder.clone()
                 .baseUrl(baseUrl)
                 .build();
     }
@@ -47,7 +49,6 @@ public class QWeatherApiUtil {
         // 构建完整的请求URL
         String requestUrl = "https://" + config.getHost() + "/v7/weather/7d?location=" + location;
         log.info("完整请求URL: {}", requestUrl);
-        log.info("请求头信息: X-QW-Api-Key={}", config.getApiKey());
         
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -79,11 +80,15 @@ public class QWeatherApiUtil {
                     }
                 })
                 .map(this::convertToDailyWeatherDTOs)
-                .retryWhen(Retry.fixedDelay(config.getRetryCount(), Duration.ofMillis(config.getTimeout()))
-                        .doBeforeRetry(retrySignal -> log.warn("重试获取天气数据，重试次数：{}", retrySignal.totalRetries() + 1))
-                )
+                .retryWhen(weatherRetry())
+                // 包括所有重试和等待的总预算，不能让天气失败拖住倒伏评估。
+                .timeout(Duration.ofMillis(config.getTimeout()))
                 .doOnError(e -> log.error("获取天气预报失败：", e))
-                .doOnSuccess(result -> log.info("成功转换并返回{}天天气预报数据", result.size()));
+                .doOnSuccess(result -> {
+                    if (result != null) {
+                        log.info("成功转换并返回{}天天气预报数据", result.size());
+                    }
+                });
     }
     
     /**
@@ -103,11 +108,20 @@ public class QWeatherApiUtil {
                 .retrieve()
                 .bodyToMono(String.class) // 实时天气返回结构不同，先作为字符串处理
                 .map(this::parseCurrentWeather)
-                .retryWhen(Retry.fixedDelay(config.getRetryCount(), Duration.ofMillis(config.getRetryInterval()))
-                        .doBeforeRetry(retrySignal -> log.warn("重试获取实时天气数据，重试次数：{}", retrySignal.totalRetries() + 1))
-                )
+                .retryWhen(weatherRetry())
+                .timeout(Duration.ofMillis(config.getTimeout()))
                 .doOnError(e -> log.error("获取实时天气失败：", e))
                 .doOnSuccess(result -> log.info("成功获取实时天气数据"));
+    }
+
+    private Retry weatherRetry() {
+        return Retry.fixedDelay(config.getRetryCount(), Duration.ofMillis(config.getRetryInterval()))
+                // JSON 解码错误及鉴权等 4xx 错误重试不会恢复，仅重试网络或服务端故障。
+                .filter(error -> error instanceof WebClientRequestException
+                        || (error instanceof WebClientResponseException responseException
+                        && responseException.getStatusCode().is5xxServerError()))
+                .onRetryExhaustedThrow((spec, signal) -> signal.failure())
+                .doBeforeRetry(signal -> log.warn("重试获取天气数据，重试次数：{}", signal.totalRetries() + 1));
     }
     
     /**

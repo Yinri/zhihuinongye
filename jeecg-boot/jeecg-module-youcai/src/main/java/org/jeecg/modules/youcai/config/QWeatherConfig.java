@@ -33,7 +33,7 @@ public class QWeatherConfig {
 
 
     /**
-     * 请求超时时间（毫秒）
+     * 请求总超时时间（毫秒），包含所有重试及重试间隔
      */
     private int timeout = 5000;
     

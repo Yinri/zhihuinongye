@@ -36,6 +36,8 @@ public class WebClientConfig {
                 .build();
 
         return HttpClient.create(connectionProvider)
+                // 自动解压天气等服务返回的 GZIP 响应，避免将压缩字节交给 JSON 解码器。
+                .compress(true)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
                 .responseTimeout(Duration.ofSeconds(30))
                 .doOnConnected(conn ->
